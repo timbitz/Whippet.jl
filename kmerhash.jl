@@ -15,7 +15,12 @@ sizehint!(d, n)
 t32 = typeof(DNAKmer(join(["A" for i in 1:32], "")))
 
 # This benchmarks faster than BloomFilters.jl
-#@time for i in 1:n
-#  k = convert(t32, UInt64(i))
-#  d[k] = "Gene1"
-#end
+'''
+@time for i in 1:2n
+  if i % 1000000 == 0
+    println(i)
+  end
+  k = convert(t32, UInt64(i))
+  d[k] = "Gene1"
+end
+'''
