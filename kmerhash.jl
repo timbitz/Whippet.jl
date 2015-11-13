@@ -1,5 +1,5 @@
 
-using Bio.Seq
+#using Bio.Seq
 
 typealias Str ASCIIString
 
@@ -20,18 +20,27 @@ function succ_rehash!(d::Dict, targsz::Integer; seed = Int(floor(targsz / 1000))
   end
 end
 
-# This benchmarks faster than BloomFilters.jl
-function set_hash!(d::Dict, n::Integer)
-  for i in 1:(n >> 2)
-    if i % 1000000 == 0
-      println(i)
-    end
-    k = convert(DNAKmer{32}, UInt64(i))
-    d[k] = "Gene1"
-  end
+function bitset!{K}(dict::Dict{K,Bool}, key::K)
+   indx = Base.ht_keyindex(dict, key)
+   if indx <= 0
+     dict[key] = true
+   end
 end
 
-d = Dict{DNAKmer{32},Str}()
-n = 3 * 1000000000 # should be ~ 3billion kmers in the human genome
-@time succ_rehash!(d, n, seed=30000000)
-@time set_hash!(d, n)
+function __init__()
+"""   # This benchmarks faster than BloomFilters.jl
+   function set_hash!(d::Dict, n::Integer)
+     for i in 1:(n >> 2)
+       if i % 1000000 == 0
+         println(i)
+       end
+       k = convert(DNAKmer{32}, UInt64(i))
+       d[k] = "Gene1"
+     end
+   end
+
+   d = Dict{DNAKmer{32},Str}()
+   n = 3 * 1000000000 # should be ~ 3billion kmers in the human genome
+   @time succ_rehash!(d, n, seed=30000000)
+   @time set_hash!(d, n) """
+end
