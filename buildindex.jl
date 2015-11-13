@@ -2,15 +2,16 @@
 # Tim Sterne-Weiler 2015
 
 using Bio.Seq
+using HDF5
 
 include("kmerhash.jl")
 
 K = 32
-N = 3 * 100000000 # should be ~ 3billion kmers in the human genome
+N = 100000000 # should be ~ 3billion kmers in the human genome
 
 println(STDERR, "Allocating k-mer hash...")
 gdict = Dict{DNAKmer{K},Bool}()
-@time succ_rehash!(gdict, N, seed=3000000)
+@time succ_rehash!(gdict, N, seed=100000)
 
 for f in readdir()
    re = match(r"(\S+).(fa|fasta)(.gz)?", f)
@@ -28,6 +29,7 @@ for f in readdir()
       # iterate through fasta entries
       fh = open( to_open, FASTA )
       for r in fh
+         immutable!(r.seq)
          println(STDERR, r )
          @time for (i,k) in each(DNAKmer{K}, r.seq, K >> 1)
             bitset!(gdict, k)

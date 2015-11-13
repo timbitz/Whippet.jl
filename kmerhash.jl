@@ -6,6 +6,8 @@ typealias Str ASCIIString
 # overload some stuff here
 # lets hash on numeric value for speed 
 Base.hash{T <: Bio.Seq.Kmer}( h::T ) = UInt64(h)
+Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
+Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 
 # this benchmarks way faster than one initial sizehint! for somereason
 function succ_rehash!(d::Dict, targsz::Integer; seed = Int(floor(targsz / 1000)))
