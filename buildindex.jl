@@ -12,20 +12,33 @@ K = 32
 N = 100000000 # should be ~ 3billion kmers in the human genome
 
 println(STDERR, "Allocating k-mer hash...")
-#gdict = Dict{DNAKmer{K},Bool}()
-#@time succ_rehash!(gdict, N, seed=10000000)
 gfmind = FMIndex[]
 
-# encode a DNA sequence with 3-bit unsigned integers;
-# this is because a reference genome has five nucleotides: A/C/G/T/N.
-function encode(seq)
-    encoded = IntVector{3,UInt8}(length(seq))
-    for i in 1:endof(seq)
-        encoded[i] = convert(UInt8, seq[i])
+# replace N with A
+function twobit_enc(seq)
+    len = length(seq)
+    ret = IntVector{2,UInt8}(len)
+    for i in 1:len
+        if seq[i] == DNA_N
+            ret[i] = convert(UInt8, DNA_A)
+        else
+            ret[i] = convert(UInt8, seq[i])
+        end
     end
-    return encoded
+    ret
 end
 
+function buildindex!( fhIter, indxArr; verbose=false )
+    for r in fhIter
+        immutable!(r.seq)
+        println( STDERR, r )
+        @time fm = FMIndex(twobit_enc(r.seq), 4, r=6)
+        push!(indxArr, fm)
+    end
+    println( STDERR, "Finished building Index..." )
+end 
+
+# iterate through files in cd
 for f in readdir()
    re = match(r"(\S+).(fa|fasta)(.gz)?", f)
   
@@ -40,26 +53,18 @@ for f in readdir()
          to_open = f
       end
       # iterate through fasta entries
-      fh = open( to_open, FASTA )
-      for r in fh
-         immutable!(r.seq)
-         println(STDERR, r )
-         @time fm = FMIndex(encode(r.seq))
-         push!(gfmind, fm)
-         r.name == "chr2" ? break : continue
-         @time for (i,k) in each(DNAKmer{K}, r.seq, K >> 1)
-            bitset!(gdict, k)
-            if i % 262145 == 0
-               print(STDERR, "Hashing Kmer $i...\r")
-            end
-         end
-      end
-   end 
+      @time buildindex!(open( to_open, FASTA ), gfmind)
+   end
 end
+
+
 println()
-println(STDERR, "Saving genome index")
-GZip.open(string("gfmind", ".jls"), "w+") do io
+println(STDERR, "Saving genome index...")
+open(string("genome", ".jls"), "w+") do io
    @time serialize( io, gfmind )
 end
+gfmind = 0
+gc()
 
-
+println(STDERR, "Loading genome index...")
+@time find = open(deserialize, "genome.jls")

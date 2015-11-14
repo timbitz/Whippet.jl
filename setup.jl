@@ -1,13 +1,13 @@
 #!/usr/bin/env julia
 
-pkgs = ["ArgParse", "Bio", "FMIndexes", "BitArrays", "GZip"]
-map( x->Pkg.add(x), pkgs )
+pkgs = ["ArgParse", "Bio", "FMIndexes", "IntArrays", "GZip"]
+map( Pkg.add, pkgs )
 Pkg.update()
-map( x->Pkg.test(x), pkgs )
+map( Pkg.test, pkgs )
 
 using Bio.Seq
 using FMIndexes
-using BitArrays
+using IntArrays
 using ArgParse
 using GZip
 

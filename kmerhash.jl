@@ -5,7 +5,7 @@ typealias Str ASCIIString
 
 # overload some stuff here
 # lets hash on numeric value for speed 
-Base.hash{T <: Bio.Seq.Kmer}( h::T ) = UInt64(h)
+Base.hash{T <: Bio.Seq.Kmer}( h::T ) = convert(UInt64, h)
 Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
 Base.write{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, k::T) = Base.write(io, convert(UInt64, k))
 Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
