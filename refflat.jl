@@ -122,24 +122,31 @@ function load_refflat( fh )
    return Refflat( txinfo, txdon, txacc, genetotx, gninfo, gndon, gnacc, gntxst, gntxen )
 end
 
+
+#### Splice k-mer graphs.
 immutable Acceptor{K}
    kmer::DNAKmer{K}
    microexon::UInt8
    gene::Genename
 end
 
-function doner_junc_table( genome, ref, k::Integer )
+function donor_junc_table( genome, ref, k::Integer )
    doners = Vector{Vector{Acceptor{k}}}(4^k)
    for gene in keys(ref.genetotx)
       chrom,strand = ref.gninfo[gene]
-      for d in ref.gndon
-         
+      offset = getoffset( genome, chrom )
+      (offset == -1) && continue # chrom not present
+      for d in ref.gndon[gene]
+         coor = d+offset
+         curk = DNAKmer{20}(genome.seq[(coor-20+1):coor])
+         println("$gene $chrom $strand $d $k $curk")
       end
+      break
    end   
 end
 
 function main()
-   println(STDERR, "Loading Refflat file...")
+"""   println(STDERR, "Loading Refflat file...")
    fh = open("$(pwd())/genome/genes.flat", "r")
    @time ref = load_refflat(fh)
    close(fh)
@@ -148,12 +155,13 @@ function main()
    open("$(pwd())/index/reflat.jls", "w+") do fh
       @time serialize(fh, ref)
    end
-
+"""
    println(STDERR, "Loading annotation index...")
-   @time trans = open(deserialize, "$(pwd())/index/reflat.jls")
+   @time ref = open(deserialize, "$(pwd())/index/reflat.jls")
    println(STDERR, "Loading genome index...")
    @time genome = open(deserialize, "$(pwd())/index/genome.jls")
    sleep(10)
+   donor_junc_table( genome, ref, 8 )
 end
 
 main()
