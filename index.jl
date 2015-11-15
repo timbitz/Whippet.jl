@@ -8,6 +8,16 @@ immutable Genome
    index::FMIndex
 end
 
+function getoffset( genome::Genome, name::Str )
+   ret = -1
+   for n in 1:length(genome.names)
+      if genome.names[n] == name
+         ret = n
+         break
+      end
+   end
+   ret
+end
 
 # replace N with A
 function twobit_enc(seq)
