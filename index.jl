@@ -12,7 +12,7 @@ function getoffset( genome::Genome, name::Str )
    ret = -1
    for n in 1:length(genome.names)
       if genome.names[n] == name
-         ret = n
+         ret = genome.offset[n]
          break
       end
    end
