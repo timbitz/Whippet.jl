@@ -1,14 +1,14 @@
 #!/usr/bin/env julia
 
-pkgs = ["ArgParse", "Bio", "FMIndexes", "IntArrays", "GZip"]
+pkgs = ["ArgParse", "FMIndexes", "IntArrays", "IntervalTrees", "GZip"]
 map( Pkg.add, pkgs )
 Pkg.update()
 map( Pkg.test, pkgs )
 
-using Bio.Seq
 using FMIndexes
 using IntArrays
 using ArgParse
+using IntervalTrees
 using GZip
 
 println(STDERR, "looks okay!")
