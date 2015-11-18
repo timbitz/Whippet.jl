@@ -1,3 +1,9 @@
+#  This is a port of the source code from https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
+#  This file is written almost entirely by the authors of BioJulia/Bio.jl
+#  It has been altered here to include new masked nucleotides 'J' for exon-exon junction
+#  and 'S' for transcription start/stop site.  
+#  These are encoded with 'N' and 'A','T','C','G' into 3-bits
+
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next
 
