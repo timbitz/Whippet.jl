@@ -1,6 +1,5 @@
 using IntervalTrees
 
-
 typealias Str ASCIIString
 
 immutable Seqlibrary
@@ -70,7 +69,7 @@ end
 function trans_index!( fhIter, ref::Refflat )
    seq,offset,names = load_fasta( fhIter )
    for g in keys(ref.genetotx)
-      
+            
    end
    Seqlibrary( )
 end
