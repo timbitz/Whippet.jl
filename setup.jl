@@ -10,5 +10,3 @@ using IntArrays
 using ArgParse
 using IntervalTrees
 using GZip
-
-println(STDERR, "looks okay!")
