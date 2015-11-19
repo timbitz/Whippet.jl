@@ -7,20 +7,42 @@ immutable Seqlibrary
    offset::Vector{Int64}
    names::Vector{Str}
    index::FMIndex
+   sorted::Bool
 end
 
-function getoffset( genome::Genome, name::Str )
+function getoffset( seqlib::Seqlibrary, name::Str )
+   if seqlib.sorted
+      ret = sorted_getoffset( seqlib, name )
+   else
+      ret = brute_getoffset( seqlib, name )
+   end
+   ret
+end
+
+function sorted_getoffset( seqlib, name, low=1, high=length(seqlib.names)+1 )
+   low == high && return(-1)
+   mid = ((high - low) >> 1) + low
+   seqlib.names[mid] == name && return(seqlib.offset[mid])
+   if seqlib.names[mid] > name
+      ret = sorted_getoffset(seqlib, name, low, mid)
+   else
+      ret = sorted_getoffset(seqlib, name, mid+1, high)
+   end
+   ret
+end
+
+function brute_getoffset( seqlib::Seqlibrary, name::Str )
    ret = -1
-   for n in 1:length(genome.names)
-     if genome.names[n] == name
-       ret = genome.offset[n]
+   for n in 1:length(seqlib.names)
+     if seqlib.names[n] == name
+       ret = seqlib.offset[n]
        break
      end
    end
    ret
 end
 
-# replace N with A
+# replace J, S, N with A
 function twobit_enc(seq)
    len = length(seq)
    ret = IntVector{2,UInt8}(len)
@@ -34,7 +56,7 @@ function twobit_enc(seq)
    ret
 end
 
-
+# encode 3-bit sequence with J,S,N,A,T,G,C
 function threebit_enc(seq)
    len = length(seq)
    ret = IntVector{3,UInt8}(len)
@@ -45,10 +67,9 @@ function threebit_enc(seq)
 end
 
 function load_fasta( fhIter; verbose=false )
-   seq = DNASequence()
+   seq = DNASequence(mutable=false)
    offset = Int[]
    names = Str[]
-   immutable!(seq)
    for r in fhIter
       immutable!(r.seq)
       push!(names, r.name)
@@ -63,14 +84,18 @@ function single_genome_index!( fhIter; verbose=false )
    seq,offset,names = load_fasta( fhIter )
    @time fm = FMIndex(twobit_enc(seq), 4, r=4, program=:SuffixArrays, mmap=true)
    println( STDERR, "Finished building Index..." )
-   Seqlibrary(seq, offset, names, fm)
+   Seqlibrary(seq, offset, names, fm, false)
 end
 
 function trans_index!( fhIter, ref::Refflat )
    seq,offset,names = load_fasta( fhIter )
+   xcript  = DNASequence(mutable=false)
+   xoffset = Vector{UInt64}()
+   xgenes  = Vector{Genename}()
    for g in keys(ref.genetotx)
-            
+      # set up exons
+      # insert J/S, push!         
    end
-   Seqlibrary( )
+   Seqlibrary( , true)
 end
 

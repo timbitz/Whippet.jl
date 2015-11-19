@@ -35,7 +35,7 @@ immutable Refflat
    gnacc::Dict{Genename,Coordtuple} # Sorted tuple of exon starts
    gntxst::Dict{Genename,Coordtuple} # Sorted tuple of tx starts
    gntxen::Dict{Genename,Coordtuple} # Sorted tuple of tx ends
- #  gnmic::Dict{Genename,Microtuple}
+#  gnmic::Dict{Genename,Microtuple}
 end
 
 function Base.show(io::IO, ref::Refflat)
