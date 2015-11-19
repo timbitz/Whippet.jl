@@ -10,6 +10,8 @@ include("index.jl")
 const Mb = 1000000
 const GENOMESIZE = 3235Mb
 
+
+# ALIAS NEW TYPES FOR INCREASED CODE READABILITY
 if GENOMESIZE < typemax(UInt32) 
    typealias Coordint UInt32 
 else 
@@ -45,6 +47,8 @@ function Base.show(io::IO, ref::Refflat)
    Base.show(io, ref.genetotx)
 end
 
+# this guy maps an array of strings or substrings to Int parsing and then into a tuple
+# which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
 parseSplice( subArray; l=0, r=0, c=0 ) = tuple(map( x->convert(Coordint,parse(Int,x)+c), subArray )...)[(1+l):(end-r)]
 
 function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
@@ -67,6 +71,8 @@ function find_microexons{T}( don::Tuple{Vararg{T}}, acc::Tuple{Vararg{T}})
    mics
 end
 
+# Load refflat file from filehandle
+# Refflat format must be as expected from output of gtfToGenePred -ext
 function load_refflat( fh )
    txinfo = Dict{Refseqid,Txinfo}()
    txdon = Dict{Refseqid,Coordtuple}()
@@ -163,6 +169,7 @@ function Base.intersect{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}} )
    res
 end
 
+# Intersect two sorted arrays.
 function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
    res = Vector{T}()
    i,j = 1,1
@@ -180,6 +187,7 @@ function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
    res
 end 
 
+# Binary search.
 function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1 )
    low == high && return(-1)
    mid = ((high - low) >> 1) + low
@@ -222,7 +230,6 @@ function donor_junc_table( genome, ref, k::Integer )
       build_kmer_gene( ref.gnacc[gene], accept, radj=(k-1) )
 
    end
-#   println(accept)
    donors,accept
 end
       #=
