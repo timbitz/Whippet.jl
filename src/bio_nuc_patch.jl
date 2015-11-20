@@ -55,7 +55,7 @@ const DNA_INVALID = convert(DNANucleotide, 0b1000) # Indicates invalid DNA when 
 ## Patch
 const EX_J = convert(DNANucleotide, 0b101)
 const TX_S = convert(DNANucleotide, 0b110)
-const TX_E = convert(DNANucleotide, 0b111)
+const TX_E = convert(DNANucleotide, 0b111) # currently unimplemented
 
 "Returns Any DNA Nucleotide (DNA_N)"
 nnucleotide(::Type{DNANucleotide}) = DNA_N
