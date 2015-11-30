@@ -92,9 +92,10 @@ function trans_index!( fhIter, ref::Refflat )
    xcript  = DNASequence(mutable=false)
    xoffset = Vector{UInt64}()
    xgenes  = Vector{Genename}()
-   for g in keys(ref.genetotx)
+   genes = sort( collect(keys(ref.gninfo)), by= k->ref.gninfo[k][1] ) # by chrom
+   for g in genes
       # set up exons
-      # insert J/S, push!         
+      # insert L/R and S, push!         
    end
    Seqlibrary( , true)
 end

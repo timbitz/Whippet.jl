@@ -27,6 +27,27 @@ typealias Coordtuple Tuple{Vararg{Coordint}}
 typealias Microsize  UInt8
 typealias Microtuple Tuple{Vararg{Microsize}}
 
+immutable Reftx
+   info::Txinfo
+   don::Coordtuple
+   acc::Coordtuple
+end
+
+immutable Refgene
+   info::Geneinfo
+   don::Coordtuple
+   acc::Coordtuple
+   txst::Coordtuple
+   txen::Coordtuple
+   dondic::Dict{Coordint,Coordtuple}
+end
+
+type Refset
+   txset::Dict{Refseqid,Reftx}
+   geneset::Dict{Genename,Refgene}
+   genetotx::Dict{Genename,Vector{Refseqid}}
+end
+
 immutable Refflat
    txinfo::Dict{Refseqid,Txinfo}
    txdon::Dict{Refseqid,Coordtuple}
@@ -85,6 +106,8 @@ function load_refflat( fh )
    gntxen = Dict{Genename,Coordtuple}()
 #   gnmic = Dict{Genename,Microtuple}()
 
+   txset = Dict{Refseqid,Reftx}()
+
    txnum = 75000
    sizehint!(txinfo, txnum)
    sizehint!(txdon, txnum)
@@ -111,11 +134,11 @@ function load_refflat( fh )
       acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=1)
 
       # set values
-      txinfo[refid] = (gene,parse(Coordint, txS),
-                            parse(Coordint, txE),
-                            exCnt)
-      txdon[refid] = don
-      txacc[refid] = acc
+      txinfo = (gene,parse(Coordint, txS),
+                     parse(Coordint, txE),
+                     exCnt)
+
+      txset[refid] = Reftx( txinfo, don, acc )      
 
       if haskey(genetotx, gene)
          push!(genetotx[gene], refid)
@@ -132,6 +155,8 @@ function load_refflat( fh )
          gntxen[gene] = tuppar(txE)
       end
    end
+   # now make Refset and add genes.
+   #r = Refset( reftx, Dict{Genename,Refgene}(), genetotx )
    return Refflat( txinfo, txdon, txacc, genetotx, gninfo, gndon, gnacc, gntxst, gntxen )
 end
 
@@ -200,6 +225,7 @@ function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1 )
    ret
 end
 
+# build k-mer arrays for splice junctions
 function donor_junc_table( genome, ref, k::Integer )
    donors = Vector{Vector{Genename}}(4^k)
    accept = Vector{Vector{Genename}}(4^k)

@@ -1,7 +1,7 @@
 #  This is a port of the source code from https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
 #  This file is written almost entirely by the authors of BioJulia/Bio.jl
-#  It has been altered here to include new masked nucleotides 'J' for exon-exon junction
-#  and 'S' for transcription start/stop site.  
+#  It has been altered here to include new masked nucleotides 'L' for donor upstream splice site
+#  and 'R' for acceptor downstream splice site, and 'S' for transcription start/stop site.  
 #  These are encoded with 'N' and 'A','T','C','G' into 3-bits
 
 using Base.Intrinsics
@@ -53,21 +53,21 @@ const DNA_N = convert(DNANucleotide, 0b100)
 const DNA_INVALID = convert(DNANucleotide, 0b1000) # Indicates invalid DNA when converting string
 
 ## Patch
-const EX_J = convert(DNANucleotide, 0b101)
-const TX_S = convert(DNANucleotide, 0b110)
-const TX_E = convert(DNANucleotide, 0b111) # currently unimplemented
+const SS_L = convert(DNANucleotide, 0b101)
+const SS_R = convert(DNANucleotide, 0b110)
+const TX_S = convert(DNANucleotide, 0b111) 
 
 "Returns Any DNA Nucleotide (DNA_N)"
 nnucleotide(::Type{DNANucleotide}) = DNA_N
 invalid_nucleotide(::Type{DNANucleotide}) = DNA_INVALID
 
 ## Patch
-jnucleotide(::Type{DNANucleotide}) = EX_J
+lnucleotide(::Type{DNANucleotide}) = SS_L
+rnucleotide(::Type{DNANucleotide}) = SS_R
 snucleotide(::Type{DNANucleotide}) = TX_S
-enucleotide(::Type{DNANucleotide}) = TX_E
 
 function isvalid(nt::DNANucleotide)
-    return convert(UInt8, nt) ≤ convert(UInt8, TX_E)
+    return convert(UInt8, nt) ≤ convert(UInt8, TX_S)
 end
 
 # RNA Nucleotides
@@ -104,15 +104,15 @@ end
 
 # lookup table for characters in 'A':'t'
 const char_to_dna = [
-    DNA_A,       DNA_INVALID, DNA_C,       DNA_INVALID, TX_E,        DNA_INVALID,
-    DNA_G,       DNA_INVALID, DNA_INVALID, EX_J,        DNA_INVALID, DNA_INVALID,
-    DNA_INVALID, DNA_N,       DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID,
+    DNA_A,       DNA_INVALID, DNA_C,       DNA_INVALID, DNA_INVALID, DNA_INVALID,
+    DNA_G,       DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID, SS_L,
+    DNA_INVALID, DNA_N,       DNA_INVALID, DNA_INVALID, DNA_INVALID, SS_R,
     TX_S,        DNA_T,       DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID,
     DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID,
     DNA_INVALID, DNA_INVALID, DNA_A,       DNA_INVALID, DNA_C,       DNA_INVALID,
-    TX_E,        DNA_INVALID, DNA_G,       DNA_INVALID, DNA_INVALID, EX_J,
-    DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_N,       DNA_INVALID, DNA_INVALID,
-    DNA_INVALID, DNA_INVALID, TX_S,        DNA_T ]
+    DNA_INVALID, DNA_INVALID, DNA_G,       DNA_INVALID, DNA_INVALID, DNA_INVALID,
+    DNA_INVALID, SS_L,        DNA_INVALID, DNA_N,       DNA_INVALID, DNA_INVALID,
+    DNA_INVALID, SS_R,        TX_S,        DNA_T ]
 
 @inline function Base.convert(::Type{DNANucleotide}, c::Char)
     @inbounds nt = 'A' <= c <= 't' ? char_to_dna[c - 'A' + 1] : DNA_INVALID
@@ -152,7 +152,7 @@ end
 # ------------------
 
 ##
-const dna_to_char = ['A', 'C', 'G', 'T', 'N', 'J', 'S', 'E']
+const dna_to_char = ['A', 'C', 'G', 'T', 'N', 'L', 'R', 'S']
 
 Base.convert(::Type{Char}, nt::DNANucleotide) = dna_to_char[convert(UInt8, nt) + 1]
 
@@ -205,7 +205,8 @@ end
 type NucleotideSequence{T<:Nucleotide} <: Sequence
     data::Vector{UInt64} # 2-bit encoded sequence
     ns::BitVector        # 'N' mask
-    js::BitVector        # 'J' mask
+    ls::BitVector        # 'L' donor splice site
+    rs::BitVector        # 'R' acceptor splice site
     ss::BitVector        # 'S' mask
     part::UnitRange{Int} # interval within `data` and `ns` defining the (sub)sequence
     mutable::Bool        # true if the sequence can be safely mutated
@@ -241,7 +242,7 @@ function NucleotideSequence{T<:Nucleotide}(::Type{T}, other::NucleotideSequence,
         error("Invalid subsequence range")
     end
 
-    seq = NucleotideSequence{T}(other.data, other.ns, other.js, other.ss, start:stop, mutable, true)
+    seq = NucleotideSequence{T}(other.data, other.ns, other.ls, other.rs, other.ss, start:stop, mutable, true)
 
     if other.mutable || mutable
         orphan!(seq, true)
@@ -280,7 +281,7 @@ end
 # This is the body of the NucleotideSequence constructor below. It's separated
 # into a macro so we can generate two versions depending on wether the `unsafe`
 # flag is set.
-macro encode_seq(nt_convert_expr, strdata, seqdata, ns, js, ss)
+macro encode_seq(nt_convert_expr, strdata, seqdata, ns, ls, rs, ss)
     quote
         j = startpos
         idx = 1
@@ -300,11 +301,16 @@ macro encode_seq(nt_convert_expr, strdata, seqdata, ns, js, ss)
                         d = (idx - 1) >>> 6
                         r = (idx - 1) & 63
                         $(ns).chunks[d + 1] |= UInt64(1) << r
-                    elseif nt == jnucleotide(T)
+                    elseif nt == lnucleotide(T)
                         # manually inlined: ns[i] = true
                         d = (idx - 1) >>> 6
                         r = (idx - 1) & 63
-                        $(js).chunks[d + 1] |= UInt64(1) << r
+                        $(ls).chunks[d + 1] |= UInt64(1) << r
+                    elseif nt == rnucleotide(T)
+                        # manually inlined: ns[i] = true
+                        d = (idx - 1) >>> 6
+                        r = (idx - 1) & 63
+                        $(rs).chunks[d + 1] |= UInt64(1) << r
                     elseif nt == snucleotide(T)
                         # manually inlined: ns[i] = true
                         d = (idx - 1) >>> 6
@@ -348,16 +354,17 @@ function NucleotideSequence{T<:Nucleotide}(::Type{T}, seq::Union{AbstractString,
     len = stoppos - startpos + 1
     data = zeros(UInt64, seq_data_len(len))
     ns = falses(len)
-    js = falses(len)
+    rs = falses(len)
+    ls = falses(len)
     ss = falses(len)
 
     if unsafe
-        @encode_seq(unsafe_ascii_byte_to_nucleotide(T, c), seq, data, ns, js, ss)
+        @encode_seq(unsafe_ascii_byte_to_nucleotide(T, c), seq, data, ns, ls, rs, ss)
     else
-        @encode_seq(convert(T, convert(Char, c)), seq, data, ns, js, ss)
+        @encode_seq(convert(T, convert(Char, c)), seq, data, ns, ls, rs, ss)
     end
 
-    return NucleotideSequence{T}(data, ns, js, ss, 1:len, mutable, false)
+    return NucleotideSequence{T}(data, ns, ls, rs, ss, 1:len, mutable, false)
 end
 
 function NucleotideSequence{T<:Nucleotide}(t::Type{T}, seq::Union{AbstractString, Vector{UInt8}}; mutable::Bool=false)
@@ -375,21 +382,22 @@ function NucleotideSequence{T<:Nucleotide}(seq::AbstractVector{T},
     len = stoppos - startpos + 1
     data = zeros(UInt64, seq_data_len(len))
     ns = falses(len)
-    js = falses(len)
+    ls = falses(len)
+    rs = falses(len)
     ss = falses(len)
 
     if unsafe
-        @encode_seq(c, seq, data, ns, js, ss)
+        @encode_seq(c, seq, data, ns, ls, rs, ss)
     else
         @encode_seq(begin
             if !isvalid(c)
                 error("the sequence includes a valid nucleotide at $j")
             end
             c
-        end, seq, data, ns, js, ss)
+        end, seq, data, ns, ls, rs, ss)
     end
 
-    return NucleotideSequence{T}(data, ns, js, ss, 1:len, mutable, false)
+    return NucleotideSequence{T}(data, ns, ls, rs, ss, 1:len, mutable, false)
 end
 
 
@@ -412,20 +420,26 @@ function Base.copy!{T}(seq::NucleotideSequence{T}, strdata::Vector{UInt8},
         resize!(seq.ns, n)
     end
 
-    if length(seq.js) < n
-        resize!(seq.ks, n)
+    if length(seq.ls) < n
+        resize!(seq.ls, n)
     end
+
+    if length(seq.rs) < n
+        resize!(seq.rs, n)
+    end
+
     if length(seq.ss) < n
         resize!(seq.ss, n)
     end
 
     fill!(seq.data, 0)
     fill!(seq.ns, false)
-    fill!(seq.js, false)
+    fill!(seq.ls, false)
+    fill!(seq.rs, false)
     fill!(seq.ss, false)
     seq.part = 1:n
 
-    @encode_seq(convert(T, convert(Char, c)), strdata, seq.data, seq.ns, seq.js, seq.ss)
+    @encode_seq(convert(T, convert(Char, c)), strdata, seq.data, seq.ns, seq.ls, seq.rs, seq.ss)
 
     return seq
 end
@@ -445,9 +459,10 @@ function NucleotideSequence{T<:Nucleotide}(chunks::NucleotideSequence{T}...)
     datalen = seq_data_len(seqlen)
     data = zeros(UInt64, datalen)
     ns   = falses(seqlen)
-    js   = falses(seqlen)
+    ls   = falses(seqlen)
+    rs   = falses(seqlen)
     ss   = falses(seqlen)
-    newseq = NucleotideSequence{T}(data, ns, js, ss, 1:seqlen, false, false)
+    newseq = NucleotideSequence{T}(data, ns, ls, rs, ss, 1:seqlen, false, false)
 
     pos = 1
     for chunk in chunks
@@ -504,9 +519,10 @@ function repeat{T<:Nucleotide}(chunk::NucleotideSequence{T}, n::Integer)
     datalen = seq_data_len(seqlen)
     data = zeros(UInt64, datalen)
     ns   = falses(seqlen)
-    js   = falses(seqlen)
+    ls   = falses(seqlen)
+    rs   = falses(seqlen)
     ss   = falses(seqlen)
-    newseq = NucleotideSequence{T}(data, ns, js, ss, 1:seqlen, false, false)
+    newseq = NucleotideSequence{T}(data, ns, ls, rs, ss, 1:seqlen, false, false)
 
     pos = 1
     for i in 1:n
@@ -535,7 +551,8 @@ It's really only suitable for use in the concatenation constructor.
 function unsafe_copy!{T}(dest::NucleotideSequence{T}, pos::Int, src::NucleotideSequence{T})
     abspos = dest.part.start + pos - 1
     copy!(dest.ns, abspos, src.ns, src.part.start, length(src))
-    copy!(dest.js, abspos, src.js, src.part.start, length(src))
+    copy!(dest.ls, abspos, src.ls, src.part.start, length(src))
+    copy!(dest.rs, abspos, src.rs, src.part.start, length(src))
     copy!(dest.ss, abspos, src.ss, src.part.start, length(src))
 
     d1, r1 = divrem(abspos - 1, 32)
@@ -654,7 +671,7 @@ Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(ASCIIStr
 
 # Convert between RNA and DNA
 function Base.convert{T}(::Type{NucleotideSequence{T}}, seq::NucleotideSequence)
-    newseq = NucleotideSequence{T}(seq.data, seq.ns, seq.js, seq.ss, seq.part, seq.mutable, seq.hasrelatives)
+    newseq = NucleotideSequence{T}(seq.data, seq.ns, seq.ls, seq.rs, seq.ss, seq.part, seq.mutable, seq.hasrelatives)
     if seq.mutable
         orphan!(newseq, true)
     end
@@ -724,8 +741,10 @@ function Base.getindex{T}(seq::NucleotideSequence{T}, i::Integer)
     i += seq.part.start - 1
     if seq.ns[i]
         return nnucleotide(T)
-    elseif seq.js[i]
-        return jnucleotide(T)
+    elseif seq.ls[i]
+        return lnucleotide(T)
+    elseif seq.rs[i]
+        return rnucleotide(T)
     elseif seq.ss[i]
         return snucleotide(T)
     else
@@ -749,15 +768,19 @@ function Base.setindex!{T}(seq::NucleotideSequence{T}, nt::T, i::Integer)
     if nt == nnucleotide(T)
         @inbounds seq.ns[i] = true
         @inbounds seq.data[d + 1] $= UInt64(0b11) << (2*r)
-    elseif nt == jnucleotide(T)
-        @inbounds seq.js[i] = true
+    elseif nt == lnucleotide(T)
+        @inbounds seq.ls[i] = true
+        @inbounds seq.data[d + 1] $= UInt64(0b11) << (2*r)
+    elseif nt == rnucleotide(T)
+        @inbounds seq.rs[i] = true
         @inbounds seq.data[d + 1] $= UInt64(0b11) << (2*r)
     elseif nt == snucleotide(T)
         @inbounds seq.ss[i] = true
         @inbounds seq.data[d + 1] $= UInt64(0b11) << (2*r)
     else
         @inbounds seq.ns[i] = false
-        @inbounds seq.js[i] = false
+        @inbounds seq.ls[i] = false
+        @inbounds seq.rs[i] = false
         @inbounds seq.ss[i] = false 
         @inbounds seq.data[d + 1] =
             (seq.data[d + 1] & ~(UInt64(0b11) << (2*r))) |
@@ -806,8 +829,9 @@ function orphan!{T}(seq::NucleotideSequence{T}, reorphan=false)
 
     seq.data = data
     seq.ns   = seq.ns[seq.part.start:seq.part.stop]
-    seq.ns   = seq.js[seq.part.start:seq.part.stop]
-    seq.ns   = seq.ss[seq.part.start:seq.part.stop]
+    seq.ls   = seq.ls[seq.part.start:seq.part.stop]
+    seq.rs   = seq.rs[seq.part.start:seq.part.stop]
+    seq.ss   = seq.ss[seq.part.start:seq.part.stop]
     seq.part = 1:length(seq.part)
     seq.hasrelatives = false
 
@@ -822,25 +846,29 @@ end
 # `reverse` which actually do make a copy and modify the copy in
 # place.
 Base.copy{T}(seq::NucleotideSequence{T}) =
-    orphan!(NucleotideSequence{T}(seq.data, seq.ns, seq.js, seq.ss, seq.part, seq.mutable, seq.hasrelatives), true)
+    orphan!(NucleotideSequence{T}(seq.data, seq.ns, seq.ls, seq.rs, seq.ss, seq.part, seq.mutable, seq.hasrelatives), true)
 
 
 # Iterating throug nucleotide sequences
 @inline function Base.start(seq::NucleotideSequence)
     npos = nextone(seq.ns, seq.part.start)
-    jpos = nextone(seq.js, seq.part.start)
+    lpos = nextone(seq.ls, seq.part.start)
+    rpos = nextone(seq.rs, seq.part.start)
     spos = nextone(seq.ss, seq.part.start)
-    return seq.part.start, npos, jpos, spos
+    return seq.part.start, npos, lpos, rpos, spos
 end
 
 @inline function Base.next{T}(seq::NucleotideSequence{T}, state)
-    i, npos,jpos,spos = state
+    i, npos,lpos,rpos,spos = state
     if i == npos
         npos = nextone(seq.ns, i + 1)
         value = nnucleotide(T)
-    elseif i == jpos
-        jpos = nextone(seq.js, i + 1)
-        value = jnucleotide(T)
+    elseif i == lpos
+        lpos = nextone(seq.ls, i + 1)
+        value = lnucleotide(T)
+    elseif i == rpos
+        rpos = nextone(seq.rs, i + 1)
+        value = rnucleotide(T)
     elseif i == spos
         spos = nextone(seq.ss, i + 1)
         value = snucleotide(T)
@@ -849,7 +877,7 @@ end
         @inbounds value = convert(T, ((seq.data[d + 1] >>> (2 * r)) & 0b11) % UInt8)
     end
 
-    return value, (i + 1, npos, jpos, spos)
+    return value, (i + 1, npos, lpos, rpos, spos)
 end
 
 @inline Base.done(seq::NucleotideSequence, state) = state[1] > seq.part.stop
@@ -929,7 +957,7 @@ function Base.reverse{T}(seq::NucleotideSequence{T})
         i += 1
     end
 
-    return NucleotideSequence{T}(data, reverse(seq.ns), reverse(seq.js), reverse(seq.ss), seq.part, seq.mutable, false)
+    return NucleotideSequence{T}(data, reverse(seq.ns), reverse(seq.ls), reverse(seq.rs), reverse(seq.ss), seq.part, seq.mutable, false)
 end
 
 # Return the reverse complement of seq
