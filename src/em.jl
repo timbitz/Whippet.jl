@@ -6,7 +6,7 @@ function rec_em{F <: AbstractFloat, T <: Tuple}( unique_cnts::Vector{F},
                                                  ambig::Vector{T}; #) req args 
                                                  uniqsum=sum(unique_cnts), 
                                                  ambigsum=length(ambig), 
-                                                 it=1, max=1000)
+                                                 it=1, max=1000, sig=0)
     norm = deepcopy(unique_cnts)
     for am_set in ambig
          am_tmp = Tuple{Int,Float64}[]
@@ -36,13 +36,20 @@ function rec_em{F <: AbstractFloat, T <: Tuple}( unique_cnts::Vector{F},
        @inbounds norm[i] /= lengths[i]
        @inbounds norm_sum += norm[i]
     end
-    norm /= norm_sum   
+
+    if sig > 0 #adjust to 'sign'-decimal places
+       for i in 1:length(norm)
+          norm[i] = signif( norm[i]/norm_sum, sig )
+       end
+    else
+       norm /= norm_sum   
+    end
 
     if norm != prop && it < max
          # iterate
          return( rec_em( unique_cnts, lengths, norm, ambig, 
                          uniqsum=uniqsum, ambigsum=ambigsum, 
-                         it=it+1, max=max ) )
+                         it=it+1, max=max, sig=sig ) )
      end
 
     norm, it
