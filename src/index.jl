@@ -87,7 +87,7 @@ function single_genome_index!( fhIter; verbose=false )
    Seqlibrary(seq, offset, names, fm, false)
 end
 
-function trans_index!( fhIter, ref::Refflat )
+function trans_index!( fhIter, ref::Refset )
    seq,offset,names = load_fasta( fhIter )
    xcript  = DNASequence(mutable=false)
    xoffset = Vector{UInt64}()
@@ -97,6 +97,6 @@ function trans_index!( fhIter, ref::Refflat )
       # set up exons
       # insert L/R and S, push!         
    end
-   Seqlibrary( , true)
+   #Seqlibrary( , true)
 end
 

@@ -1,15 +1,14 @@
 using GZip
-using Bio.Seq
+#using Bio.Seq
 using FMIndexes
 using DataStructures
 
-include("index.jl")
+__precompile__()
 
 #Base.convert{T<:AbstractString}(::Type{T}, seq::NucleotideSequence) = Base.convert(ASCIIString, [convert(Char, x) for x in seq])
 
-const Mb = 1000000
+const Mb = 1_000_000
 const GENOMESIZE = 3235Mb
-
 
 # ALIAS NEW TYPES FOR INCREASED CODE READABILITY
 if GENOMESIZE < typemax(UInt32) 
@@ -17,6 +16,7 @@ if GENOMESIZE < typemax(UInt32)
 else 
    typealias Coordint UInt64
 end
+
 typealias Genename    ASCIIString
 typealias Refseqid    ASCIIString
 typealias Txinfo      Tuple{Genename,Coordint,Coordint,Coordint} 
@@ -24,49 +24,42 @@ typealias Txinfo      Tuple{Genename,Coordint,Coordint,Coordint}
 typealias Geneinfo    Tuple{ASCIIString, Char}
                        #    Chrom/seqname, Strand '+'/'-'
 typealias Coordtuple Tuple{Vararg{Coordint}}
+typealias Coordarray Vector{Coordint}
 typealias Microsize  UInt8
 typealias Microtuple Tuple{Vararg{Microsize}}
 
+# Single Reftx entry
 immutable Reftx
    info::Txinfo
    don::Coordtuple
    acc::Coordtuple
 end
 
+# Single Refgene entry
 immutable Refgene
    info::Geneinfo
-   don::Coordtuple
-   acc::Coordtuple
+   don::Coordtuple # make Coordarray instead?
+   acc::Coordtuple # TODO?
    txst::Coordtuple
    txen::Coordtuple
    dondic::Dict{Coordint,Coordtuple}
 end
 
+# Full Annotation Set
 type Refset
    txset::Dict{Refseqid,Reftx}
    geneset::Dict{Genename,Refgene}
    genetotx::Dict{Genename,Vector{Refseqid}}
 end
 
-immutable Refflat
-   txinfo::Dict{Refseqid,Txinfo}
-   txdon::Dict{Refseqid,Coordtuple}
-   txacc::Dict{Refseqid,Coordtuple} 
-   genetotx::Dict{Genename,Vector{Refseqid}} # Array of Tx Refseqids
-   gninfo::Dict{Genename,Geneinfo} # Seqname, Chrom
-   gndon::Dict{Genename,Coordtuple} # Sorted tuple of exon ends
-   gnacc::Dict{Genename,Coordtuple} # Sorted tuple of exon starts
-   gntxst::Dict{Genename,Coordtuple} # Sorted tuple of tx starts
-   gntxen::Dict{Genename,Coordtuple} # Sorted tuple of tx ends
-#  gnmic::Dict{Genename,Microtuple}
-end
-
+"""
 function Base.show(io::IO, ref::Refflat)
    Base.show(io, ref.txinfo)
    Base.show(io, ref.txdon)
    Base.show(io, ref.txacc)
    Base.show(io, ref.genetotx)
 end
+"""
 
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
@@ -95,10 +88,7 @@ end
 # Load refflat file from filehandle
 # Refflat format must be as expected from output of gtfToGenePred -ext
 function load_refflat( fh )
-   txinfo = Dict{Refseqid,Txinfo}()
-   txdon = Dict{Refseqid,Coordtuple}()
-   txacc = Dict{Refseqid,Coordtuple}()
-   genetotx = Dict{Genename,Vector{Refseqid}}()
+   
    gninfo = Dict{Genename,Geneinfo}()
    gndon = Dict{Genename,Coordtuple}()
    gnacc = Dict{Genename,Coordtuple}()
@@ -106,12 +96,13 @@ function load_refflat( fh )
    gntxen = Dict{Genename,Coordtuple}()
 #   gnmic = Dict{Genename,Microtuple}()
 
-   txset = Dict{Refseqid,Reftx}()
+   txset    = Dict{Refseqid,Reftx}()
+   geneset  = Dict{Genename,Refgene}()
+   genetotx = Dict{Genename,Vector{Refseqid}}()
 
    txnum = 75000
-   sizehint!(txinfo, txnum)
-   sizehint!(txdon, txnum)
-   sizehint!(txacc, txnum)
+   sizehint!(txset, txnum)
+   sizehint!(geneset, txnum >> 1)
    sizehint!(genetotx, txnum)
 
    tuppar( i ) = tuple(parse(Coordint, i))
@@ -156,8 +147,14 @@ function load_refflat( fh )
       end
    end
    # now make Refset and add genes.
-   #r = Refset( reftx, Dict{Genename,Refgene}(), genetotx )
-   return Refflat( txinfo, txdon, txacc, genetotx, gninfo, gndon, gnacc, gntxst, gntxen )
+   for gene in keys(genetotx)
+      dondic = Dict{Coordint,Coordtuple}()
+      # make dondic
+      geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
+                               gntxst[gene], gntxen[gene], dondic )
+   end
+
+   return Refset( txset, geneset, genetotx )
 end
 
 
@@ -277,18 +274,29 @@ end
       =#
 
 function main()
-   """println(STDERR, "Loading Refflat file...")
-   fh = open("$(pwd())/genome/genes.flat", "r")
+   println(STDERR, "Loading Refflat file...")
+   fh = open("$(pwd())/../genome/genes.flat", "r")
    @time ref = load_refflat(fh)
    close(fh)
 
    println(STDERR, "Saving gene annotations...")
-   open("$(pwd())/index/reflat.jls", "w+") do fh
+   open("$(pwd())/../index/reflat.jls", "w+") do fh
       @time serialize(fh, ref)
-   end"""
-
+   end
    println(STDERR, "Loading annotation index...")
-   @time ref = open(deserialize, "$(pwd())/index/reflat.jls")
+   @time ref = open(deserialize, "$(pwd())/../index/reflat.jls")
+   #=
+   Loading Refflat file...
+    45.661196 seconds (149.57 M allocations: 3.433 GB, 4.67% gc time)
+   Saving gene annotations...
+     2.310959 seconds (3.66 M allocations: 126.598 MB, 2.11% gc time)
+   Loading annotation index...
+     1.510497 seconds (6.74 M allocations: 175.154 MB, 18.79% gc time)
+   =#
+
+   quit()   
+
+   include("index.jl")
    println(STDERR, "Loading genome index...")
    @time genome = open(deserialize, "$(pwd())/index/genome.jls")
    @time junclib_d,junclib_a = donor_junc_table( genome, ref, 9 )
