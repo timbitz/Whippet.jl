@@ -42,7 +42,7 @@ function brute_getoffset( seqlib::Seqlibrary, name::Str )
    ret
 end
 
-# replace J, S, N with A
+# replace L,R,S,N with A
 function twobit_enc(seq)
    len = length(seq)
    ret = IntVector{2,UInt8}(len)
@@ -56,7 +56,7 @@ function twobit_enc(seq)
    ret
 end
 
-# encode 3-bit sequence with J,S,N,A,T,G,C
+# encode 3-bit sequence with L,R,S,N,A,T,G,C
 function threebit_enc(seq)
    len = length(seq)
    ret = IntVector{3,UInt8}(len)

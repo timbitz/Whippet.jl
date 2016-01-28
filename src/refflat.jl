@@ -3,8 +3,6 @@ using GZip
 using FMIndexes
 using DataStructures
 
-__precompile__()
-
 #Base.convert{T<:AbstractString}(::Type{T}, seq::NucleotideSequence) = Base.convert(ASCIIString, [convert(Char, x) for x in seq])
 
 const Mb = 1_000_000
@@ -38,6 +36,7 @@ end
 # Single Refgene entry
 immutable Refgene
    info::Geneinfo
+   meanlen::Coordint
    don::Coordtuple # make Coordarray instead?
    acc::Coordtuple # TODO?
    txst::Coordtuple
@@ -95,10 +94,13 @@ function load_refflat( fh )
    gntxst = Dict{Genename,Coordtuple}()
    gntxen = Dict{Genename,Coordtuple}()
 #   gnmic = Dict{Genename,Microtuple}()
+   gnlens = Dict{Genename,Coordtuple}()
 
+   # Refset variables
    txset    = Dict{Refseqid,Reftx}()
    geneset  = Dict{Genename,Refgene}()
    genetotx = Dict{Genename,Vector{Refseqid}}()
+
 
    txnum = 75000
    sizehint!(txset, txnum)
@@ -137,6 +139,7 @@ function load_refflat( fh )
          gnacc[gene] = unique_tuple(gnacc[gene], acc)
          gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS))
          gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
+         gnlens[gene] += genelen(don, acc)  #FINISH
       else
          genetotx[gene] = Refseqid[refid]
          gndon[gene] = don
@@ -144,6 +147,7 @@ function load_refflat( fh )
          gninfo[gene] = (chrom,strand[1])
          gntxst[gene] = tuppar(txS)
          gntxen[gene] = tuppar(txE)
+         gnlens[gene] = genelen(don, acc)
       end
    end
    # now make Refset and add genes.
@@ -293,8 +297,8 @@ function main()
    Loading annotation index...
      1.510497 seconds (6.74 M allocations: 175.154 MB, 18.79% gc time)
    =#
-
-   quit()   
+   gc()
+   return ref  
 
    include("index.jl")
    println(STDERR, "Loading genome index...")
@@ -308,4 +312,4 @@ function main()
    sleep(10)
 end
 
-main()
+refflat = main()
