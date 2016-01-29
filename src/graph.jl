@@ -39,6 +39,7 @@ SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(), Vector{UInt32}(),
 # which is a directed multigraph
 immutable SpliceGraph
   nodeoffset::Vector{Coordint}
+  nodecoord::Vector{Coordint}
   nodelen::Vector{Coordint}
   edgetype::Vector{EdgeType}
   seq::DNASequence
@@ -54,16 +55,57 @@ SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
 function SpliceGraph( gene::Refgene, chrom::DNASequence )
    # splice graph variables
    nodeoffset = Vector{Coordint}()
+   nodecoord  = Vector{Coordint}()
    nodelen    = Vector{Coordint}()
    edgetype   = Vector{EdgeType}()
    seq        = DNASequence()
    
-   a = length(gene.acc)
-   d = length(gene.don)
+   # initialize iterators
+   a,alen = 1,length(gene.acc)
+   d,dlen = 1,length(gene.don)
+   s,slen = 1,length(gene.txst)
+   p,plen = 1,length(gene.txen)
 
-   for i in 1:length(don)
+   idx = [a, d, s, p]
+  
+   # return Inf if out of bounds, otherwise return the value 
+   function getbounds( v::Vector, ind::Integer )
+      if 1 <= ind <= length(v)
+         return v[ind]
+      else
+         return Inf
+      end
+   end  
+
+   while( idx[1] <= alen || idx[2] <= blen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
-      # left to right. '-' = rc unshift?
-   end
+      # left to right. '-' strand = rc unshift?
+      minidx = indmin( [ getbounds(gene.txst, idx[1]), 
+                         getbounds(gene.don,  idx[2]), 
+                         getbounds(gene.acc,  idx[3]), 
+                         getbounds(gene.txen, idx[4]) ])
+      idx[minidx] += 1
+      secidx = indmin( [ getbounds(gene.txst, idx[1]),
+                         getbounds(gene.don,  idx[2]),
+                         getbounds(gene.acc,  idx[3]), 
+                         getbounds(gene.txen, idx[4]) ])
+
+      if secidx == 1 && getbounds(gene.txst,idx[secidx]) == Inf
+         # tack sentinel; break
+         break
+      end
+
+      if minidx == 1
+         
+      elseif minidx == 2
+
+      elseif minidx == 3
+
+      elseif minidx == 4
+         
+      end
+
+   end # end while
+
    return SpliceGraph( nodeoffset, nodelen, edgetype, seq )
 end
