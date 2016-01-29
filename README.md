@@ -1,2 +1,3 @@
-# baseq 
-**B**asic **A**lternative **S**plicing **E**stimation from high-throughput se**Q**uencing
+# whippet
+Ultra-fast lightweight analysis of RNA-seq data at an event-specific level.
+ 
