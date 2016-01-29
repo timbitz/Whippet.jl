@@ -32,5 +32,7 @@ SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
 
 function SpliceGraph( gene::Refgene )
    ss = SpliceGraph()
-   
+   for d in gene.don
+
+   end  
 end
