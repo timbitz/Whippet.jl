@@ -1,28 +1,16 @@
-using GZip
 #using Bio.Seq
-using FMIndexes
 using DataStructures
+
+#requires
+include("types.jl")
 
 #Base.convert{T<:AbstractString}(::Type{T}, seq::NucleotideSequence) = Base.convert(ASCIIString, [convert(Char, x) for x in seq])
 
-const Mb = 1_000_000
-const GENOMESIZE = 3235Mb
-
-# ALIAS NEW TYPES FOR INCREASED CODE READABILITY
-if GENOMESIZE < typemax(UInt32) 
-   typealias Coordint UInt32 
-else 
-   typealias Coordint UInt64
-end
-
-typealias Genename    ASCIIString
 typealias Refseqid    ASCIIString
 typealias Txinfo      Tuple{Genename,Coordint,Coordint,Coordint} 
                        #   {Genename, TxStart, TxEnd, ExonCount}
 typealias Geneinfo    Tuple{ASCIIString, Char}
                        #    Chrom/seqname, Strand '+'/'-'
-typealias Coordtuple Tuple{Vararg{Coordint}}
-typealias Coordarray Vector{Coordint}
 typealias Microsize  UInt8
 typealias Microtuple Tuple{Vararg{Microsize}}
 
@@ -88,6 +76,7 @@ end
 # Refflat format must be as expected from output of gtfToGenePred -ext
 function load_refflat( fh )
    
+   # Temporary variables   
    gninfo = Dict{Genename,Geneinfo}()
    gndon = Dict{Genename,Coordtuple}()
    gnacc = Dict{Genename,Coordtuple}()

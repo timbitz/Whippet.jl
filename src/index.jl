@@ -1,10 +1,15 @@
-using IntervalTrees
+# index.jl - tim.sterne.weiler@utoronto.ca, 1/28/16
+
+# requires
+include("bio_nuc_patch.jl")
+include("refflat.jl")
+include("graph.jl")
 
 typealias Str ASCIIString
 
 immutable Seqlibrary
    seq::DNASequence
-   offset::Vector{Int64}
+   offset::Vector{Coordint}
    names::Vector{Str}
    index::FMIndex
    sorted::Bool
@@ -86,6 +91,7 @@ function single_genome_index!( fhIter; verbose=false )
    println( STDERR, "Finished building Index..." )
    Seqlibrary(seq, offset, names, fm, false)
 end
+
 
 function trans_index!( fhIter, ref::Refset )
    seq,offset,names = load_fasta( fhIter )
