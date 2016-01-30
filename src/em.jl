@@ -105,6 +105,6 @@ function em_test()
    psi_counts = Float64[ 6, 1 ]
    psi_lengths = [ 7, 5 ]
    psi_ambig = [(1,2) for i in 1:12]
-   @time rec_em( psi_counts, psi_lengths, divsum(psi_counts), psi_ambig )
+   @time rec_em( psi_counts, psi_lengths, divsum(psi_counts), psi_ambig, sig=4 )
 end
 
