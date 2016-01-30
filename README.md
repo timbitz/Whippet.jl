@@ -1,9 +1,9 @@
 # whippet
-Ultra-fast RNA-seq quantification of gene expression and event-specific splicing levels.
+##### Ultra-fast RNA-seq quantification of gene expression and event-specific splicing levels.
 
-## Why use Whippet?
+### Why use Whippet?
 
-## Features
+### Features
 - Gene expression calling (TpM)
 - Percent-spliced-in (PSI) 
-- 
+
