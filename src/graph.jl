@@ -1,5 +1,8 @@
 
+# requires:
+# include("bio_nuc_patch.jl")
 using IntervalTrees
+
 
 typealias Exonmax UInt16
 
@@ -38,12 +41,15 @@ SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(), Vector{UInt32}(),
 # This holds a representation of the splice graph
 # which is a directed multigraph
 immutable SpliceGraph
-  nodeoffset::Vector{Coordint}
-  nodecoord::Vector{Coordint}
+  nodeoffset::Vector{Coordint} # SG offset
+  nodecoord::Vector{Coordint}  # Genome offset
   nodelen::Vector{Coordint}
   edgetype::Vector{EdgeType}
   seq::DNASequence
 end
+# All positive strand oriented sequences---> 
+# Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
+# Edge array:        1   2       3   4         5 6   7
 
 # empty constructor
 SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
@@ -72,31 +78,22 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
 
    curoffset = 1 
   
-   # return Inf if out of bounds, otherwise return the value 
-   function getbounds( v::Vector, ind::Integer )
-      if 1 <= ind <= length(v)
-         return v[ind]
-      else
-         return Inf
-      end
-   end  
-
    while( idx[1] <= alen || idx[2] <= blen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
       # left to right. '-' strand = rc unshift?
-      curarr = [ getbounds(gene.txst, idx[1]),
-                 getbounds(gene.don,  idx[2]),
-                 getbounds(gene.acc,  idx[3]),
-                 getbounds(gene.txen, idx[4]) ]
+      curarr = [ get(gene.txst, idx[1], Inf),
+                 get(gene.don,  idx[2], Inf),
+                 get(gene.acc,  idx[3], Inf),
+                 get(gene.txen, idx[4], Inf) ]
 
       minidx = indmin( curarr ) 
       minval = min( curarr... )                   
       idx[minidx] += 1
 
-      secarr = [ getbounds(gene.txst, idx[1]),
-                 getbounds(gene.don,  idx[2]),
-                 getbounds(gene.acc,  idx[3]),
-                 getbounds(gene.txen, idx[4]) ]
+      secarr = [ get(gene.txst, idx[1], Inf),
+                 get(gene.don,  idx[2], Inf),
+                 get(gene.acc,  idx[3], Inf),
+                 get(gene.txen, idx[4], Inf) ]
       secidx = indmin( secarr )
       secval = min( secarr... )
 
@@ -105,14 +102,19 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          # tack sentinel; break
          break
       end
-      nodesize = secval - minval #TODO adjustment?
-      nodeseq  = chrom[minval:secval] # collect slice
-      # NEED TO KNOW WHICH INTRONS ARE RETAINED IN GM
+
+      # should we make a node?
+      if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
+         nodesize = secval - minval #TODO adjustment?
+         nodeseq  = chrom[minval:secval] # collect slice
+            
+      end
+
       # increment curoffset += nodesize
       
       # determine EdgeType:
       if minidx == 1
-            
+         
       elseif minidx == 2
 
       elseif minidx == 3
@@ -124,4 +126,19 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
    end # end while
 
    return SpliceGraph( nodeoffset, nodelen, edgetype, seq )
+end
+
+# This function looks specifically for an intersection
+# between one interval, and the interval tree, such that
+# some interval in the tree full contains the sub interval
+#  itree contains: (low,             high)
+#  subint must be:     (low+x, high-y)
+# Returns: bool
+function issubinterval( itree, subint )
+   for i in intersect(itree, subint)
+      if i.first <= subint.first && i.last >= subint.last
+         return true
+      end 
+   end
+   false
 end

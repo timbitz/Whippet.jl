@@ -14,6 +14,8 @@ typealias Geneinfo    Tuple{ASCIIString, Char}
 typealias Microsize  UInt8
 typealias Microtuple Tuple{Vararg{Microsize}}
 
+typealias Coordtree IntervalTree{Coordint,Interval{Coordint}}
+
 # Single Reftx entry
 immutable Reftx
    info::Txinfo
@@ -24,12 +26,12 @@ end
 # Single Refgene entry
 immutable Refgene
    info::Geneinfo
-   meanlen::Coordint
+   #meanlen::Coordint
    don::Coordtuple # make Coordarray instead?
    acc::Coordtuple # TODO?
    txst::Coordtuple
    txen::Coordtuple
-   exons::IntervalTree{Coordint}
+   exons::Coordtree
 end
 
 # Full Annotation Set
@@ -39,14 +41,13 @@ type Refset
    genetotx::Dict{Genename,Vector{Refseqid}}
 end
 
-"""
-function Base.show(io::IO, ref::Refflat)
-   Base.show(io, ref.txinfo)
-   Base.show(io, ref.txdon)
-   Base.show(io, ref.txacc)
+
+function Base.show(io::Base.IO, ref::Refset)
+   Base.show(io, ref.txset)
+   Base.show(io, ref.geneset)
    Base.show(io, ref.genetotx)
 end
-"""
+
 
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
@@ -61,6 +62,7 @@ function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
    tuple(uniq...)
 end
 
+#=  Useless?
 function find_microexons{T}( don::Tuple{Vararg{T}}, acc::Tuple{Vararg{T}})
    mics = Vector{Tuple{T,T,T}}()
    for i in 1:(length(acc)-1)
@@ -71,10 +73,14 @@ function find_microexons{T}( don::Tuple{Vararg{T}}, acc::Tuple{Vararg{T}})
    end
    mics
 end
+=#
 
 # Load refflat file from filehandle
 # Refflat format must be as expected from output of gtfToGenePred -ext
-function load_refflat( fh )
+# Options:
+#         if txbool=false, then return Refset with empty txset variable
+#         if totxbool=false, then return Refset with empty genetotx
+function load_refflat( fh; txbool=false, totxbool )
    
    # Temporary variables   
    gninfo = Dict{Genename,Geneinfo}()
@@ -82,8 +88,8 @@ function load_refflat( fh )
    gnacc = Dict{Genename,Coordtuple}()
    gntxst = Dict{Genename,Coordtuple}()
    gntxen = Dict{Genename,Coordtuple}()
-#   gnmic = Dict{Genename,Microtuple}()
    gnlens = Dict{Genename,Coordtuple}()
+   gnexons = Dict{Genename,Coordtree}()
 
    # Refset variables
    txset    = Dict{Refseqid,Reftx}()
@@ -110,25 +116,42 @@ function load_refflat( fh )
 
       if exCnt <= 2 continue end # no alternative splicing possible
 
-      # get donor and acceptor splice sites, ignore txStart/End (l/r), 
-      #                                      and adjust for 0-based coords
-      don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=1, c=-1)
-      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=1)
+      # get donor and acceptor splice sites, adjust for 0-based coords 
+      don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0, c=-1)
+      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0)
+
+      # Add original exons to interval tree-->
+      for i in 1:length(don)
+         if haskey(gnexons, gene)
+            insval = Interval{Coordint}(acc[i],don[i])
+            # make sure we are adding a unique value
+            if !haskey(gnexons[gene], (acc[i],don[i]))
+               push!(gnexons[gene], insval)
+            end
+         else
+            gnexons[gene] = Coordtree()
+         end
+      end
+
+      don = don[1:(end-1)] #ignore txStart and end
+      acc = acc[2:end] # TODO make safe for single exon genes
 
       # set values
       txinfo = (gene,parse(Coordint, txS),
                      parse(Coordint, txE),
                      exCnt)
 
-      txset[refid] = Reftx( txinfo, don, acc )      
-      
+      if txbool
+         txset[refid] = Reftx( txinfo, don, acc )      
+      end
+
       if haskey(genetotx, gene)
          push!(genetotx[gene], refid)
          gndon[gene] = unique_tuple(gndon[gene], don)
          gnacc[gene] = unique_tuple(gnacc[gene], acc)
          gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS))
          gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
-         gnlens[gene] += genelen(don, acc)  #FINISH
+         #gnlens[gene] += genelen(don, acc)  # TODO finish
       else
          genetotx[gene] = Refseqid[refid]
          gndon[gene] = don
@@ -136,22 +159,20 @@ function load_refflat( fh )
          gninfo[gene] = (chrom,strand[1])
          gntxst[gene] = tuppar(txS)
          gntxen[gene] = tuppar(txE)
-         gnlens[gene] = genelen(don, acc)
+         #gnlens[gene] = genelen(don, acc)
       end
    end
    # now make Refset and add genes.
    for gene in keys(genetotx)
-      #dondic = Dict{Coordint,Coordtuple}()
-      #make interval tree
       geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
-                               gntxst[gene], gntxen[gene], dondic )
+                               gntxst[gene], gntxen[gene], gnexons[gene] )
    end
 
    return Refset( txset, geneset, genetotx )
 end
 
 
-#### Splice k-mer graphs.
+#### Splice k-mer graphs.  MOVE TO NEW FILE
 immutable Acceptor{K}
    kmer::DNAKmer{K}
    microexon::UInt8
