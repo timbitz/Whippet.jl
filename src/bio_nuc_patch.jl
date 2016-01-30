@@ -2,7 +2,7 @@
 #  This file is written almost entirely by the authors of BioJulia/Bio.jl
 #  It has been altered here to include new masked nucleotides 'L' for donor upstream splice site
 #  and 'R' for acceptor downstream splice site, and 'S' for transcription start/stop site.  
-#  These are encoded with 'N' and 'A','T','C','G' into 3-bits
+#  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next
