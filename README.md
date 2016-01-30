@@ -1,5 +1,5 @@
 # whippet
-##### Ultra-fast RNA-seq quantification of gene expression and event-specific splicing levels.
+##### Ultra-fast quantification of gene expression and event-specific splicing levels from RNA-seq.
 
 ### Why use Whippet?
 
