@@ -3,7 +3,6 @@
 # include("bio_nuc_patch.jl")
 using IntervalTrees
 
-
 typealias Exonmax UInt16
 
 bitstype 8 EdgeType
@@ -107,28 +106,24 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
 
    curoffset = 1 
 
-   # return an array containing the min coordinate for
+   # return a tuple containing the min coordinate's idx,val
    # each of 4 categories, txstart, donor, acceptor, txend
-   function getindarray( gene::Refgene, idx; def=Inf )
+   function getmin_ind_val( gene::Refgene, idx; def=Inf )
       retarr = [ get(gene.txst, idx[1], def),
                  get(gene.don,  idx[2], def),
                  get(gene.acc,  idx[3], def),
                  get(gene.txen, idx[4], def) ]
-      retarr
+      indmin( curarr ), min( curarr... )
    end
 
    while( idx[1] <= alen || idx[2] <= blen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
       # left to right. '-' strand = rc unshift?
-      curarr = getindarray( gene, idx )
+      minidx,minval = getmin_ind_val( gene, idx )
 
-      minidx = indmin( curarr ) 
-      minval = min( curarr... )                   
       idx[minidx] += 1
 
-      secarr = getindarray( gene, idx )
-      secidx = indmin( secarr )
-      secval = min( secarr... )
+      secidx,secval = getmin_ind_val( gene, idx )
 
       # last coordinate in the gene:
       if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
@@ -141,14 +136,14 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          nodesize = secval - minval #TODO adjustment?
          nodeseq  = chrom[minval:secval] # collect slice
          edge = getedgetype( minidx, secidx, true) # determine EdgeType
-         curoffset += nodesize
+         curoffset += nodesize 
       else
          edge = getedgetype( minidx, secidx, false )
          idx[secidx] += 1 #skip ahead again
-         thrarr = getindarray( gene, idx )
-         nodesize = thr
+         thridx,thrval = getmin_ind_val( gene, idx )
+         nodesize = thrval - secval
       end
-      
+      curoffset += 2 # for edgesize
 
    end # end while
 
