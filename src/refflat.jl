@@ -1,5 +1,5 @@
-#using Bio.Seq
 using DataStructures
+using IntervalTrees
 
 #requires
 include("types.jl")
@@ -29,7 +29,7 @@ immutable Refgene
    acc::Coordtuple # TODO?
    txst::Coordtuple
    txen::Coordtuple
-   dondic::Dict{Coordint,Coordtuple}
+   exons::IntervalTree{Coordint}
 end
 
 # Full Annotation Set
@@ -121,7 +121,7 @@ function load_refflat( fh )
                      exCnt)
 
       txset[refid] = Reftx( txinfo, don, acc )      
-
+      
       if haskey(genetotx, gene)
          push!(genetotx[gene], refid)
          gndon[gene] = unique_tuple(gndon[gene], don)
@@ -141,8 +141,8 @@ function load_refflat( fh )
    end
    # now make Refset and add genes.
    for gene in keys(genetotx)
-      dondic = Dict{Coordint,Coordtuple}()
-      # make dondic
+      #dondic = Dict{Coordint,Coordtuple}()
+      #make interval tree
       geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
                                gntxst[gene], gntxen[gene], dondic )
    end

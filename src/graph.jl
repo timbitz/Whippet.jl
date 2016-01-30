@@ -60,6 +60,8 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
    edgetype   = Vector{EdgeType}()
    seq        = DNASequence()
    
+   chrom = gene.info[2]
+   
    # initialize iterators
    a,alen = 1,length(gene.acc)
    d,dlen = 1,length(gene.don)
@@ -67,6 +69,8 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
    p,plen = 1,length(gene.txen)
 
    idx = [a, d, s, p]
+
+   curoffset = 1 
   
    # return Inf if out of bounds, otherwise return the value 
    function getbounds( v::Vector, ind::Integer )
@@ -80,23 +84,35 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
    while( idx[1] <= alen || idx[2] <= blen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
       # left to right. '-' strand = rc unshift?
-      minidx = indmin( [ getbounds(gene.txst, idx[1]), 
-                         getbounds(gene.don,  idx[2]), 
-                         getbounds(gene.acc,  idx[3]), 
-                         getbounds(gene.txen, idx[4]) ])
-      idx[minidx] += 1
-      secidx = indmin( [ getbounds(gene.txst, idx[1]),
-                         getbounds(gene.don,  idx[2]),
-                         getbounds(gene.acc,  idx[3]), 
-                         getbounds(gene.txen, idx[4]) ])
+      curarr = [ getbounds(gene.txst, idx[1]),
+                 getbounds(gene.don,  idx[2]),
+                 getbounds(gene.acc,  idx[3]),
+                 getbounds(gene.txen, idx[4]) ]
 
+      minidx = indmin( curarr ) 
+      minval = min( curarr... )                   
+      idx[minidx] += 1
+
+      secarr = [ getbounds(gene.txst, idx[1]),
+                 getbounds(gene.don,  idx[2]),
+                 getbounds(gene.acc,  idx[3]),
+                 getbounds(gene.txen, idx[4]) ]
+      secidx = indmin( secarr )
+      secval = min( secarr... )
+
+      # last coordinate in the gene:
       if secidx == 1 && getbounds(gene.txst,idx[secidx]) == Inf
          # tack sentinel; break
          break
       end
-
+      nodesize = secval - minval #TODO adjustment?
+      nodeseq  = chrom[minval:secval] # collect slice
+      # NEED TO KNOW WHICH INTRONS ARE RETAINED IN GM
+      # increment curoffset += nodesize
+      
+      # determine EdgeType:
       if minidx == 1
-         
+            
       elseif minidx == 2
 
       elseif minidx == 3
