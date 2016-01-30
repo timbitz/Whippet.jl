@@ -26,6 +26,10 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
                                                   [0x06  for _ in 1:4 ];
                                                   [0x03  for _ in 1:4 ] ], (4,4)))
 
+const EDGETYPE_TO_DNA = DNASequence[ dna"SL", dna"SR", dna"LS", dna"RS",
+                                     dna"LR", dna"LL", dna"RR", dna"SS" ]
+
+
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
    EDGETYPE_TO_UINT8[one-3,two-3]
@@ -36,6 +40,7 @@ Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) =
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = box(EdgeType, unbox(UInt8, edge ))
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = box(UInt8, unbox(EdgeType, edge ))
 Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
+Base.convert( ::Type{DNASequence}, edge::EdgeType ) = EDGETYPE_TO_DNA[Base.convert(UInt8, edge)+1]
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
@@ -126,7 +131,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       secval = min( secarr... )
 
       # last coordinate in the gene:
-      if secidx == 1 && getbounds(gene.txst,idx[secidx]) == Inf
+      if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
          # tack sentinel; break
          break
       end
