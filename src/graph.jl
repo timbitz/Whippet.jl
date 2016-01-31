@@ -40,13 +40,21 @@ Base.convert( ::Type{DNASequence}, edge::EdgeType ) = EDGETYPE_TO_DNA[Base.conve
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
-function getedgetype( minidx::Int, secidx::Int, isnode::Bool )
+function get_edgetype( minidx::Int, secidx::Int, isnode::Bool )
    if isnode
       ret = INDEX_TO_EDGETYPE_NODE[minidx,secidx]
    else
       ret = INDEX_TO_EDGETYPE[minidx,secidx]
    end
    return EdgeType(ret)
+end
+
+function invert_edgetype( edge::EdgeType )
+   if edge == EdgeType(0x04) # 'LR'
+      return edge
+   else
+      return convert(EdgeType, convert(UInt8, edge) $ 0b011)
+   end
 end
 
 # This is where we count reads for nodes/edges/circular-edges
