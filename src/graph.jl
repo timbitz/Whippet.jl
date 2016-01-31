@@ -2,9 +2,8 @@
 # include("bio_nuc_patch.jl")
 using IntervalTrees
 
-typealias Exonmax UInt16
-
 bitstype 8 EdgeType
+
 const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
 EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start 
 EDGETYPE_TO_UINT8[4,3] = 0x01 # 'SR' = 0x01; Tandem Last Exon
@@ -26,7 +25,6 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
 
 const EDGETYPE_TO_DNA = DNASequence[ dna"SL", dna"SR", dna"LS", dna"RS",
                                      dna"LR", dna"LL", dna"RR", dna"SS" ]
-
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
@@ -50,7 +48,6 @@ function getedgetype( minidx::Int, secidx::Int, isnode::Bool )
    end
    return EdgeType(ret)
 end
-
 
 # This is where we count reads for nodes/edges/circular-edges
 type SpliceGraphQuant 
@@ -91,7 +88,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
    nodecoord  = Vector{Coordint}()
    nodelen    = Vector{Coordint}()
    edgetype   = Vector{EdgeType}()
-   seq        = DNASequence()
+   seq        = dna""
    
    strand = gene.info[2]
    
@@ -103,8 +100,6 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
 
    idx = [a, d, s, p]
 
-   curoffset = 1 
-
    # return a tuple containing the min coordinate's idx,val
    # each of 4 categories, txstart, donor, acceptor, txend
    function getmin_ind_val( gene::Refgene, idx; def=Inf )
@@ -112,53 +107,61 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
                  get(gene.don,  idx[2], def),
                  get(gene.acc,  idx[3], def),
                  get(gene.txen, idx[4], def) ]
-      indmin( curarr ), min( curarr... )
+      indmin( retarr ), min( retarr... )
+   end
+
+   # re-orient - strand by using unshift! instead of push!
+   function stranded_push!( collection, value, strand::Char )
+      if strand == '+'
+         push!( collection, value )
+      else # '-' strand
+         unshift!( collection, value )
+      end
    end
 
    while( idx[1] <= alen || idx[2] <= blen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
       # left to right. '-' strand = rc unshift?
       minidx,minval = getmin_ind_val( gene, idx )
-
       idx[minidx] += 1
-
       secidx,secval = getmin_ind_val( gene, idx )
 
       # last coordinate in the gene:
       if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
-         # tack sentinel; break
+         stranded_push!(edgetype, EdgeType(0x03), strand)
          break
       end
       
-      curoffset += 2 # no matter what we are adding an edge...
       # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
          nodesize = secval - minval #TODO adjustment?
-         nodeseq  = chrom[minval:secval] # collect slice
+         nodeseq  = dna"AAAAA" #chrom[minval:secval] # collect slice
          edge = getedgetype( minidx, secidx, true) # determine EdgeType
+
          if strand == '+'
             seq *= DNASequence(edge) * nodeseq
-            push!(nodeoffset, curoffset)
-            push!(nodecoord, minval)
-            push!(nodelen, nodesize)
-            push!(edgetype, edge)
          else # '-' strand
             seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
-            unshift!(nodeoffset, curoffset) # this won't work
-            unshift!(nodecoord, minval)
-            unshift!(nodelen, nodesize)
-            unshift!(edgetype, edge)
          end
-         curoffset += nodesize
+         stranded_push!(nodecoord, minval, strand)
+         stranded_push!(nodelen, nodesize, strand)
+         stranded_push!(edgetype, edge)
+
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          edge = getedgetype( minidx, secidx, false )
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
-         
+
+         stranded_push!(nodecoord, secval)
+         stranded_push!(nodelen, nodesize)
+         stranded_push!(edgetype, edge)
+
       end
 
    end # end while
+   
+   # need to calculate nodeoffsets now.
 
    return SpliceGraph( nodeoffset, nodelen, edgetype, seq )
 end
@@ -179,3 +182,10 @@ function issubinterval{T <: IntervalTree,
    false
 end
 
+function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
+   if 1 <= key <= length(collection)
+      return collection[key]
+   else
+      return def
+   end
+end

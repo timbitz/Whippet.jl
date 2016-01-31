@@ -9,6 +9,6 @@ else
 end
 typealias Coordtuple Tuple{Vararg{Coordint}}
 typealias Coordarray Vector{Coordint}
-
-typealias Genename    ASCIIString
+typealias Exonmax    UInt16
+typealias Genename   ASCIIString
 

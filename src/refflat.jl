@@ -79,8 +79,7 @@ end
 # Refflat format must be as expected from output of gtfToGenePred -ext
 # Options:
 #         if txbool=false, then return Refset with empty txset variable
-#         if totxbool=false, then return Refset with empty genetotx
-function load_refflat( fh; txbool=false, totxbool )
+function load_refflat( fh; txbool=false )
    
    # Temporary variables   
    gninfo = Dict{Genename,Geneinfo}()
