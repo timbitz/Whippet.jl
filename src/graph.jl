@@ -40,15 +40,21 @@ Base.convert( ::Type{DNASequence}, edge::EdgeType ) = EDGETYPE_TO_DNA[Base.conve
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
-function get_edgetype( minidx::Int, secidx::Int, isnode::Bool )
+function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Char='+' )
    if isnode
       ret = INDEX_TO_EDGETYPE_NODE[minidx,secidx]
    else
       ret = INDEX_TO_EDGETYPE[minidx,secidx]
    end
-   return EdgeType(ret)
+   ret = EdgeType(ret)
+   if strand != '+'
+      ret = invert_edgetype( ret )
+   end
+   ret
 end
 
+# Invert EdgeTypes using xor
+# 'LR' does not need to be inverted
 function invert_edgetype( edge::EdgeType )
    if edge == EdgeType(0x04) # 'LR'
       return edge
@@ -145,7 +151,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
          nodesize = secval - minval #TODO adjustment?
          nodeseq  = dna"AAAAA" #chrom[minval:secval] # collect slice
-         edge = getedgetype( minidx, secidx, true) # determine EdgeType
+         edge = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
 
          if strand == '+'
             seq *= DNASequence(edge) * nodeseq
@@ -157,7 +163,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          stranded_push!(edgetype,  edge,     strand)
 
       else # don't make a node, this is a sequence gap, make edge and inc+=2
-         edge = getedgetype( minidx, secidx, false )
+         edge = get_edgetype( minidx, secidx, false, strand )
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
