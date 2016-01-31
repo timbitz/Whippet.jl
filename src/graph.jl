@@ -159,27 +159,26 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          nodesize = secval - minval #TODO adjustment?
          nodeseq  = dna"AAAAA" #chrom[minval:secval] # collect slice
          edge = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
-
-         if strand == '+'
-            seq *= DNASequence(edge) * nodeseq
-         else # '-' strand
-            seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
-         end
-         stranded_push!(nodecoord, minval,   strand)
-         stranded_push!(nodelen,   nodesize, strand)
-         stranded_push!(edgetype,  edge,     strand)
+         pushval = minval
 
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          edge = get_edgetype( minidx, secidx, false, strand )
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
-
-         stranded_push!(nodecoord, secval,   strand)
-         stranded_push!(nodelen,   nodesize, strand)
-         stranded_push!(edgetype,  edge,     strand)
+         nodeseq = dna"CCCCC"
+         pushval = secval
 
       end
+
+      if strand == '+'
+         seq *= DNASequence(edge) * nodeseq
+      else # '-' strand
+         seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
+      end
+      stranded_push!(nodecoord, pushval,  strand)
+      stranded_push!(nodelen,   nodesize, strand)
+      stranded_push!(edgetype,  edge,     strand)
 
    end # end while
    
