@@ -127,7 +127,8 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       secidx,secval = getmin_ind_val( gene, idx )
 
       # last coordinate in the gene:
-      if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
+#      if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
+      if secval == Inf
          stranded_push!(edgetype, EdgeType(0x03), strand)
          break
       end
@@ -143,9 +144,9 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          else # '-' strand
             seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
          end
-         stranded_push!(nodecoord, minval, strand)
-         stranded_push!(nodelen, nodesize, strand)
-         stranded_push!(edgetype, edge)
+         stranded_push!(nodecoord, minval,   strand)
+         stranded_push!(nodelen,   nodesize, strand)
+         stranded_push!(edgetype,  edge,     strand)
 
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          edge = getedgetype( minidx, secidx, false )
@@ -153,9 +154,9 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
 
-         stranded_push!(nodecoord, secval)
-         stranded_push!(nodelen, nodesize)
-         stranded_push!(edgetype, edge)
+         stranded_push!(nodecoord, secval,   strand)
+         stranded_push!(nodelen,   nodesize, strand)
+         stranded_push!(edgetype,  edge,     strand)
 
       end
 
@@ -163,7 +164,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
    
    # need to calculate nodeoffsets now.
 
-   return SpliceGraph( nodeoffset, nodelen, edgetype, seq )
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, seq )
 end
 
 # This function looks specifically for an intersection
