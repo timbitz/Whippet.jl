@@ -143,7 +143,14 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       # last coordinate in the gene:
 #      if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
       if secval == Inf
-         stranded_push!(edgetype, EdgeType(0x03), strand)
+         termedge = EdgeType(0x03)
+         stranded_push!(edgetype, termedge, strand)
+         if strand == '+'
+            seq *= DNASequence(termedge)
+         else
+            termedge = invert_edgetype( termedge )
+            seq = DNASequence(termedge) * seq
+         end
          break
       end
       
