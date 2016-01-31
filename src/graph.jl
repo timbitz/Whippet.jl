@@ -1,4 +1,3 @@
-
 # requires:
 # include("bio_nuc_patch.jl")
 using IntervalTrees
@@ -130,20 +129,34 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          # tack sentinel; break
          break
       end
-
-      # should we make a node?
+      
+      curoffset += 2 # no matter what we are adding an edge...
+      # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
          nodesize = secval - minval #TODO adjustment?
          nodeseq  = chrom[minval:secval] # collect slice
          edge = getedgetype( minidx, secidx, true) # determine EdgeType
-         curoffset += nodesize 
-      else
+         if strand == '+'
+            seq *= DNASequence(edge) * nodeseq
+            push!(nodeoffset, curoffset)
+            push!(nodecoord, minval)
+            push!(nodelen, nodesize)
+            push!(edgetype, edge)
+         else # '-' strand
+            seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
+            unshift!(nodeoffset, curoffset) # this won't work
+            unshift!(nodecoord, minval)
+            unshift!(nodelen, nodesize)
+            unshift!(edgetype, edge)
+         end
+         curoffset += nodesize
+      else # don't make a node, this is a sequence gap, make edge and inc+=2
          edge = getedgetype( minidx, secidx, false )
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
+         
       end
-      curoffset += 2 # for edgesize
 
    end # end while
 
