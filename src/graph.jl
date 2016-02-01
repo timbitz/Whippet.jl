@@ -181,8 +181,13 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       stranded_push!(edgetype,  edge,     strand)
 
    end # end while
-   
-   # need to calculate nodeoffsets now.
+
+   # calculate node offsets-->
+   curoffset = 3
+   for n in nodelen
+      push!(nodeoffset, curoffset)
+      curoffset += n + 2
+   end
 
    return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, seq )
 end

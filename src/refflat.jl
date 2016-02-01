@@ -128,7 +128,9 @@ function load_refflat( fh; txbool=false )
                push!(gnexons[gene], insval)
             end
          else
+            insval = Interval{Coordint}(acc[i],don[i])
             gnexons[gene] = Coordtree()
+            push!(gnexons[gene], insval)
          end
       end
 
