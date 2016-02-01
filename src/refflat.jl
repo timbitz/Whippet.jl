@@ -101,7 +101,7 @@ function load_refflat( fh; txbool=false )
    sizehint!(geneset, txnum >> 1)
    sizehint!(genetotx, txnum)
 
-   tuppar( i ) = tuple(parse(Coordint, i))
+   tuppar( i; c=0 ) = tuple(convert(Coordint, parse(Int, i)+c))
 
    for l::ASCIIString in eachline(fh)
       (refid,chrom,strand, # NM_001177644,chr3,+
@@ -137,7 +137,7 @@ function load_refflat( fh; txbool=false )
 
       # set values
       txinfo = (gene,parse(Coordint, txS),
-                     parse(Coordint, txE),
+                     parse(Coordint, txE)-1,
                      exCnt)
 
       if txbool
@@ -149,7 +149,7 @@ function load_refflat( fh; txbool=false )
          gndon[gene] = unique_tuple(gndon[gene], don)
          gnacc[gene] = unique_tuple(gnacc[gene], acc)
          gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS))
-         gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
+         gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE, c=-1))
          #gnlens[gene] += genelen(don, acc)  # TODO finish
       else
          genetotx[gene] = Refseqid[refid]
@@ -157,7 +157,7 @@ function load_refflat( fh; txbool=false )
          gnacc[gene] = acc
          gninfo[gene] = (chrom,strand[1])
          gntxst[gene] = tuppar(txS)
-         gntxen[gene] = tuppar(txE)
+         gntxen[gene] = tuppar(txE, c=-1)
          #gnlens[gene] = genelen(don, acc)
       end
    end
@@ -165,6 +165,11 @@ function load_refflat( fh; txbool=false )
    for gene in keys(genetotx)
       geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
                                gntxst[gene], gntxen[gene], gnexons[gene] )
+   end
+
+   if !txbool
+      genetotx = Dict{Genename,Vector{Refseqid}}()
+      gc()
    end
 
    return Refset( txset, geneset, genetotx )

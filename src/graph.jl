@@ -133,7 +133,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       end
    end
 
-   while( idx[1] <= alen || idx[2] <= blen || idx[3] <= slen || idx[4] <= plen )    
+   while( idx[1] <= alen || idx[2] <= dlen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
       # left to right. '-' strand = rc unshift?
       minidx,minval = getmin_ind_val( gene, idx )
@@ -160,15 +160,14 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          nodeseq  = dna"AAAAA" #chrom[minval:secval] # collect slice
          edge = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval = minval
-
+         thridx = 0
       else # don't make a node, this is a sequence gap, make edge and inc+=2
-         edge = get_edgetype( minidx, secidx, false, strand )
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
          nodeseq = dna"CCCCC"
+         edge = get_edgetype( minidx, secidx, false, strand )
          pushval = secval
-
       end
 
       if strand == '+'
@@ -176,6 +175,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       else # '-' strand
          seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
       end
+   #   println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $pushval, nodeseq: $nodeseq")
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
       stranded_push!(edgetype,  edge,     strand)
@@ -192,6 +192,7 @@ end
 # some interval in the tree full contains the sub interval
 #  itree contains: (low,             high)
 #  subint must be:     (low+x, high-y)
+#  where x and y are >= 0
 # Returns: bool
 function issubinterval{T <: IntervalTree, 
                        I <: AbstractInterval}( itree::T, subint::I )
@@ -203,6 +204,8 @@ function issubinterval{T <: IntervalTree,
    false
 end
 
+# hacky extension of Base.get for tuples which isn't supported natively
+# because tuples aren't really a type of collection, fair enough
 function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
    if 1 <= key <= length(collection)
       return collection[key]

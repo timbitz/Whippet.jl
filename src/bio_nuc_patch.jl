@@ -753,6 +753,8 @@ function Base.getindex{T}(seq::NucleotideSequence{T}, i::Integer)
 end
 
 # Construct a subesequence
+Base.getindex{T}(seq::NucleotideSequence{T}, r::UnitRange) = NucleotideSequence{T}(seq, r)
+
 Base.setindex!{T}(seq::NucleotideSequence{T}, r::UnitRange) = NucleotideSequence{T}(seq, r)
 
 
