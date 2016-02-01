@@ -175,7 +175,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       else # '-' strand
          seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
       end
-   #   println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $pushval, nodeseq: $nodeseq")
+      println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $pushval, nodeseq: $nodeseq")
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
       stranded_push!(edgetype,  edge,     strand)
