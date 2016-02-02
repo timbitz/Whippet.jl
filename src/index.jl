@@ -172,7 +172,7 @@ function trans_index!( fhIter, ref::Refset )
          runoffset += length(curgraph.seq) 
       end
    end
-   @time fm = FMIndex(threebit_enc(xcript), 8, r=4, program=:SuffixArrays, mmap=true) 
+   @time fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true) 
    println( STDERR, "Finished building index..." )
 
    # clean up
