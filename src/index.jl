@@ -1,21 +1,35 @@
 # index.jl - tim.sterne.weiler@utoronto.ca, 1/28/16
 
 # requires
-include("bio_nuc_patch.jl")
+using FMIndexes
+using IntArrays
+
+include("types.jl")
+include("bio_nuc_safepatch.jl")
 include("refflat.jl")
 include("graph.jl")
 
 typealias Str ASCIIString
 
-immutable Seqlibrary
-   seq::DNASequence
+abstract SeqLibrary
+
+immutable SeqLib <: SeqLibrary
+   seq::NucleotideSequence
    offset::Vector{Coordint}
    names::Vector{Str}
    index::FMIndex
    sorted::Bool
 end
 
-function getoffset( seqlib::Seqlibrary, name::Str )
+immutable GraphLib <: SeqLibrary
+   offset::Vector{Coordint}
+   names::Vector{Str}
+   graphs::Vector{SpliceGraph}
+   index::FMIndex
+   sorted::Bool
+end
+
+function getoffset( seqlib::SeqLibrary, name::Str )
    if seqlib.sorted
       ret = sorted_getoffset( seqlib, name )
    else
@@ -26,7 +40,7 @@ end
 
 function sorted_getoffset( seqlib, name, low=1, high=length(seqlib.names)+1 )
    low == high && return(-1)
-   mid = ((high - low) >> 1) + low
+   mid = ((high - low) >> 1) + lowe
    seqlib.names[mid] == name && return(seqlib.offset[mid])
    if seqlib.names[mid] > name
       ret = sorted_getoffset(seqlib, name, low, mid)
@@ -36,13 +50,35 @@ function sorted_getoffset( seqlib, name, low=1, high=length(seqlib.names)+1 )
    ret
 end
 
-function brute_getoffset( seqlib::Seqlibrary, name::Str )
+function brute_getoffset( seqlib::SeqLibrary, name::Str )
    ret = -1
    for n in 1:length(seqlib.names)
      if seqlib.names[n] == name
        ret = seqlib.offset[n]
        break
      end
+   end
+   ret
+end
+
+function build_offset_dict{I <: Integer, 
+                           S <: AbstractString}( offset::Vector{I}, names::Vector{S} )
+   ret = Dict{S,I}()
+   for i in 1:length(names)
+      cname,coffset = names[i],offset[i]
+      ret[cname] = coffset
+   end
+   ret
+end
+
+function build_chrom_dict( ref::Refset )
+   ret = Dict{Str,Vector{Genename}}() # refgenomeseq->geneid[]
+   for g in keys(ref.geneset)
+      chrom = ref.geneset[g].info[1]
+      if !haskey(ret, chrom)
+         ret[chrom] = Vector{Genename}()
+      end
+      push!(ret[chrom], g)
    end
    ret
 end
@@ -72,7 +108,7 @@ function threebit_enc(seq)
 end
 
 function load_fasta( fhIter; verbose=false )
-   seq = DNASequence(mutable=false)
+   seq = SGSequence(mutable=false)
    offset = Int[]
    names = Str[]
    for r in fhIter
@@ -85,24 +121,64 @@ function load_fasta( fhIter; verbose=false )
    seq, offset, names
 end
 
+#TODO test offset
+function load_fasta_sg( fhIter; verbose=false )
+   seq = sg""
+   offset = Int[]
+   names = Str[]
+   for r in fhIter
+      Bio.Seq.immutable!(r.seq)
+      sg = SGSequence( r.seq )
+      push!(names, r.name)
+      push!(offset, length(seq)+1)
+      println( STDERR, r )
+      @time seq *= sg 
+   end    
+   seq, offset, names
+end
+
 function single_genome_index!( fhIter; verbose=false )
    seq,offset,names = load_fasta( fhIter )
    @time fm = FMIndex(twobit_enc(seq), 4, r=4, program=:SuffixArrays, mmap=true)
    println( STDERR, "Finished building Index..." )
-   Seqlibrary(seq, offset, names, fm, false)
+
+   SeqLib(seq, offset, names, fm, false)
 end
 
 
 function trans_index!( fhIter, ref::Refset )
-   seq,offset,names = load_fasta( fhIter )
-   xcript  = DNASequence(mutable=false)
+   seqdic  = build_chrom_dict( ref )
+   xcript  = sg""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{Genename}()
-   genes = sort( collect(keys(ref.gninfo)), by= k->ref.gninfo[k][1] ) # by chrom
-   for g in genes
-      # set up exons
-      # insert L/R and S, push!         
+   xgraph  = Vector{SpliceGraph}()
+   # set up splice graphs
+   runoffset = 0
+   for r in fhIter
+      Bio.Seq.immutable!(r.seq)
+      sg = SGSequence( r.seq )
+
+      r.seq = dna""
+      gc() # free
+
+      haskey(seqdic, r.name) || continue
+      for g in seqdic[r.name]
+         println( STDERR, "Building $g Splice Graph..." )
+         curgraph = SpliceGraph( ref.geneset[g], sg )
+         xcript  *= curgraph.seq
+         push!(xgraph, curgraph)
+         push!(xgenes, g)
+         push!(xoffset, runoffset)
+         runoffset += length(curgraph.seq) 
+      end
    end
-   #Seqlibrary( , true)
+   @time fm = FMIndex(threebit_enc(xcript), 8, r=4, program=:SuffixArrays, mmap=true) 
+   println( STDERR, "Finished building index..." )
+
+   # clean up
+   xcript = sg""
+   gc()
+
+   GraphLib( xoffset, xgenes, xgraph, fm, true)
 end
 

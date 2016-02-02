@@ -1,5 +1,5 @@
 # requires:
-# include("bio_nuc_patch.jl")
+# include("bio_nuc_safepatch.jl")
 using IntervalTrees
 
 bitstype 8 EdgeType
@@ -23,20 +23,20 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
                                                   [0x06  for _ in 1:4 ];
                                                   [0x03  for _ in 1:4 ] ], (4,4)))
 
-const EDGETYPE_TO_DNA = DNASequence[ dna"SL", dna"SR", dna"LS", dna"RS",
-                                     dna"LR", dna"LL", dna"RR", dna"SS" ]
+const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
+                                     sg"LR", sg"LL", sg"RR", sg"SS" ]
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
    EDGETYPE_TO_UINT8[one-3,two-3]
 end
 
-Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) = 
+Base.convert( ::Type{EdgeType}, one::SGNucleotide, two::SGNucleotide ) = 
                Base.convert( EdgeType, convert(UInt8, one), convert(UInt8, two) )
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = box(EdgeType, unbox(UInt8, edge ))
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = box(UInt8, unbox(EdgeType, edge ))
 Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
-Base.convert( ::Type{DNASequence}, edge::EdgeType ) = EDGETYPE_TO_DNA[Base.convert(UInt8, edge)+1]
+Base.convert( ::Type{SGSequence}, edge::EdgeType ) = EDGETYPE_TO_SG[Base.convert(UInt8, edge)+1]
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
@@ -83,7 +83,7 @@ immutable SpliceGraph
   nodecoord::Vector{Coordint}  # Genome offset
   nodelen::Vector{Coordint}
   edgetype::Vector{EdgeType}
-  seq::DNASequence
+  seq::SGSequence
 end
 # All positive strand oriented sequences---> 
 # Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
@@ -96,13 +96,13 @@ SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
 
 # Main constructor
 # Build splice graph here.
-function SpliceGraph( gene::Refgene, chrom::DNASequence )
+function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
    # splice graph variables
    nodeoffset = Vector{Coordint}()
    nodecoord  = Vector{Coordint}()
    nodelen    = Vector{Coordint}()
    edgetype   = Vector{EdgeType}()
-   seq        = dna""
+   seq        = sg""
    
    strand = gene.info[2]
    
@@ -146,10 +146,10 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          termedge = EdgeType(0x03)
          stranded_push!(edgetype, termedge, strand)
          if strand == '+'
-            seq *= DNASequence(termedge)
+            seq *= SGSequence(termedge)
          else
             termedge = invert_edgetype( termedge )
-            seq = DNASequence(termedge) * seq
+            seq = SGSequence(termedge) * seq
          end
          break
       end
@@ -157,7 +157,7 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
       # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
          nodesize = secval - minval #TODO adjustment?
-         nodeseq  = dna"AAAAA" #chrom[minval:secval] # collect slice
+         nodeseq  = genome[Int(minval+seqoffset):Int(secval)] # collect slice
          edge = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval = minval
          thridx = 0
@@ -165,17 +165,17 @@ function SpliceGraph( gene::Refgene, chrom::DNASequence )
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
          nodesize = thrval - secval
-         nodeseq = dna"CCCCC"
+         nodeseq = genome[Int(secval+seqoffset):Int(thrval)]
          edge = get_edgetype( minidx, secidx, false, strand )
          pushval = secval
       end
 
       if strand == '+'
-         seq *= DNASequence(edge) * nodeseq
+         seq *= SGSequence(edge) * nodeseq
       else # '-' strand
-         seq = reverse_complement(nodeseq) * DNASequence(edge) * seq
+         seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
       end
-      println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $(Int(pushval)), nodeseq: $nodeseq")
+      #println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $(Int(pushval)), nodeseq: $nodeseq")
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
       stranded_push!(edgetype,  edge,     strand)
