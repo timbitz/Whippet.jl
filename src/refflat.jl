@@ -147,6 +147,7 @@ function load_refflat( fh; txbool=false )
       end
 
       if haskey(genetotx, gene)
+         chrom == gninfo[gene][1] || continue # can have only one chrom
          push!(genetotx[gene], refid)
          gndon[gene] = unique_tuple(gndon[gene], don)
          gnacc[gene] = unique_tuple(gnacc[gene], acc)
