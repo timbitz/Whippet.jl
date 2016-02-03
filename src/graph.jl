@@ -24,7 +24,7 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
                                                   [0x03  for _ in 1:4 ] ], (4,4)))
 
 const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
-                                     sg"LR", sg"LL", sg"RR", sg"SS" ]
+                                   sg"LR", sg"LL", sg"RR", sg"SS" ]
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
@@ -218,3 +218,4 @@ function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
       return def
    end
 end
+
