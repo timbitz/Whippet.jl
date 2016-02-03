@@ -27,33 +27,36 @@ function is_edge( edge::EdgeType, left::Bool )
    false
 end
 
+
+
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
                                                   entry::SGNodeTup )
    s = seq[l:r]
+   ksize = r-l+1
    ind = 0 #default
    #println( "$(seq[(l-4):(l-1)]) + $(seq[l:r]) + $(seq[(r+1):(r+4)])" )
    try
       curkmer = SGKmer( s ) 
       ind = Int(UInt64(curkmer)) + 1
    catch
-      println( "Caught!!" )
-      sub = ""
-      do
-         sub = split( AbstractString(s), r"LL|LR|RR" )
-         if length(sub) > 1
-            res = join( sub, "" )
-            s = left ? AbstractString(seq[(l-2):(l-1)]) * res :
-                       res * AbstractString(seq[(r+1):(r+2)])
-         else
-            break
-         end
-         println( "Removed splice site to get $s size!" )
+      abstr = AbstractString(s)
+      ismatch( r"S|N", abstr ) && return
+      sub = replace( abstr, r"L|R", "" )
+      #println("Caught $abstr replaced to $sub , $ksize")
+      curl,curr = l-1,r+1
+      while length(sub) < ksize
+         sub = left ? AbstractString(seq[curl:curl]) * sub :
+                      sub * AbstractString(seq[curr:curr])
+         #println("Sub looks like $sub")
+         sub = replace( sub, r"L|R", "" )
+         curr += 1
+         curl -= 1
       end
       try
         curkmer = SGKmer( s )
         ind = Int(UInt64(curkmer)) + 1
-        println( "Index size: $ind, kmer size: $(typeof(curkmer))" )
+        #println( "Index size: $ind, kmer size: $(typeof(curkmer))" )
       end
    end
    if ind > 0
