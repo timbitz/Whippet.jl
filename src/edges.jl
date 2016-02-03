@@ -35,6 +35,7 @@ function is_edge( edge::EdgeType, left::Bool )
 end
 
 # Intersect two sorted arrays of SGNodeTup by gene entry
+# Return the list of intersected arrB entries
 function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
    res = Vector{T}()
    i,j = 1,1
@@ -44,13 +45,15 @@ function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
       elseif arrA[i] < arrB[j]
          i += 1
       else
-         push!( res, arrA[i] )
+         push!( res, arrB[j] )
          i += 1
          j += 1
       end
    end
    res
 end 
+
+kmer_index{T,K}( kmer::Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
@@ -61,7 +64,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
    #println( "$(seq[(l-4):(l-1)]) + $(seq[l:r]) + $(seq[(r+1):(r+4)])" )
    try
       curkmer = SGKmer( s ) 
-      ind = Int(UInt64(curkmer)) + 1
+      ind = kmer_index(curkmer)
    catch
       abstr = AbstractString(s)
       ismatch( r"S|N", abstr ) && return
@@ -78,7 +81,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
       end
       try
         curkmer = SGKmer( s )
-        ind = Int(UInt64(curkmer)) + 1
+        ind = kmer_index(curkmer)
         #println( "Index size: $ind, kmer size: $(typeof(curkmer))" )
       end
    end
