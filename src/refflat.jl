@@ -105,7 +105,7 @@ function load_refflat( fh; txbool=false )
 
       # get donor and acceptor splice sites, adjust for 0-based coords 
       don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0)
-      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0, c=-1)
+      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0, c=1)
 
       # Add original exons to interval tree-->
       for i in 1:length(don)
@@ -139,7 +139,7 @@ function load_refflat( fh; txbool=false )
          push!(genetotx[gene], refid)
          gndon[gene] = unique_tuple(gndon[gene], don)
          gnacc[gene] = unique_tuple(gnacc[gene], acc)
-         gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS, c=-1))
+         gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS, c=1))
          gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
          #gnlens[gene] += genelen(don, acc)  # TODO finish
       else
@@ -147,7 +147,7 @@ function load_refflat( fh; txbool=false )
          gndon[gene] = don
          gnacc[gene] = acc
          gninfo[gene] = (chrom,strand[1])
-         gntxst[gene] = tuppar(txS, c=-1)
+         gntxst[gene] = tuppar(txS, c=1)
          gntxen[gene] = tuppar(txE)
          #gnlens[gene] = genelen(don, acc)
       end
@@ -182,7 +182,7 @@ end
 
 
 function main()
-   #=
+   
    println(STDERR, "Loading Refflat file...")
    fh = open("$(pwd())/../genome/genes.flat", "r")
    @time ref = load_refflat(fh)
@@ -191,7 +191,7 @@ function main()
    println(STDERR, "Saving gene annotations...")
    open("$(pwd())/../index/reflat.jls", "w+") do fh
       @time serialize(fh, ref)
-   end =#
+   end 
    println(STDERR, "Loading annotation index...")
    @time ref = open(deserialize, "$(pwd())/../index/reflat.jls")
    #=
