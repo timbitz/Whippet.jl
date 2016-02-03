@@ -16,6 +16,15 @@ immutable AlignParam
    is_circ_ok::Bool   # Do we allow back edges
 end
 
+abstract UngappedAlignment
+
+type SGAlignment <: UngappedAlignment
+   matches::Int
+   mismatches::Int
+   offset::Int
+   path::Vector{SGNodeTup}
+end
+
 function check_seed_hit( index::FMIndex, param )
    sa = FMIndexes.sa_range( query, index )
    cnt = length(sa)

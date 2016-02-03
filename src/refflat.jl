@@ -139,16 +139,16 @@ function load_refflat( fh; txbool=false )
          push!(genetotx[gene], refid)
          gndon[gene] = unique_tuple(gndon[gene], don)
          gnacc[gene] = unique_tuple(gnacc[gene], acc)
-         gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS))
-         gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE, c=-1))
+         gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS, c=-1))
+         gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
          #gnlens[gene] += genelen(don, acc)  # TODO finish
       else
          genetotx[gene] = Refseqid[refid]
          gndon[gene] = don
          gnacc[gene] = acc
          gninfo[gene] = (chrom,strand[1])
-         gntxst[gene] = tuppar(txS)
-         gntxen[gene] = tuppar(txE, c=-1)
+         gntxst[gene] = tuppar(txS, c=-1)
+         gntxen[gene] = tuppar(txE)
          #gnlens[gene] = genelen(don, acc)
       end
    end
@@ -182,6 +182,7 @@ end
 
 
 function main()
+   #=
    println(STDERR, "Loading Refflat file...")
    fh = open("$(pwd())/../genome/genes.flat", "r")
    @time ref = load_refflat(fh)
@@ -190,7 +191,7 @@ function main()
    println(STDERR, "Saving gene annotations...")
    open("$(pwd())/../index/reflat.jls", "w+") do fh
       @time serialize(fh, ref)
-   end
+   end =#
    println(STDERR, "Loading annotation index...")
    @time ref = open(deserialize, "$(pwd())/../index/reflat.jls")
    #=

@@ -1231,9 +1231,9 @@ Base.convert{K}(::Type{UInt64}, x::DEPRECATEDKmer{K}) = box(UInt64, unbox(DEPREC
 
 
 Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
-Base.write{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, k::T) = Base.write(io, convert(UInt64, k))
+#Base.write{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, k::T) = Base.write(io, convert(UInt64, k))
 Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
-Base.read{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
+#Base.read{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 
 
 # Conversion to/from String
