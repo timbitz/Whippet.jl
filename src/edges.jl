@@ -1,4 +1,6 @@
 
+import Base.<,Base.>,Base.<=,Base.>=
+
 typealias NodeInt UInt32
 
 immutable SGNodeTup
@@ -12,6 +14,11 @@ immutable Edges{K}
    left::Vector{SGNodeSet}
    right::Vector{SGNodeSet}
 end
+
+<( a::SGNodeTup, b::SGNodeTup ) = <( a.gene, b.gene )
+>( a::SGNodeTup, b::SGNodeTup ) = >( a.gene, b.gene )
+<=( a::SGNodeTup, b::SGNodeTup ) = <=( a.gene, b.gene )
+>=( a::SGNodeTup, b::SGNodeTup ) = >=( a.gene, b.gene )
 
 Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 
@@ -27,7 +34,23 @@ function is_edge( edge::EdgeType, left::Bool )
    false
 end
 
-
+# Intersect two sorted arrays of SGNodeTup by gene entry
+function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
+   res = Vector{T}()
+   i,j = 1,1
+   while i <= length(arrA) && j <= length(arrB)
+      if arrA[i] > arrB[j]
+         j += 1
+      elseif arrA[i] < arrB[j]
+         i += 1
+      else
+         push!( res, arrA[i] )
+         i += 1
+         j += 1
+      end
+   end
+   res
+end 
 
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
