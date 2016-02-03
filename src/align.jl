@@ -32,8 +32,8 @@ function check_seed_hit( index::FMIndex, param )
 end
 
 
-function ungapped_align( lib::GraphLib, param::AlignParam, reads )
-
+function ungapped_align( lib::GraphLib, param::AlignParam, read )
+   
 end
 
 function ungapped_fwd_extend()

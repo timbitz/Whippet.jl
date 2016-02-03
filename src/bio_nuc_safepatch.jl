@@ -111,9 +111,6 @@ const sg_to_char = ['A', 'C', 'G', 'T', 'N', 'L', 'R', 'S']
 
 Base.convert(::Type{Char}, nt::SGNucleotide) = sg_to_char[convert(UInt8, nt) + 1]
 
-const deprecated_to_char = ['A', 'C', 'G', 'U', 'N']
-
-Base.convert(::Type{Char}, nt::DEPRECATEDNucleotide) = deprecated_to_char[convert(UInt8, nt) + 1]
 
 
 # Basic functions
@@ -590,7 +587,6 @@ Base.convert{T<:Nucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [x 
 
 # Convert from/to Strings
 Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
-Base.convert(::Type{DEPRECATEDSequence}, seq::AbstractString) = DEPRECATEDSequence(seq)
 Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(ASCIIString, [convert(Char, x) for x in seq])
 
 # Convert between DNA/RNA and SG
@@ -1280,13 +1276,6 @@ function Base.show{K}(io::IO, x::SGKmer{K})
     end
 end
 
-
-function Base.show{K}(io::IO, x::DEPRECATEDKmer{K})
-    write(io, "DEPRECATED $(K)-mer:\n ")
-    for i in 1:K
-        write(io, convert(Char, x[i]))
-    end
-end
 
 
 Base.isless{T, K}(x::Kmer{T, K}, y::Kmer{T, K}) = convert(UInt64, x) < convert(UInt64, y)

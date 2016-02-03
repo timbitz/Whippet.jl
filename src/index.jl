@@ -8,6 +8,7 @@ include("types.jl")
 include("bio_nuc_safepatch.jl")
 include("refflat.jl")
 include("graph.jl")
+include("edges.jl")
 
 typealias Str ASCIIString
 

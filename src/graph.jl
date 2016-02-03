@@ -124,15 +124,6 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       indmin( retarr ), min( retarr... )
    end
 
-   # re-orient - strand by using unshift! instead of push!
-   function stranded_push!( collection, value, strand::Char )
-      if strand == '+'
-         push!( collection, value )
-      else # '-' strand
-         unshift!( collection, value )
-      end
-   end
-
    while( idx[1] <= alen || idx[2] <= dlen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
       # left to right. '-' strand = rc unshift?
@@ -190,6 +181,15 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
    end
 
    return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, seq )
+end
+
+# re-orient - strand by using unshift! instead of push!
+function stranded_push!( collection, value, strand::Char )
+   if strand == '+'
+      push!( collection, value )
+   else # '-' strand
+      unshift!( collection, value )
+   end
 end
 
 # This function looks specifically for an intersection
