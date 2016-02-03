@@ -19,16 +19,12 @@ import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.rev
 # Single nucleotides are represented in bytes using just the two low-order bits
 #abstract Nucleotide
 bitstype 8 SGNucleotide <: Nucleotide
-bitstype 8 DEPRECATEDNucleotide <: Nucleotide
-
 
 # Conversion from/to integers
 # ---------------------------
 
 Base.convert(::Type{SGNucleotide}, nt::UInt8) = box(SGNucleotide, unbox(UInt8, nt))
-Base.convert(::Type{DEPRECATEDNucleotide}, nt::UInt8) = box(DEPRECATEDNucleotide, unbox(UInt8, nt))
 Base.convert(::Type{UInt8}, nt::SGNucleotide) = box(UInt8, unbox(SGNucleotide, nt))
-Base.convert(::Type{UInt8}, nt::DEPRECATEDNucleotide) = box(UInt8, unbox(DEPRECATEDNucleotide, nt))
 #Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{T}, nt::S) = box(T, Base.zext_int(T, unbox(S, nt)))
 #Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{S}, nt::T) = convert(S, convert(UInt8, nt))
 
@@ -78,33 +74,6 @@ function isvalid(nt::SGNucleotide)
     return convert(UInt8, nt) ≤ convert(UInt8, TX_S)
 end
 
-# DEPRECATED Nucleotides
-
-"DEPRECATED Adenine"
-const DEPRECATED_A = convert(DEPRECATEDNucleotide, 0b000)
-
-"DEPRECATED Cytosine"
-const DEPRECATED_C = convert(DEPRECATEDNucleotide, 0b001)
-
-"DEPRECATED Guanine"
-const DEPRECATED_G = convert(DEPRECATEDNucleotide, 0b010)
-
-"DEPRECATED Uracil"
-const DEPRECATED_U = convert(DEPRECATEDNucleotide, 0b011)
-
-"Any DEPRECATED Nucleotide"
-const DEPRECATED_N = convert(DEPRECATEDNucleotide, 0b100)
-
-"Invalid DEPRECATED Nucleotide"
-const DEPRECATED_INVALID = convert(DEPRECATEDNucleotide, 0b1000) # Indicates invalid DEPRECATED when converting string
-
-"Returns Any DEPRECATED Nucleotide (DEPRECATED_N)"
-nnucleotide(::Type{DEPRECATEDNucleotide}) = DEPRECATED_N
-invalid_nucleotide(::Type{DEPRECATEDNucleotide}) = DEPRECATED_INVALID
-
-function isvalid(nt::DEPRECATEDNucleotide)
-    return convert(UInt8, nt) ≤ convert(UInt8, DEPRECATED_N)
-end
 
 
 # Conversion from Char
@@ -133,28 +102,6 @@ end
 end
 
 
-# lookup table for characters in 'A':'u'
-const char_to_deprecated = [
-    DEPRECATED_A,       DEPRECATED_INVALID, DEPRECATED_C,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_G,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_N,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_U,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_A,       DEPRECATED_INVALID, DEPRECATED_C,       DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_G,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_N,       DEPRECATED_INVALID, DEPRECATED_INVALID,
-    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_U ]
-
-@inline function Base.convert(::Type{DEPRECATEDNucleotide}, c::Char)
-    @inbounds nt = 'A' <= c <= 'u' ? char_to_deprecated[c - 'A' + 1] : DEPRECATED_INVALID
-    return nt
-end
-
-@inline function unsafe_ascii_byte_to_nucleotide(T::Type{DEPRECATEDNucleotide}, c::UInt8)
-    @inbounds nt = char_to_deprecated[c - 0x41 + 1]
-    return nt
-end
-
 
 # Conversion to Char
 # ------------------
@@ -180,13 +127,6 @@ function Base.show(io::IO, nt::SGNucleotide)
     end
 end
 
-function Base.show(io::IO, nt::DEPRECATEDNucleotide)
-    if !isvalid(nt)
-        write(io, "Invalid DEPRECATED Nucleotide")
-    else
-        write(io, convert(Char, nt))
-    end
-end
 
 
 # Nucleotide Sequence
@@ -639,30 +579,6 @@ SGSequence(seq::AbstractVector{SGNucleotide}; mutable::Bool=false) =
     NucleotideSequence(seq, mutable=mutable)
 
 
-# DEPRECATED Sequences
-typealias DEPRECATEDSequence NucleotideSequence{DEPRECATEDNucleotide}
-
-"Construct an empty DEPRECATED nucleotide sequence"
-DEPRECATEDSequence(; mutable::Bool=true) =
-    NucleotideSequence(DEPRECATEDNucleotide, mutable=mutable)
-
-"Construct a DEPRECATED nucleotide subsequence from another sequence"
-DEPRECATEDSequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
-    NucleotideSequence(DEPRECATEDNucleotide, other, part, mutable=mutable)
-
-"Construct a DEPRECATED nucleotide sequence from an AbstractString"
-DEPRECATEDSequence(seq::AbstractString; mutable::Bool=false) =
-    NucleotideSequence(DEPRECATEDNucleotide, seq, mutable=mutable)
-
-"Construct a DEPRECATED nucleotide sequence from other sequences"
-DEPRECATEDSequence(chunk1::DEPRECATEDSequence, chunks::DEPRECATEDSequence...) = NucleotideSequence(chunk1, chunks...)
-DEPRECATEDSequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
-    NucleotideSequence(DEPRECATEDNucleotide, seq, mutable=mutable)
-DEPRECATEDSequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
-    NucleotideSequence(DEPRECATEDNucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
-DEPRECATEDSequence(seq::AbstractVector{DEPRECATEDNucleotide}; mutable::Bool=false) =
-    NucleotideSequence(seq, mutable=mutable)
-
 
 # Conversion
 # ----------
@@ -893,10 +809,6 @@ end
 # Enable building sequence literals like: sg"ACGTACGT" and deprecated"ACGUACGU"
 macro sg_str(seq, flags...)
     return SGSequence(remove_newlines(seq))
-end
-
-macro deprecated_str(seq, flags...)
-    return DEPRECATEDSequence(remove_newlines(seq))
 end
 
 function remove_newlines(seq)
@@ -1215,8 +1127,7 @@ end
 bitstype 64 Kmer{T<:Nucleotide, K}
 
 typealias SGKmer{K} Kmer{SGNucleotide, K}
-typealias DEPRECATEDKmer{K} Kmer{DEPRECATEDNucleotide, K}
-typealias Codon DEPRECATEDKmer{3}
+
 
 
 # Conversion
@@ -1225,9 +1136,7 @@ typealias Codon DEPRECATEDKmer{3}
 # Conversion to/from UInt64
 
 Base.convert{K}(::Type{SGKmer{K}}, x::UInt64) = box(SGKmer{K}, unbox(UInt64, x))
-Base.convert{K}(::Type{DEPRECATEDKmer{K}}, x::UInt64) = box(DEPRECATEDKmer{K}, unbox(UInt64, x))
 Base.convert{K}(::Type{UInt64}, x::SGKmer{K}) = box(UInt64, unbox(SGKmer{K}, x))
-Base.convert{K}(::Type{UInt64}, x::DEPRECATEDKmer{K}) = box(UInt64, unbox(DEPRECATEDKmer{K}, x))
 
 
 Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
@@ -1298,9 +1207,6 @@ Base.convert{T, K}(::Type{NucleotideSequence}, x::Kmer{T, K}) = convert(Nucleoti
 "Construct a SGKmer to an AbstractString"
 sgkmer(seq::AbstractString) = convert(SGKmer, seq)
 
-"Construct a DEPRECATEDKmer to an AbstractString"
-deprecatedkmer(seq::AbstractString) = convert(DEPRECATEDKmer, seq)
-
 "Construct a Kmer from a sequence of Nucleotides"
 function kmer{T <: Nucleotide}(nts::T...)
     K = length(nts)
@@ -1326,11 +1232,6 @@ function kmer(seq::SGSequence)
     return convert(SGKmer{length(seq)}, seq)
 end
 
-"Construct a Kmer from a DEPRECATEDSequence"
-function kmer(seq::DEPRECATEDSequence)
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(DEPRECATEDKmer{length(seq)}, seq)
-end
 
 # call kmer with @inline macro would reduce the performance significantly?
 # Would the compiler inline even without @inline?
@@ -1340,11 +1241,6 @@ function sgkmer(seq::SGSequence)
     return convert(SGKmer{length(seq)}, seq)
 end
 
-"Construct a DEPRECATEDKmer from a DEPRECATEDSequence"
-function deprecatedkmer(seq::DEPRECATEDSequence)
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(DEPRECATEDKmer{length(seq)}, seq)
-end
 
 
 # Basic Functions
@@ -1635,7 +1531,6 @@ end
 # -------
 
 typealias SGNucleotideCounts NucleotideCounts{SGNucleotide}
-typealias DEPRECATEDNucleotideCounts NucleotideCounts{DEPRECATEDNucleotide}
 
 
 # Constructors
@@ -1765,21 +1660,6 @@ function Base.show(io::IO, counts::SGNucleotideCounts)
 end
 
 
-function Base.show(io::IO, counts::DEPRECATEDNucleotideCounts)
-    count_strings = format_counts(
-        [counts[DEPRECATED_A], counts[DEPRECATED_C], counts[DEPRECATED_G], counts[DEPRECATED_U], counts[DEPRECATED_N]])
-
-    write(io,
-        """
-        DEPRECATEDNucleotideCounts:
-          A => $(count_strings[1])
-          C => $(count_strings[2])
-          G => $(count_strings[3])
-          U => $(count_strings[4])
-          N => $(count_strings[5])
-        """)
-end
-
 
 # Kmer Composition
 # ----------------
@@ -1807,8 +1687,6 @@ immutable KmerCounts{T, K}
 end
 
 typealias SGKmerCounts{K} KmerCounts{SGNucleotide, K}
-typealias DEPRECATEDKmerCounts{K} KmerCounts{SGNucleotide, K}
-
 
 function Base.getindex{T, K}(counts::KmerCounts{T, K}, x::Kmer{T, K})
     @inbounds c = counts.data[convert(UInt64, x) + 1]
