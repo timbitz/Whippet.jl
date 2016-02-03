@@ -1,101 +1,109 @@
 #  This is a port of the source code from https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
 #  This file is written almost entirely by the authors of BioJulia/Bio.jl
-#  It has been altered here to include new masked nucleotides 'L' for donor upstream splice site
-#  and 'R' for acceptor downstream splice site, and 'S' for transcription start/stop site.  
+#  It has been altered here to include new types containing masked nucleotides 
+#  'L' for donor upstream splice site
+#  'R' for acceptor downstream splice site, and 
+#  'S' for transcription start/stop site.  
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
+
+using Bio.Seq
 
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.reverse
 
-abstract Sequence
+#abstract Sequence
 # Nucleotides
 # ===========
 
 
 # Single nucleotides are represented in bytes using just the two low-order bits
-abstract Nucleotide
-bitstype 8 DNANucleotide <: Nucleotide
-bitstype 8 RNANucleotide <: Nucleotide
+#abstract Nucleotide
+bitstype 8 SGNucleotide <: Nucleotide
+bitstype 8 DEPRECATEDNucleotide <: Nucleotide
 
 
 # Conversion from/to integers
 # ---------------------------
 
-Base.convert(::Type{DNANucleotide}, nt::UInt8) = box(DNANucleotide, unbox(UInt8, nt))
-Base.convert(::Type{RNANucleotide}, nt::UInt8) = box(RNANucleotide, unbox(UInt8, nt))
-Base.convert(::Type{UInt8}, nt::DNANucleotide) = box(UInt8, unbox(DNANucleotide, nt))
-Base.convert(::Type{UInt8}, nt::RNANucleotide) = box(UInt8, unbox(RNANucleotide, nt))
-Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{T}, nt::S) = box(T, Base.zext_int(T, unbox(S, nt)))
-Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{S}, nt::T) = convert(S, convert(UInt8, nt))
+Base.convert(::Type{SGNucleotide}, nt::UInt8) = box(SGNucleotide, unbox(UInt8, nt))
+Base.convert(::Type{DEPRECATEDNucleotide}, nt::UInt8) = box(DEPRECATEDNucleotide, unbox(UInt8, nt))
+Base.convert(::Type{UInt8}, nt::SGNucleotide) = box(UInt8, unbox(SGNucleotide, nt))
+Base.convert(::Type{UInt8}, nt::DEPRECATEDNucleotide) = box(UInt8, unbox(DEPRECATEDNucleotide, nt))
+#Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{T}, nt::S) = box(T, Base.zext_int(T, unbox(S, nt)))
+#Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{S}, nt::T) = convert(S, convert(UInt8, nt))
 
 
 # Nucleotide encoding definition
 # ------------------------------
 
-# DNA Nucleotides
+# SG Nucleotides
 
-"DNA Adenine"
-const DNA_A = convert(DNANucleotide, 0b000)
+"SG Adenine"
+const SG_A = convert(SGNucleotide, 0b000)
 
-"DNA Cytosine"
-const DNA_C = convert(DNANucleotide, 0b001)
+"SG Cytosine"
+const SG_C = convert(SGNucleotide, 0b001)
 
-"DNA Guanine"
-const DNA_G = convert(DNANucleotide, 0b010)
+"SG Guanine"
+const SG_G = convert(SGNucleotide, 0b010)
 
-"DNA Thymine"
-const DNA_T = convert(DNANucleotide, 0b011)
+"SG Thymine"
+const SG_T = convert(SGNucleotide, 0b011)
 
-"DNA Any Nucleotide"
-const DNA_N = convert(DNANucleotide, 0b100)
+"SG Any Nucleotide"
+const SG_N = convert(SGNucleotide, 0b100)
 
-"DNA Invalid Nucleotide"
-const DNA_INVALID = convert(DNANucleotide, 0b1000) # Indicates invalid DNA when converting string
-
-## Patch
-const SS_L = convert(DNANucleotide, 0b101)
-const SS_R = convert(DNANucleotide, 0b110)
-const TX_S = convert(DNANucleotide, 0b111) 
-
-"Returns Any DNA Nucleotide (DNA_N)"
-nnucleotide(::Type{DNANucleotide}) = DNA_N
-invalid_nucleotide(::Type{DNANucleotide}) = DNA_INVALID
+"SG Invalid Nucleotide"
+const SG_INVALID = convert(SGNucleotide, 0b1000) # Indicates invalid SG when converting string
 
 ## Patch
-lnucleotide(::Type{DNANucleotide}) = SS_L
-rnucleotide(::Type{DNANucleotide}) = SS_R
-snucleotide(::Type{DNANucleotide}) = TX_S
+const SS_L = convert(SGNucleotide, 0b101)
+const SS_R = convert(SGNucleotide, 0b110)
+const TX_S = convert(SGNucleotide, 0b111) 
 
-function isvalid(nt::DNANucleotide)
+"Returns Any SG Nucleotide (SG_N)"
+nnucleotide(::Type{SGNucleotide}) = SG_N
+invalid_nucleotide(::Type{SGNucleotide}) = SG_INVALID
+
+## Patch
+lnucleotide(::Type{SGNucleotide}) = SS_L
+rnucleotide(::Type{SGNucleotide}) = SS_R
+snucleotide(::Type{SGNucleotide}) = TX_S
+
+lnucleotide{N <: Nucleotide}(::Type{N}) = SS_L
+rnucleotide{N <: Nucleotide}(::Type{N}) = SS_R
+snucleotide{N <: Nucleotide}(::Type{N}) = TX_S
+
+function isvalid(nt::SGNucleotide)
     return convert(UInt8, nt) ≤ convert(UInt8, TX_S)
 end
 
-# RNA Nucleotides
+# DEPRECATED Nucleotides
 
-"RNA Adenine"
-const RNA_A = convert(RNANucleotide, 0b000)
+"DEPRECATED Adenine"
+const DEPRECATED_A = convert(DEPRECATEDNucleotide, 0b000)
 
-"RNA Cytosine"
-const RNA_C = convert(RNANucleotide, 0b001)
+"DEPRECATED Cytosine"
+const DEPRECATED_C = convert(DEPRECATEDNucleotide, 0b001)
 
-"RNA Guanine"
-const RNA_G = convert(RNANucleotide, 0b010)
+"DEPRECATED Guanine"
+const DEPRECATED_G = convert(DEPRECATEDNucleotide, 0b010)
 
-"RNA Uracil"
-const RNA_U = convert(RNANucleotide, 0b011)
+"DEPRECATED Uracil"
+const DEPRECATED_U = convert(DEPRECATEDNucleotide, 0b011)
 
-"Any RNA Nucleotide"
-const RNA_N = convert(RNANucleotide, 0b100)
+"Any DEPRECATED Nucleotide"
+const DEPRECATED_N = convert(DEPRECATEDNucleotide, 0b100)
 
-"Invalid RNA Nucleotide"
-const RNA_INVALID = convert(RNANucleotide, 0b1000) # Indicates invalid RNA when converting string
+"Invalid DEPRECATED Nucleotide"
+const DEPRECATED_INVALID = convert(DEPRECATEDNucleotide, 0b1000) # Indicates invalid DEPRECATED when converting string
 
-"Returns Any RNA Nucleotide (RNA_N)"
-nnucleotide(::Type{RNANucleotide}) = RNA_N
-invalid_nucleotide(::Type{RNANucleotide}) = RNA_INVALID
+"Returns Any DEPRECATED Nucleotide (DEPRECATED_N)"
+nnucleotide(::Type{DEPRECATEDNucleotide}) = DEPRECATED_N
+invalid_nucleotide(::Type{DEPRECATEDNucleotide}) = DEPRECATED_INVALID
 
-function isvalid(nt::RNANucleotide)
-    return convert(UInt8, nt) ≤ convert(UInt8, RNA_N)
+function isvalid(nt::DEPRECATEDNucleotide)
+    return convert(UInt8, nt) ≤ convert(UInt8, DEPRECATED_N)
 end
 
 
@@ -103,47 +111,47 @@ end
 # --------------------
 
 # lookup table for characters in 'A':'t'
-const char_to_dna = [
-    DNA_A,       DNA_INVALID, DNA_C,       DNA_INVALID, DNA_INVALID, DNA_INVALID,
-    DNA_G,       DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID, SS_L,
-    DNA_INVALID, DNA_N,       DNA_INVALID, DNA_INVALID, DNA_INVALID, SS_R,
-    TX_S,        DNA_T,       DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID,
-    DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID, DNA_INVALID,
-    DNA_INVALID, DNA_INVALID, DNA_A,       DNA_INVALID, DNA_C,       DNA_INVALID,
-    DNA_INVALID, DNA_INVALID, DNA_G,       DNA_INVALID, DNA_INVALID, DNA_INVALID,
-    DNA_INVALID, SS_L,        DNA_INVALID, DNA_N,       DNA_INVALID, DNA_INVALID,
-    DNA_INVALID, SS_R,        TX_S,        DNA_T ]
+const char_to_sg = [
+    SG_A,       SG_INVALID, SG_C,       SG_INVALID, SG_INVALID, SG_INVALID,
+    SG_G,       SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SS_L,
+    SG_INVALID, SG_N,       SG_INVALID, SG_INVALID, SG_INVALID, SS_R,
+    TX_S,        SG_T,       SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID,
+    SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID,
+    SG_INVALID, SG_INVALID, SG_A,       SG_INVALID, SG_C,       SG_INVALID,
+    SG_INVALID, SG_INVALID, SG_G,       SG_INVALID, SG_INVALID, SG_INVALID,
+    SG_INVALID, SS_L,        SG_INVALID, SG_N,       SG_INVALID, SG_INVALID,
+    SG_INVALID, SS_R,        TX_S,        SG_T ]
 
-@inline function Base.convert(::Type{DNANucleotide}, c::Char)
-    @inbounds nt = 'A' <= c <= 't' ? char_to_dna[c - 'A' + 1] : DNA_INVALID
+@inline function Base.convert(::Type{SGNucleotide}, c::Char)
+    @inbounds nt = 'A' <= c <= 't' ? char_to_sg[c - 'A' + 1] : SG_INVALID
     return nt
 end
 
-@inline function unsafe_ascii_byte_to_nucleotide(T::Type{DNANucleotide}, c::UInt8)
-    @inbounds nt = char_to_dna[c - 0x41 + 1]
+@inline function unsafe_ascii_byte_to_nucleotide(T::Type{SGNucleotide}, c::UInt8)
+    @inbounds nt = char_to_sg[c - 0x41 + 1]
     return nt
 end
 
 
 # lookup table for characters in 'A':'u'
-const char_to_rna = [
-    RNA_A,       RNA_INVALID, RNA_C,       RNA_INVALID, RNA_INVALID, RNA_INVALID,
-    RNA_G,       RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID,
-    RNA_INVALID, RNA_N,       RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID,
-    RNA_INVALID, RNA_INVALID, RNA_U,       RNA_INVALID, RNA_INVALID, RNA_INVALID,
-    RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID,
-    RNA_INVALID, RNA_INVALID, RNA_A,       RNA_INVALID, RNA_C,       RNA_INVALID,
-    RNA_INVALID, RNA_INVALID, RNA_G,       RNA_INVALID, RNA_INVALID, RNA_INVALID,
-    RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_N,       RNA_INVALID, RNA_INVALID,
-    RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_INVALID, RNA_U ]
+const char_to_deprecated = [
+    DEPRECATED_A,       DEPRECATED_INVALID, DEPRECATED_C,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_G,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_N,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_U,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_A,       DEPRECATED_INVALID, DEPRECATED_C,       DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_G,       DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_N,       DEPRECATED_INVALID, DEPRECATED_INVALID,
+    DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_INVALID, DEPRECATED_U ]
 
-@inline function Base.convert(::Type{RNANucleotide}, c::Char)
-    @inbounds nt = 'A' <= c <= 'u' ? char_to_rna[c - 'A' + 1] : RNA_INVALID
+@inline function Base.convert(::Type{DEPRECATEDNucleotide}, c::Char)
+    @inbounds nt = 'A' <= c <= 'u' ? char_to_deprecated[c - 'A' + 1] : DEPRECATED_INVALID
     return nt
 end
 
-@inline function unsafe_ascii_byte_to_nucleotide(T::Type{RNANucleotide}, c::UInt8)
-    @inbounds nt = char_to_rna[c - 0x41 + 1]
+@inline function unsafe_ascii_byte_to_nucleotide(T::Type{DEPRECATEDNucleotide}, c::UInt8)
+    @inbounds nt = char_to_deprecated[c - 0x41 + 1]
     return nt
 end
 
@@ -152,29 +160,29 @@ end
 # ------------------
 
 ##
-const dna_to_char = ['A', 'C', 'G', 'T', 'N', 'L', 'R', 'S']
+const sg_to_char = ['A', 'C', 'G', 'T', 'N', 'L', 'R', 'S']
 
-Base.convert(::Type{Char}, nt::DNANucleotide) = dna_to_char[convert(UInt8, nt) + 1]
+Base.convert(::Type{Char}, nt::SGNucleotide) = sg_to_char[convert(UInt8, nt) + 1]
 
-const rna_to_char = ['A', 'C', 'G', 'U', 'N']
+const deprecated_to_char = ['A', 'C', 'G', 'U', 'N']
 
-Base.convert(::Type{Char}, nt::RNANucleotide) = rna_to_char[convert(UInt8, nt) + 1]
+Base.convert(::Type{Char}, nt::DEPRECATEDNucleotide) = deprecated_to_char[convert(UInt8, nt) + 1]
 
 
 # Basic functions
 # ---------------
 
-function Base.show(io::IO, nt::DNANucleotide)
+function Base.show(io::IO, nt::SGNucleotide)
     if !isvalid(nt)
-        write(io, "Invalid DNA Nucleotide")
+        write(io, "Invalid SG Nucleotide")
     else
         write(io, convert(Char, nt))
     end
 end
 
-function Base.show(io::IO, nt::RNANucleotide)
+function Base.show(io::IO, nt::DEPRECATEDNucleotide)
     if !isvalid(nt)
-        write(io, "Invalid RNA Nucleotide")
+        write(io, "Invalid DEPRECATED Nucleotide")
     else
         write(io, convert(Char, nt))
     end
@@ -221,7 +229,7 @@ end
 # ------------
 
 """
-`NucleotideSequence(DNANucleotide|RNANucleotide)`
+`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide)`
 
 Construct an empty nucleotide sequence of the given type
 """
@@ -230,7 +238,7 @@ NucleotideSequence{T<:Nucleotide}(::Type{T}; mutable::Bool=false) =
 
 
 """
-`NucleotideSequence(DNANucleotide|RNANucleotide, other::NucleotideSequence, part::UnitRange)`
+`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide, other::NucleotideSequence, part::UnitRange)`
 
 Construct a subsequence of the given type from another nucleotide sequence
 """
@@ -344,7 +352,7 @@ end
 
 
 """
-`NucleotideSequence(DNANucleotide|RNANucleotide, seq::AbstractString, startpos::Int, stoppos::Int)`
+`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide, seq::AbstractString, startpos::Int, stoppos::Int)`
 
 Construct a nucleotide sequence from the `seq[startpos:stoppos]` string
 """
@@ -606,53 +614,53 @@ end
 # Aliases and contructors
 # -----------------------
 
-# DNA Sequences
-typealias DNASequence NucleotideSequence{DNANucleotide}
+# SG Sequences
+typealias SGSequence NucleotideSequence{SGNucleotide}
 
-"Construct an empty DNA nucleotide sequence"
-DNASequence(; mutable::Bool=true) =
-    NucleotideSequence(DNANucleotide, mutable=mutable)
+"Construct an empty SG nucleotide sequence"
+SGSequence(; mutable::Bool=true) =
+    NucleotideSequence(SGNucleotide, mutable=mutable)
 
-"Construct a DNA nucleotide subsequence from another sequence"
-DNASequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
-    NucleotideSequence(DNANucleotide, other, part, mutable=mutable)
+"Construct a SG nucleotide subsequence from another sequence"
+SGSequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
+    NucleotideSequence(SGNucleotide, other, part, mutable=mutable)
 
-"Construct a DNA nucleotide sequence from an AbstractString"
-DNASequence(seq::AbstractString; mutable=false) =
-    NucleotideSequence(DNANucleotide, seq, mutable=mutable)
+"Construct a SG nucleotide sequence from an AbstractString"
+SGSequence(seq::AbstractString; mutable=false) =
+    NucleotideSequence(SGNucleotide, seq, mutable=mutable)
 
-"Construct a DNA nucleotide sequence from other sequences"
-DNASequence(chunk1::DNASequence, chunks::DNASequence...) = NucleotideSequence(chunk1, chunks...)
-DNASequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
-    NucleotideSequence(DNANucleotide, seq, mutable=mutable)
-DNASequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
-    NucleotideSequence(DNANucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
-DNASequence(seq::AbstractVector{DNANucleotide}; mutable::Bool=false) =
+"Construct a SG nucleotide sequence from other sequences"
+SGSequence(chunk1::SGSequence, chunks::SGSequence...) = NucleotideSequence(chunk1, chunks...)
+SGSequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
+    NucleotideSequence(SGNucleotide, seq, mutable=mutable)
+SGSequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
+    NucleotideSequence(SGNucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
+SGSequence(seq::AbstractVector{SGNucleotide}; mutable::Bool=false) =
     NucleotideSequence(seq, mutable=mutable)
 
 
-# RNA Sequences
-typealias RNASequence NucleotideSequence{RNANucleotide}
+# DEPRECATED Sequences
+typealias DEPRECATEDSequence NucleotideSequence{DEPRECATEDNucleotide}
 
-"Construct an empty RNA nucleotide sequence"
-RNASequence(; mutable::Bool=true) =
-    NucleotideSequence(RNANucleotide, mutable=mutable)
+"Construct an empty DEPRECATED nucleotide sequence"
+DEPRECATEDSequence(; mutable::Bool=true) =
+    NucleotideSequence(DEPRECATEDNucleotide, mutable=mutable)
 
-"Construct a RNA nucleotide subsequence from another sequence"
-RNASequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
-    NucleotideSequence(RNANucleotide, other, part, mutable=mutable)
+"Construct a DEPRECATED nucleotide subsequence from another sequence"
+DEPRECATEDSequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
+    NucleotideSequence(DEPRECATEDNucleotide, other, part, mutable=mutable)
 
-"Construct a RNA nucleotide sequence from an AbstractString"
-RNASequence(seq::AbstractString; mutable::Bool=false) =
-    NucleotideSequence(RNANucleotide, seq, mutable=mutable)
+"Construct a DEPRECATED nucleotide sequence from an AbstractString"
+DEPRECATEDSequence(seq::AbstractString; mutable::Bool=false) =
+    NucleotideSequence(DEPRECATEDNucleotide, seq, mutable=mutable)
 
-"Construct a RNA nucleotide sequence from other sequences"
-RNASequence(chunk1::RNASequence, chunks::RNASequence...) = NucleotideSequence(chunk1, chunks...)
-RNASequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
-    NucleotideSequence(RNANucleotide, seq, mutable=mutable)
-RNASequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
-    NucleotideSequence(RNANucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
-RNASequence(seq::AbstractVector{RNANucleotide}; mutable::Bool=false) =
+"Construct a DEPRECATED nucleotide sequence from other sequences"
+DEPRECATEDSequence(chunk1::DEPRECATEDSequence, chunks::DEPRECATEDSequence...) = NucleotideSequence(chunk1, chunks...)
+DEPRECATEDSequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
+    NucleotideSequence(DEPRECATEDNucleotide, seq, mutable=mutable)
+DEPRECATEDSequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
+    NucleotideSequence(DEPRECATEDNucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
+DEPRECATEDSequence(seq::AbstractVector{DEPRECATEDNucleotide}; mutable::Bool=false) =
     NucleotideSequence(seq, mutable=mutable)
 
 
@@ -665,18 +673,13 @@ Base.convert{T<:Nucleotide}(::Type{NucleotideSequence{T}}, seq::AbstractVector{T
 Base.convert{T<:Nucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [x for x in seq]
 
 # Convert from/to Strings
-Base.convert(::Type{DNASequence}, seq::AbstractString) = DNASequence(seq)
-Base.convert(::Type{RNASequence}, seq::AbstractString) = RNASequence(seq)
+Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
+Base.convert(::Type{DEPRECATEDSequence}, seq::AbstractString) = DEPRECATEDSequence(seq)
 Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(ASCIIString, [convert(Char, x) for x in seq])
 
-# Convert between RNA and DNA
-function Base.convert{T}(::Type{NucleotideSequence{T}}, seq::NucleotideSequence)
-    newseq = NucleotideSequence{T}(seq.data, seq.ns, seq.ls, seq.rs, seq.ss, seq.part, seq.mutable, seq.hasrelatives)
-    if seq.mutable
-        orphan!(newseq, true)
-    end
-    return newseq
-end
+# Convert between DNA/RNA and SG
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
+
 
 
 # Basic Functions
@@ -690,7 +693,7 @@ function Base.show{T}(io::IO, seq::NucleotideSequence{T})
     len = length(seq)
     write(io, "$(string(len))nt ",
           seq.mutable ? "Mutable " : "",
-          T == DNANucleotide ? "DNA" : "RNA", " Sequence\n ")
+          T == SGNucleotide ? "SG" : "DEPRECATED", " Sequence\n ")
 
     # don't show more than this many characters to avoid filling the screen
     # with junk
@@ -887,13 +890,13 @@ end
 # String Decorator
 # ----------------
 
-# Enable building sequence literals like: dna"ACGTACGT" and rna"ACGUACGU"
-macro dna_str(seq, flags...)
-    return DNASequence(remove_newlines(seq))
+# Enable building sequence literals like: sg"ACGTACGT" and deprecated"ACGUACGU"
+macro sg_str(seq, flags...)
+    return SGSequence(remove_newlines(seq))
 end
 
-macro rna_str(seq, flags...)
-    return RNASequence(remove_newlines(seq))
+macro deprecated_str(seq, flags...)
+    return DEPRECATEDSequence(remove_newlines(seq))
 end
 
 function remove_newlines(seq)
@@ -1206,14 +1209,14 @@ end
 #
 # While NucleotideSequence is an efficient general-purpose sequence
 # representation, Kmer is useful for applications like assembly, k-mer counting,
-# k-mer based quantification in RNA-Seq, etc that rely on manipulating many
+# k-mer based quantification in DEPRECATED-Seq, etc that rely on manipulating many
 # short sequences as efficiently (space and time) as possible.
 
 bitstype 64 Kmer{T<:Nucleotide, K}
 
-typealias DNAKmer{K} Kmer{DNANucleotide, K}
-typealias RNAKmer{K} Kmer{RNANucleotide, K}
-typealias Codon RNAKmer{3}
+typealias SGKmer{K} Kmer{SGNucleotide, K}
+typealias DEPRECATEDKmer{K} Kmer{DEPRECATEDNucleotide, K}
+typealias Codon DEPRECATEDKmer{3}
 
 
 # Conversion
@@ -1221,10 +1224,16 @@ typealias Codon RNAKmer{3}
 
 # Conversion to/from UInt64
 
-Base.convert{K}(::Type{DNAKmer{K}}, x::UInt64) = box(DNAKmer{K}, unbox(UInt64, x))
-Base.convert{K}(::Type{RNAKmer{K}}, x::UInt64) = box(RNAKmer{K}, unbox(UInt64, x))
-Base.convert{K}(::Type{UInt64}, x::DNAKmer{K}) = box(UInt64, unbox(DNAKmer{K}, x))
-Base.convert{K}(::Type{UInt64}, x::RNAKmer{K}) = box(UInt64, unbox(RNAKmer{K}, x))
+Base.convert{K}(::Type{SGKmer{K}}, x::UInt64) = box(SGKmer{K}, unbox(UInt64, x))
+Base.convert{K}(::Type{DEPRECATEDKmer{K}}, x::UInt64) = box(DEPRECATEDKmer{K}, unbox(UInt64, x))
+Base.convert{K}(::Type{UInt64}, x::SGKmer{K}) = box(UInt64, unbox(SGKmer{K}, x))
+Base.convert{K}(::Type{UInt64}, x::DEPRECATEDKmer{K}) = box(UInt64, unbox(DEPRECATEDKmer{K}, x))
+
+
+Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
+Base.write{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, k::T) = Base.write(io, convert(UInt64, k))
+Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
+Base.read{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 
 
 # Conversion to/from String
@@ -1238,6 +1247,9 @@ function Base.convert{T, K}(::Type{Kmer{T, K}}, seq::AbstractString)
     for (i, c) in enumerate(seq)
         nt = convert(T, c)
         @assert nt != nnucleotide(T) error("A K-mer may not contain an N in its sequence")
+        @assert nt != lnucleotide(T) error("A K-mer may not contain an L in its sequence")
+        @assert nt != rnucleotide(T) error("A K-mer may not contain an R in its sequence")
+        @assert nt != snucleotide(T) error("A K-mer may not contain an S in its sequence")
 
         x |= convert(UInt64, nt) << shift
         shift += 2
@@ -1251,16 +1263,16 @@ Base.convert{T, K}(::Type{AbstractString}, seq::Kmer{T, K}) = convert(AbstractSt
 
 # Conversion to/from NucleotideSequence
 
-"Convert a NucleotideSequence to a Kmer"
-function Base.convert{T, K}(::Type{Kmer{T, K}}, seq::NucleotideSequence{T})
+"Convert a NucleotideSequence to an SGKmer"
+function Base.convert{T, K}(::Type{Kmer{T,K}}, seq::NucleotideSequence{T})
     @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
     @assert length(seq) == K error("Cannot construct a $(K)-mer from a NucleotideSequence of length $(length(seq))")
 
     x     = UInt64(0)
     shift = 0
     for (i, nt) in enumerate(seq)
-        if nt == nnucleotide(T)
-            error("A K-mer may not contain an N in its sequence")
+        if nt == nnucleotide(T) || nt == lnucleotide(T) || nt == rnucleotide(T) || nt == snucleotide(T)
+            error("A K-mer may not contain an N,L,R,S in its sequence")
         end
         x |= convert(UInt64, nt) << shift
         shift += 2
@@ -1283,11 +1295,11 @@ Base.convert{T, K}(::Type{NucleotideSequence}, x::Kmer{T, K}) = convert(Nucleoti
 
 # From strings
 
-"Construct a DNAKmer to an AbstractString"
-dnakmer(seq::AbstractString) = convert(DNAKmer, seq)
+"Construct a SGKmer to an AbstractString"
+sgkmer(seq::AbstractString) = convert(SGKmer, seq)
 
-"Construct a RNAKmer to an AbstractString"
-rnakmer(seq::AbstractString) = convert(RNAKmer, seq)
+"Construct a DEPRECATEDKmer to an AbstractString"
+deprecatedkmer(seq::AbstractString) = convert(DEPRECATEDKmer, seq)
 
 "Construct a Kmer from a sequence of Nucleotides"
 function kmer{T <: Nucleotide}(nts::T...)
@@ -1308,30 +1320,30 @@ function kmer{T <: Nucleotide}(nts::T...)
     return convert(Kmer{T, K}, x)
 end
 
-"Construct a Kmer from a DNASequence"
-function kmer(seq::DNASequence)
+"Construct a Kmer from a SGSequence"
+function kmer(seq::SGSequence)
     @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(DNAKmer{length(seq)}, seq)
+    return convert(SGKmer{length(seq)}, seq)
 end
 
-"Construct a Kmer from a RNASequence"
-function kmer(seq::RNASequence)
+"Construct a Kmer from a DEPRECATEDSequence"
+function kmer(seq::DEPRECATEDSequence)
     @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(RNAKmer{length(seq)}, seq)
+    return convert(DEPRECATEDKmer{length(seq)}, seq)
 end
 
 # call kmer with @inline macro would reduce the performance significantly?
 # Would the compiler inline even without @inline?
-"Construct a DNAKmer from a DNASequence"
-function dnakmer(seq::DNASequence)
+"Construct a SGKmer from a SGSequence"
+function sgkmer(seq::SGSequence)
     @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(DNAKmer{length(seq)}, seq)
+    return convert(SGKmer{length(seq)}, seq)
 end
 
-"Construct a RNAKmer from a RNASequence"
-function rnakmer(seq::RNASequence)
+"Construct a DEPRECATEDKmer from a DEPRECATEDSequence"
+function deprecatedkmer(seq::DEPRECATEDSequence)
     @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(RNAKmer{length(seq)}, seq)
+    return convert(DEPRECATEDKmer{length(seq)}, seq)
 end
 
 
@@ -1365,16 +1377,16 @@ function Base.getindex{T, K}(x::Kmer{T, K}, i::Integer)
 end
 
 
-function Base.show{K}(io::IO, x::DNAKmer{K})
-    write(io, "DNA $(K)-mer:\n ")
+function Base.show{K}(io::IO, x::SGKmer{K})
+    write(io, "SG $(K)-mer:\n ")
     for i in 1:K
         write(io, convert(Char, x[i]))
     end
 end
 
 
-function Base.show{K}(io::IO, x::RNAKmer{K})
-    write(io, "RNA $(K)-mer:\n ")
+function Base.show{K}(io::IO, x::DEPRECATEDKmer{K})
+    write(io, "DEPRECATED $(K)-mer:\n ")
     for i in 1:K
         write(io, convert(Char, x[i]))
     end
@@ -1504,7 +1516,7 @@ A EachKmerIterator constructed with these parameters
 ### Examples
 ```{.julia execute="false"}
 # iterate over codons
-for x in each(DNAKmer{3}, dna"ATCCTANAGNTACT", 3)
+for x in each(SGKmer{3}, sg"ATCCTANAGNTACT", 3)
     @show x
 end
 ```
@@ -1610,7 +1622,7 @@ type NucleotideCounts{T <: Nucleotide}
     a::UInt
     c::UInt
     g::UInt
-    t::UInt # also hold 'U' count when T == RNANucleotide
+    t::UInt # also hold 'U' count when T == DEPRECATEDNucleotide
     n::UInt
 
     function NucleotideCounts()
@@ -1622,8 +1634,8 @@ end
 # Aliases
 # -------
 
-typealias DNANucleotideCounts NucleotideCounts{DNANucleotide}
-typealias RNANucleotideCounts NucleotideCounts{RNANucleotide}
+typealias SGNucleotideCounts NucleotideCounts{SGNucleotide}
+typealias DEPRECATEDNucleotideCounts NucleotideCounts{DEPRECATEDNucleotide}
 
 
 # Constructors
@@ -1737,13 +1749,13 @@ end
 
 
 # Pretty printing of NucleotideCounts
-function Base.show(io::IO, counts::DNANucleotideCounts)
+function Base.show(io::IO, counts::SGNucleotideCounts)
     count_strings = format_counts(
-        [counts[DNA_A], counts[DNA_C], counts[DNA_G], counts[DNA_T], counts[DNA_N]])
+        [counts[SG_A], counts[SG_C], counts[SG_G], counts[SG_T], counts[SG_N]])
 
     write(io,
         """
-        DNANucleotideCounts:
+        SGNucleotideCounts:
           A => $(count_strings[1])
           C => $(count_strings[2])
           G => $(count_strings[3])
@@ -1753,13 +1765,13 @@ function Base.show(io::IO, counts::DNANucleotideCounts)
 end
 
 
-function Base.show(io::IO, counts::RNANucleotideCounts)
+function Base.show(io::IO, counts::DEPRECATEDNucleotideCounts)
     count_strings = format_counts(
-        [counts[RNA_A], counts[RNA_C], counts[RNA_G], counts[RNA_U], counts[RNA_N]])
+        [counts[DEPRECATED_A], counts[DEPRECATED_C], counts[DEPRECATED_G], counts[DEPRECATED_U], counts[DEPRECATED_N]])
 
     write(io,
         """
-        RNANucleotideCounts:
+        DEPRECATEDNucleotideCounts:
           A => $(count_strings[1])
           C => $(count_strings[2])
           G => $(count_strings[3])
@@ -1794,8 +1806,8 @@ immutable KmerCounts{T, K}
     end
 end
 
-typealias DNAKmerCounts{K} KmerCounts{DNANucleotide, K}
-typealias RNAKmerCounts{K} KmerCounts{DNANucleotide, K}
+typealias SGKmerCounts{K} KmerCounts{SGNucleotide, K}
+typealias DEPRECATEDKmerCounts{K} KmerCounts{SGNucleotide, K}
 
 
 function Base.getindex{T, K}(counts::KmerCounts{T, K}, x::Kmer{T, K})
@@ -1805,7 +1817,7 @@ end
 
 
 function Base.show{T, K}(io::IO, counts::KmerCounts{T, K})
-    println(io, (T == DNANucleotide ? "DNA" : "RNA"), "KmerCounts{", K, "}:")
+    println(io, (T == SGNucleotide ? "SG" : "DEPRECATED"), "KmerCounts{", K, "}:")
     for x in UInt64(1):UInt64(4^K)
         s = convert(AbstractString, convert(Kmer{T, K}, x - 1))
         println(io, "  ", s, " => ", counts.data[x])
