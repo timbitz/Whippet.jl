@@ -116,8 +116,8 @@ function load_refflat( fh; txbool=false )
       if exCnt <= 2 continue end # no alternative splicing possible
 
       # get donor and acceptor splice sites, adjust for 0-based coords 
-      don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0, c=-1)
-      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0)
+      don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0)
+      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0, c=-1)
 
       # Add original exons to interval tree-->
       for i in 1:length(don)
