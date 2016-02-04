@@ -51,7 +51,10 @@ end
 
 function ungapped_align( lib::GraphLib, param::AlignParam, read::SeqRecord )
    seed,readloc = try_seed( lib.index, param, read )
-   gene = sorted_getname  
+   locit = LocationIterator( seed )
+   for s in locit
+      gene = offset_to_name( lib, s )
+   end
 end
 
 function ungapped_fwd_extend()
