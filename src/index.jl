@@ -44,9 +44,9 @@ function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1; l
    ret
 end
 
-offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, offset, lower=true) )
+offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, Coordint(offset), lower=true) )
 
-function getoffset( seqlib::SeqLibrary, name::Str )
+function name_to_offset( seqlib::SeqLibrary, name::Str )
    if seqlib.sorted
       ind = search_sorted( seqlib.names, name, true )
       ret = seqlib.names[ind]
