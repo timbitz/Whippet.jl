@@ -31,23 +31,29 @@ immutable GraphLib <: SeqLibrary
    sorted::Bool
 end
 
-function getoffset( seqlib::SeqLibrary, name::Str )
-   if seqlib.sorted
-      ret = sorted_getoffset( seqlib, name )
+# Binary search.
+function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1, exact::Bool=true )
+   low == high && return(-1)
+   mid = ((high - low) >> 1) + low
+   arr[mid] == elem && return(mid)
+   if arr[mid] > elem
+      ret = search_sorted(arr, elem, low, mid)
    else
-      ret = brute_getoffset( seqlib, name )
+      ret = search_sorted(arr, elem, mid+1, high)
    end
    ret
 end
 
-function sorted_getoffset( seqlib, name, low=1, high=length(seqlib.names)+1 )
-   low == high && return(-1)
-   mid = ((high - low) >> 1) + lowe
-   seqlib.names[mid] == name && return(seqlib.offset[mid])
-   if seqlib.names[mid] > name
-      ret = sorted_getoffset(seqlib, name, low, mid)
+function getname( seqlib::SeqLibrary, offset )
+   ind = search_sorted( seqlib.offset, offset )
+end
+
+function getoffset( seqlib::SeqLibrary, name::Str )
+   if seqlib.sorted
+      ind = search_sorted( seqlib.names, name, true )
+      ret = seqlib.names[ind]
    else
-      ret = sorted_getoffset(seqlib, name, mid+1, high)
+      ret = brute_getoffset( seqlib, name )
    end
    ret
 end

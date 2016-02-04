@@ -13,6 +13,7 @@ immutable AlignParam
    seed_buffer::Int   # Ignore first _ bases
    seed_inc::Int      # Incrementation for subsequent seed searches
    seed_rng::Int      # Seed for random number generator
+   score_range::Int   # Scoring range to be considered repetitive
    is_stranded::Bool  # Is input data + strand only?
    is_paired::Bool    # Paired end data?
    is_trans_ok::Bool  # Do we allow edges from one gene to another
@@ -48,10 +49,9 @@ function try_seed( fm::FMIndex, p::AlignParam, read::SeqRecord )
    sa,curpos
 end
 
-
 function ungapped_align( lib::GraphLib, param::AlignParam, read::SeqRecord )
    seed,readloc = try_seed( lib.index, param, read )
-     
+   gene = sorted_getname  
 end
 
 function ungapped_fwd_extend()
