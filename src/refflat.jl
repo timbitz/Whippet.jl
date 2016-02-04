@@ -167,20 +167,6 @@ function load_refflat( fh; txbool=false )
 end
 
 
-# Binary search.
-function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1 )
-   low == high && return(-1)
-   mid = ((high - low) >> 1) + low
-   arr[mid] == elem && return(mid)
-   if arr[mid] > elem
-      ret = search_sorted(arr, elem, low, mid)
-   else
-      ret = search_sorted(arr, elem, mid+1, high)
-   end
-   ret
-end
-
-
 function main()
    
    println(STDERR, "Loading Refflat file...")
