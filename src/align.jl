@@ -14,6 +14,7 @@ immutable AlignParam
    seed_inc::Int      # Incrementation for subsequent seed searches
    seed_rng::Int      # Seed for random number generator
    score_range::Int   # Scoring range to be considered repetitive
+   score_min::Int     # Minimum score for a valid alignment
    is_stranded::Bool  # Is input data + strand only?
    is_paired::Bool    # Paired end data?
    is_trans_ok::Bool  # Do we allow edges from one gene to another
@@ -34,7 +35,7 @@ function fetch_seed( p::AlignParam, read::SeqRecord, offset=p.seed_buffer )
    seed
 end
 
-function try_seed( fm::FMIndex, p::AlignParam, read::SeqRecord )
+function try_seed( p::AlignParam, fm::FMIndex, read::SeqRecord )
    sa = 1:0
    cnt = Inf
    ctry = 0
@@ -49,16 +50,46 @@ function try_seed( fm::FMIndex, p::AlignParam, read::SeqRecord )
    sa,curpos
 end
 
-function ungapped_align( lib::GraphLib, param::AlignParam, read::SeqRecord )
-   seed,readloc = try_seed( lib.index, param, read )
+function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
+   seed,readloc = try_seed( p, lib.index, read )
    locit = LocationIterator( seed )
    for s in locit
-      gene = offset_to_name( lib, s )
+      geneind = offset_to_name( lib, s )
+      path = ungapped_fwd_extend( lib.graphs[geneind], s - lib.offset[geneind], 
+                                  read, readloc + p.seed_length - 1 ) # TODO check
    end
 end
 
-function ungapped_fwd_extend()
+function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int, 
+                             read::SeqRecord, readoffset::Int )
+   align   = SGAlignment( p.seed_length, 0, sgoffset, SGNodeTup[] ) 
+   ridx    = readoffset
+   sgidx   = sgoffset
+   sg      = sgarray[sgind]
+   curnode = search_sorted( sg.nodeoffset, sgoffset, lower=true )
+   edges   = Vector{Coordint}()
+   while( mis < p.mismatches )
+      if read[ridx] == sg[sgind]
+         # match
+         align.matches += 1
+      elseif (sg[sgind] & 0b100) == 0b100
+         # edge
+         # push and add to extend count down
+      else 
+         # mismatch
+          
+      end
+      ridx += 1
+      sgidx += 1
+   end
+
+   if (align.mat - align.min) >= p.score_min
+      unshift!( align.path, SGNodeTup( sgind, curnode ) )
+   else
+      # return no valid alignment
+   end
 end
-function ungapped_rev_extend()
+
+function ungapped_edge_extend( p::AlignParam, sgarray, sgnode )
+
 end
- 
