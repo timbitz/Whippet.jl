@@ -4,7 +4,7 @@
 ### Why use Whippet?
 
 ### Features
-- Ultra-high performance 
+- Ultra-high performance
 - Alignment-free robust quantification in any species
   - Gene expression (TpM)
   - Percent-spliced-in (PSI)
