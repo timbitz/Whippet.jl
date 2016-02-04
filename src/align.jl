@@ -7,9 +7,12 @@
 immutable AlignParam
    mismatches::Int    # Allowable mismatches
    seed_try::Int      # Starting number of seeds
+   seed_tolerate::Int # Allow at most _ hits for a valid seed
    seed_length::Int   # Seed Size
-   seed_region::Int   # Seed gathering constraint
-   seed_offset::Int   # Ignore first _ bases
+   seed_maxoff::Int   # Seed gathering constraint
+   seed_buffer::Int   # Ignore first _ bases
+   seed_inc::Int      # Incrementation for subsequent seed searches
+   seed_rng::Int      # Seed for random number generator
    is_stranded::Bool  # Is input data + strand only?
    is_paired::Bool    # Paired end data?
    is_trans_ok::Bool  # Do we allow edges from one gene to another
@@ -25,15 +28,30 @@ type SGAlignment <: UngappedAlignment
    path::Vector{SGNodeTup}
 end
 
-function check_seed_hit( index::FMIndex, param )
-   sa = FMIndexes.sa_range( query, index )
-   cnt = length(sa)
-   FMIndexes.LocationIterator( sa, index )
+function fetch_seed( p::AlignParam, read::SeqRecord, offset=p.seed_buffer )
+   seed = read.seq[offset:(offset+p.seed_length-1)]
+   seed
+end
+
+function try_seed( fm::FMIndex, p::AlignParam, read::SeqRecord )
+   sa = 1:0
+   cnt = Inf
+   ctry = 0
+   curpos = p.seed_buffer
+   while( cnt > p.seed_tolerate && ctry <= p.seed_try && curpos <= p.seed_maxoff )
+      query,offset = fetch_seed( p, read, curpos )
+      sa = FMIndexes.sa_range( query, index )
+      cnt = length(sa)
+      ctry += 1
+      curpos += p.seed_inc
+   end
+   sa,curpos
 end
 
 
-function ungapped_align( lib::GraphLib, param::AlignParam, read )
-   
+function ungapped_align( lib::GraphLib, param::AlignParam, read::SeqRecord )
+   seed,readloc = try_seed( lib.index, param, read )
+     
 end
 
 function ungapped_fwd_extend()
