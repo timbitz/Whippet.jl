@@ -71,14 +71,18 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
    curedge  = curnode
    
    while( mis < p.mismatches ) # add < length(sg.seq)
-      if read[ridx] == sg[sgind]
+      if read[ridx] == sg.seq[sgind]
          # match
          align.matches += 1
-      elseif (UInt8(sg[sgind]) & 0b100) == 0b100 # N,L,R,S
-         if #is_transparent(curedge)
-            # edge
-            #if 
+      elseif (UInt8(sg.seq[sgind]) & 0b100) == 0b100 # N,L,R,S
+         if # 'LR', 'LL'
+            if nodelen < K
+  
+            else
+               # check edgeright[curnode+1] == 
+            end
          end
+         # ignore 'N' and 'RR' 
       else 
          # mismatch
          mis += 1
