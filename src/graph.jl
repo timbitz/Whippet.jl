@@ -26,6 +26,15 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
 const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
                                    sg"LR", sg"LL", sg"RR", sg"SS" ]
 
+const EDGETYPE_SL = convert(EdgeType, 0b000)
+const EDGETYPE_SR = convert(EdgeType, 0b001)
+const EDGETYPE_LS = convert(EdgeType, 0b010)
+const EDGETYPE_RS = convert(EdgeType, 0b011)
+
+const EDGETYPE_LR = convert(EdgeType, 0b100)
+const EDGETYPE_LL = convert(EdgeType, 0b101)
+const EDGETYPE_RR = convert(EdgeType, 0b110)
+
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
    EDGETYPE_TO_UINT8[one-3,two-3]
