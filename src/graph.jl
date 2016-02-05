@@ -79,11 +79,13 @@ SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(), Vector{UInt32}(),
 # This holds a representation of the splice graph
 # which is a directed multigraph
 immutable SpliceGraph
-  nodeoffset::Vector{Coordint} # SG offset
-  nodecoord::Vector{Coordint}  # Genome offset
-  nodelen::Vector{Coordint}
-  edgetype::Vector{EdgeType}
-  seq::SGSequence
+   nodeoffset::Vector{Coordint} # SG offset
+   nodecoord::Vector{Coordint}  # Genome offset
+   nodelen::Vector{Coordint}
+   edgetype::Vector{EdgeType}
+   edgeleft::Vector{UInt64}
+   edgeright::Vector{UInt64}
+   seq::SGSequence
 end
 # All positive strand oriented sequences---> 
 # Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
@@ -180,7 +182,10 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       curoffset += n + 2
    end
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, seq )
+   eleft  = fill(zero(UInt64), length(edgetype))
+   eright = fill(zero(UInt64), length(edgetype))
+
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!

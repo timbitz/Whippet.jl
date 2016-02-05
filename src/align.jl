@@ -6,6 +6,7 @@
 
 immutable AlignParam
    mismatches::Int    # Allowable mismatches
+   edge_ext_min::Int  # Minimum number of matches to extend past an edge
    seed_try::Int      # Starting number of seeds
    seed_tolerate::Int # Allow at most _ hits for a valid seed
    seed_length::Int   # Seed Size
@@ -61,23 +62,27 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
 end
 
 function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int, 
-                             read::SeqRecord, readoffset::Int )
-   align   = SGAlignment( p.seed_length, 0, sgoffset, SGNodeTup[] ) 
-   ridx    = readoffset
-   sgidx   = sgoffset
-   sg      = sgarray[sgind]
-   curnode = search_sorted( sg.nodeoffset, sgoffset, lower=true )
-   edges   = Vector{Coordint}()
+                              read::SeqRecord, readoffset::Int )
+   align    = SGAlignment( p.seed_length, 0, sgoffset, SGNodeTup[] ) 
+   ridx     = readoffset
+   sgidx    = sgoffset
+   sg       = sgarray[sgind]
+   curnode  = search_sorted( sg.nodeoffset, sgoffset, lower=true )
+   edges    = Vector{Coordint}()
+   edgeext  = 0
+   edgebool = false
+   
    while( mis < p.mismatches )
       if read[ridx] == sg[sgind]
          # match
          align.matches += 1
-      elseif (sg[sgind] & 0b100) == 0b100
-         # edge
-         # push and add to extend count down
+      elseif (UInt8(sg[sgind]) & 0b100) == 0b100 # N,L,R,S
+         if #edge?
+            # edge
+         end
       else 
          # mismatch
-          
+         mis += 1
       end
       ridx += 1
       sgidx += 1
@@ -91,5 +96,5 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
 end
 
 function ungapped_edge_extend( p::AlignParam, sgarray, sgnode )
-
+   
 end
