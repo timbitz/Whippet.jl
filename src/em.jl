@@ -106,5 +106,11 @@ function em_test()
    psi_lengths = [ 7, 5 ]
    psi_ambig = [(1,2) for i in 1:12]
    @time rec_em( psi_counts, psi_lengths, divsum(psi_counts), psi_ambig, sig=4 )
+
+   # Test imbalanced exon body to exon-exon junction reads
+   psi_counts = Float64[ 5+5, 5 ]
+   psi_lengths = [ 6, 4 ]
+   psi_ambig = [(1,2) for i in 1:10]
+   @time rec_em( psi_counts, psi_lengths, divsum(psi_counts), psi_ambig, sig=4 )
 end
 

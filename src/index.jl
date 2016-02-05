@@ -26,7 +26,7 @@ immutable GraphLib <: SeqLibrary
    offset::Vector{Coordint}
    names::Vector{Str}
    graphs::Vector{SpliceGraph}
-   #edges::Vector{Edges}
+   edges::Edges
    index::FMIndex
    sorted::Bool
 end

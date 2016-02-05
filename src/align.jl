@@ -75,14 +75,18 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
          # match
          align.matches += 1
       elseif (UInt8(sg.seq[sgind]) & 0b100) == 0b100 # N,L,R,S
-         if # 'LR', 'LL'
-            if nodelen < K
-  
-            else
+         if # 'LR' && nodelen > K
                # check edgeright[curnode+1] == 
-            end
+               # move forward K, continue    
+         elseif # 'LR' || 'LL'
+               # if length(edges) > 0, push! edgematch then set to 0
+               # push! edge,       
+         elseif # 'LS'
+               # obligate spliced_extension
+         elseif # 'SR' || 'RS'
+               # end of alignment
          end
-         # ignore 'N' and 'RR' 
+         # ignore 'N' and 'RR' and 'SL' 
       else 
          # mismatch
          mis += 1
@@ -90,6 +94,8 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
       ridx += 1
       sgidx += 1
    end
+
+   # if edgemat < K, spliced_extension for each in length(edges)
 
    if (align.mat - align.min) >= p.score_min
       unshift!( align.path, SGNodeTup( sgind, curnode ) )
