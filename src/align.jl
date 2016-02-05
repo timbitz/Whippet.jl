@@ -68,17 +68,16 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
    sgidx    = sgoffset
    sg       = sgarray[sgind]
    curnode  = search_sorted( sg.nodeoffset, sgoffset, lower=true )
-   edges    = Vector{Coordint}()
-   edgeext  = 0
-   edgebool = false
+   curedge  = curnode
    
-   while( mis < p.mismatches )
+   while( mis < p.mismatches ) # add < length(sg.seq)
       if read[ridx] == sg[sgind]
          # match
          align.matches += 1
       elseif (UInt8(sg[sgind]) & 0b100) == 0b100 # N,L,R,S
-         if #edge?
+         if #is_transparent(curedge)
             # edge
+            #if 
          end
       else 
          # mismatch
