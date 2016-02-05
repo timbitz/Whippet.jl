@@ -6,7 +6,7 @@
 
 immutable AlignParam
    mismatches::Int    # Allowable mismatches
-   edge_ext_min::Int  # Minimum number of matches to extend past an edge
+   kmer_size::Int  # Minimum number of matches to extend past an edge
    seed_try::Int      # Starting number of seeds
    seed_tolerate::Int # Allow at most _ hits for a valid seed
    seed_length::Int   # Seed Size
@@ -68,25 +68,30 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
    sgidx    = sgoffset
    sg       = sgarray[sgind]
    curnode  = search_sorted( sg.nodeoffset, sgoffset, lower=true )
-   curedge  = curnode
-   
+   curedge  = curnode+1  
+ 
    while( mis < p.mismatches ) # add < length(sg.seq)
       if read[ridx] == sg.seq[sgind]
          # match
          align.matches += 1
       elseif (UInt8(sg.seq[sgind]) & 0b100) == 0b100 # N,L,R,S
-         if # 'LR' && nodelen > K
+         if     sg.edgetype[curedge] == EDGETYPE_LR && 
+                sg.nodelen[curedge] >= p.kmer_size  # 'LR' && nodelen >= K
                # check edgeright[curnode+1] == 
                # move forward K, continue    
-         elseif # 'LR' || 'LL'
+         elseif sg.edgetype[curedge] == EDGETYPE_LR || 
+                sg.edgetype[curedge] == EDGETYPE_LL # 'LR' || 'LL'
                # if length(edges) > 0, push! edgematch then set to 0
                # push! edge,       
-         elseif # 'LS'
+         elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
-         elseif # 'SR' || 'RS'
+         elseif sg.edgetype[curedge] == EDGETYPE_SR ||
+                sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
                # end of alignment
+         elseif !(sg.seq[sgind] == SG_N) #'RR' || 'SL'
+            
          end
-         # ignore 'N' and 'RR' and 'SL' 
+         # ignore 'N', 'RR' and 'SL' 
       else 
          # mismatch
          mis += 1

@@ -185,6 +185,8 @@ function trans_index!( fhIter, ref::Refset )
    xcript = sg""
    gc()
 
-   GraphLib( xoffset, xgenes, xgraph, fm, true)
+   edges = build_edges( xgraph, 9 ) # TODO make variable kmer
+
+   GraphLib( xoffset, xgenes, xgraph, edges, fm, true)
 end
 
