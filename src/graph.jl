@@ -83,8 +83,8 @@ immutable SpliceGraph
    nodecoord::Vector{Coordint}  # Genome offset
    nodelen::Vector{Coordint}
    edgetype::Vector{EdgeType}
-   edgeleft::Vector{UInt64}
-   edgeright::Vector{UInt64}
+   edgeleft::Vector{SGKmer}
+   edgeright::Vector{SGKmer}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -182,8 +182,8 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       curoffset += n + 2
    end
 
-   eleft  = fill(zero(UInt64), length(edgetype))
-   eright = fill(zero(UInt64), length(edgetype))
+   eleft  = Vector{SGKmer}(length(edgetype))
+   eright = Vector{SGKmer}(length(edgetype))
 
    return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq )
 end
