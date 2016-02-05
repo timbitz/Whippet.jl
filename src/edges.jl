@@ -67,7 +67,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
       ind = kmer_index(curkmer)
    catch
       abstr = AbstractString(s)
-      ismatch( r"S|N", abstr ) && return
+      ismatch( r"S|N", abstr ) && return(zero(UInt64))
       sub = replace( abstr, r"L|R", "" )
       #println("Caught $abstr replaced to $sub , $ksize")
       curl,curr = l-1,r+1
@@ -92,6 +92,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
       push!(kmers[ind], entry)
       kmers[ind] = sort(kmers[ind], by=x->x.gene) |> unique
    end
+   ind
 end
 
 function build_edges( graphs::Vector{SpliceGraph}, k::Integer )
@@ -103,10 +104,12 @@ function build_edges( graphs::Vector{SpliceGraph}, k::Integer )
       for (j,n) in enumerate(g.nodeoffset)
 
          if is_edge( g.edgetype[j], true ) # left edge
-            add_kmer_edge!( left, g.seq, n-k-2, n-3, true,  SGNodeTup(i,j) )
+            lkmer = add_kmer_edge!( left, g.seq, n-k-2, n-3, true,  SGNodeTup(i,j) )
+            g.edgeleft[j] = lkmer
          end
          if is_edge( g.edgetype[j], false ) # right edge
-            add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNodeTup(i,j) )
+            rkmer = add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNodeTup(i,j) )
+            g.edgeright[j] = rkmer
          end
 
       end
