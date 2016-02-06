@@ -71,10 +71,10 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
    curedge  = curnode+1  
  
    while( mis < p.mismatches ) # add < length(sg.seq)
-      if read[ridx] == sg.seq[sgind]
+      if read[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
-      elseif (UInt8(sg.seq[sgind]) & 0b100) == 0b100 # N,L,R,S
+      elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 # N,L,R,S
          if     sg.edgetype[curedge] == EDGETYPE_LR && 
                 sg.nodelen[curedge] >= p.kmer_size  # 'LR' && nodelen >= K
                # check edgeright[curnode+1] == 
@@ -89,9 +89,9 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
                 sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
                # end of alignment
          elseif !(sg.seq[sgind] == SG_N) #'RR' || 'SL'
-            
+               # ignore 'RR' and 'SL'   
          end
-         # ignore 'N', 'RR' and 'SL' 
+         # ignore 'N'
       else 
          # mismatch
          mis += 1
@@ -109,6 +109,7 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
    end
 end
 
-function ungapped_edge_extend( p::AlignParam, sgarray, sgnode )
-   
+function spliced_extend( p::AlignParam, lib, sgarray, sgind )
+   # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
+  
 end
