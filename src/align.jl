@@ -65,7 +65,7 @@ end
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
    seed,readloc = try_seed( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed )
-   res   = SGAlignment[]
+   res   = Vector{SGAlignment}()
    for s in locit
       geneind = offset_to_name( lib, s )
       align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind], 
@@ -80,25 +80,29 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgoffset::Int, 
-                              read::SeqRecord, readoffset::Int;
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int, 
+                              read::SeqRecord, ridx::Int;
                               align=SGAlignment(p.seed_length,0,sgoffset,SGNodeTup[],false),
-                              nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,sgoffset,lower=true) )
-   ridx     = readoffset
-   sgidx    = sgoffset
+                              nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,sgidx,lower=true) )
    sg       = lib.graphs[geneind]
    readlen  = length(read.seq)
-   curnode  = nodeidx
+   curedge  = nodeidx
 
-   push!( align.path, SGNodeTup( geneind, curnode ) ) # starting node
+   passed_edges = nothing # don't allocate arrays unless
+   edge_matches = nothing # we are going to need them
+   extend_match = 0
+
+   push!( align.path, SGNodeTup( geneind, nodeidx ) ) # starting node
 
    while( mis <= p.mismatches && ridx <= readlen )
       if read[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
+         extend_match  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 # N,L,R,S
-         if     sg.edgetype[curnode+1] == EDGETYPE_LR && 
-                sg.nodelen[curnode+1]  >= p.kmer_size && # 'LR' && nodelen >= K
+         curedge = nodeidx+1
+         if     sg.edgetype[curedge] == EDGETYPE_LR && 
+                sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
                 readlen - ridx + 1     >= p.kmer_size
                # check edgeright[curnode+1] == read[ nextkmer ]
                # move forward K, continue 
@@ -106,14 +110,14 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgoffset::I
                # then we simply jump ahead, otherwise lets try to find a compatible right
                # node
                rkmer = SGKmer{p.kmer.size}(read[ridx:(ridx+p.kmer.size-1)])
-               if lib.edges.edgeright[curnode+1] == rkmer
+               if lib.edges.edgeright[curedge] == rkmer
                   align.matches += p.kmer.size
-                  ridx += 1 + p.kmer.size
+                  ridx += p.kmer.size
                   sidx += 1 + p.kmer.size
-                  curnode += 1
-                  push!( align.path, SGNodeTup( geneind, curnode ) )
+                  nodeidx += 1
+                  push!( align.path, SGNodeTup( geneind, nodeidx ) )
                else
-                  align = spliced_extend( p, lib, geneind, curnode+1, read, ridx, rkmer, align )
+                  align = spliced_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                   break
                end
          elseif sg.edgetype[curedge] == EDGETYPE_LR || 
@@ -123,17 +127,26 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgoffset::I
                # of potential edges we pass along the way.  When the alignment
                # dies if we have not had sufficient matches we then explore
                # those edges. 
-                
+               if passed_edges == nothing # now we have to malloc
+                  passed_edges = Vector{Coordint}()
+                  edge_matches = Vector{Coordint}()
+                  extend_match = 0
+               else
+                   
+               end
          elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
                rkmer = SGKmer{p.kmer.size}(read[ridx:(ridx+p.kmer.size-1)])
-               align = spliced_extend( p, lib, geneind, curnode+1, read, ridx, kmer, align )
+               align = spliced_extend( p, lib, geneind, curedge, read, ridx, kmer, align )
                break
          elseif sg.edgetype[curedge] == EDGETYPE_SR ||
                 sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
                # end of alignment
+               break # ?
          elseif !(sg.seq[sgind] == SG_N) #'RR' || 'SL'
-               # ignore 'RR' and 'SL'   
+               # ignore 'RR' and 'SL'
+               sidx += 1
+               ridx -= 1 # offset the lower ridx += 1  
          end
          # ignore 'N'
       else 
@@ -160,10 +173,10 @@ function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, r
    for rn in right_nodes
       rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
       res_align = ungapped_fwd_extend( p, lib, rn.gene, rn_offset, read, ridx, 
-                                               align=deep_copy(align), nodeidx=rn.node )
+                                       align=deep_copy(align), nodeidx=rn.node )
       best = res_align > best ? res_align : best
    end
-   if score(best) >= score(align)+p.kmer_size
+   if score(best) >= score(align) + p.kmer_size
       best.isvalid = true
    end
    best
