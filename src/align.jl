@@ -56,33 +56,52 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
    locit = LocationIterator( seed )
    for s in locit
       geneind = offset_to_name( lib, s )
-      path = ungapped_fwd_extend( lib.graphs[geneind], s - lib.offset[geneind], 
+      path = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind], 
                                   read, readloc + p.seed_length - 1 ) # TODO check
    end
 end
 
-function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int, 
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgoffset::Int, 
                               read::SeqRecord, readoffset::Int )
    align    = SGAlignment( p.seed_length, 0, sgoffset, SGNodeTup[] ) 
    ridx     = readoffset
    sgidx    = sgoffset
-   sg       = sgarray[sgind]
+   sg       = lib.graphs[geneind]
    curnode  = search_sorted( sg.nodeoffset, sgoffset, lower=true )
-   curedge  = curnode+1  
- 
-   while( mis < p.mismatches ) # add < length(sg.seq)
+   readlen  = length(read.seq)
+
+   push!( align.path, SGNodeTup( geneind, curnode ) ) # starting node
+
+   while( mis <= p.mismatches && ridx <= readlen ) # add < length(sg.seq)
       if read[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 # N,L,R,S
-         if     sg.edgetype[curedge] == EDGETYPE_LR && 
-                sg.nodelen[curedge] >= p.kmer_size  # 'LR' && nodelen >= K
-               # check edgeright[curnode+1] == 
-               # move forward K, continue    
+         if     sg.edgetype[curnode+1] == EDGETYPE_LR && 
+                sg.nodelen[curnode+1]  >= p.kmer_size && # 'LR' && nodelen >= K
+                readlen - ridx + 1     >= p.kmer_size
+               # check edgeright[curnode+1] == read[ nextkmer ]
+               # move forward K, continue 
+               # This is a std exon-exon junction, if the read is an inclusion read
+               # then we simply jump ahead, otherwise lets try to find a compatible right
+               # node
+               if lib.edges.edgeright[curnode+1] == read[(ridx+2):(ridx+1+p.kmer.size)]
+                  align.matches += p.kmer.size
+                  ridx += 1 + p.kmer.size
+                  sidx += 1 + p.kmer.size
+                  curnode += 1
+                  push!( align.path, SGNodeTup( geneind, curnode ) )
+               else
+                  align = spliced_extend( p, lib, geneind, curnode+1, read, ridx, align )
+                  break
+               end
          elseif sg.edgetype[curedge] == EDGETYPE_LR || 
                 sg.edgetype[curedge] == EDGETYPE_LL # 'LR' || 'LL'
                # if length(edges) > 0, push! edgematch then set to 0
-               # push! edge,       
+               # push! edge,  (here we try to extend fwd, but keep track
+               # of potential edges we pass along the way.  When the alignment
+               # dies if we have not had sufficient matches we then explore
+               # those edges. 
          elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
          elseif sg.edgetype[curedge] == EDGETYPE_SR ||
@@ -103,13 +122,13 @@ function ungapped_fwd_extend( p::AlignParam, sgarray, sgind, sgoffset::Int,
    # if edgemat < K, spliced_extension for each in length(edges)
 
    if (align.mat - align.min) >= p.score_min
-      unshift!( align.path, SGNodeTup( sgind, curnode ) )
+      unshift!( align.path, SGNodeTup( geneind, curnode ) )
    else
       # return no valid alignment
    end
 end
 
-function spliced_extend( p::AlignParam, lib, sgarray, sgind )
+function spliced_extend( p::AlignParam, lib, geneind, edgeind, read, ridx, align )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
-  
+   
 end

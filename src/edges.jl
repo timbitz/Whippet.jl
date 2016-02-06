@@ -34,6 +34,8 @@ function is_edge( edge::EdgeType, left::Bool )
    false
 end
 
+Base.intersect( arrA::Vector{SGNodeTup}, arrB::Vector{SGNodeTup} ) = intersect_sorted( arrA, arrB )
+
 # Intersect two sorted arrays of SGNodeTup by gene entry
 # Return the list of intersected arrB entries
 function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
