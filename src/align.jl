@@ -65,11 +65,16 @@ end
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
    seed,readloc = try_seed( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed )
+   res   = SGAlignment[]
    for s in locit
       geneind = offset_to_name( lib, s )
-      path = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind], 
-                                  read, readloc + p.seed_length - 1 ) # TODO check
+      align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind], 
+                                   read, readloc + p.seed_length - 1 ) # TODO check
+      if align.isvalid
+         push!(res, align)
+      end
    end
+   res
 end
 
 
@@ -118,8 +123,12 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgoffset::I
                # of potential edges we pass along the way.  When the alignment
                # dies if we have not had sufficient matches we then explore
                # those edges. 
+                
          elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
+               rkmer = SGKmer{p.kmer.size}(read[ridx:(ridx+p.kmer.size-1)])
+               align = spliced_extend( p, lib, geneind, curnode+1, read, ridx, kmer, align )
+               break
          elseif sg.edgetype[curedge] == EDGETYPE_SR ||
                 sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
                # end of alignment
