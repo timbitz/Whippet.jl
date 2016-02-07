@@ -67,7 +67,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
    res   = Nullable{Vector{SGAlignment}}()
    for s in locit
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
-      println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]+10):(s-lib.offset[geneind]+10)+50])")
+      #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]+10):(s-lib.offset[geneind]+10)+50])")
       align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind] + p.seed_length + 10, 
                                    read, readloc + p.seed_length ) # TODO check
    #   if align.isvalid
@@ -146,7 +146,7 @@ end
          elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
-               align = spliced_extend( p, lib, geneind, curedge, read, ridx, kmer, align )
+               align = spliced_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                break
          elseif sg.edgetype[curedge] == EDGETYPE_SR ||
                 sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
@@ -180,6 +180,8 @@ end
 function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, rkmer, align )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
+   isdefined( lib.edges.right, kmer_index(rkmer) ) || return DEF_ALIGN
+
    best = DEF_ALIGN
    left_kmer = lib.graphs[geneind].edgeleft[edgeind]
    right_nodes = lib.edges.left[ kmer_index(left_kmer) ] ∩ lib.edges.right[ kmer_index(rkmer) ]
