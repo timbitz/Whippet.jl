@@ -113,7 +113,9 @@ Base.convert(::Type{Char}, nt::SGNucleotide) = sg_to_char[convert(UInt8, nt) + 1
 
 # Converstion to DNANucleotide
 # ----------------------------
-==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = convert(UInt8, a) == convert(UInt8, b)
+==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = box(UInt8, a) == box(UInt8, b)
+==( a::SGNucleotide, b::Bio.Seq.DNANucleotide ) = box(UInt8, a) == box(UInt8, b)
+
 
 # Basic functions
 # ---------------
@@ -1144,6 +1146,8 @@ Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.re
 Base.read{T <: Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 #Base.read{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 
+==( a::Bio.Seq.DNAKmer, b::SGKmer ) = convert(UInt64, a) == convert(UInt64, b)
+==( a::SGKmer, b::Bio.Seq.DNAKmer ) = convert(UInt64, a) == convert(UInt64, b)
 
 # Conversion to/from String
 
@@ -1198,6 +1202,8 @@ function Base.convert{T, K}(::Type{NucleotideSequence{T}}, x::Kmer{T, K})
 end
 Base.convert{T, K}(::Type{NucleotideSequence}, x::Kmer{T, K}) = convert(NucleotideSequence{T}, x)
 
+
+==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = convert(UInt64, a) == convert(UInt64, b)
 
 # Constructors
 # ------------
