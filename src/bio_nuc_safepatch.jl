@@ -111,7 +111,9 @@ const sg_to_char = ['A', 'C', 'G', 'T', 'N', 'L', 'R', 'S']
 
 Base.convert(::Type{Char}, nt::SGNucleotide) = sg_to_char[convert(UInt8, nt) + 1]
 
-
+# Converstion to DNANucleotide
+# ----------------------------
+==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = convert(UInt8, a) == convert(UInt8, b)
 
 # Basic functions
 # ---------------
@@ -1136,8 +1138,10 @@ Base.convert{K}(::Type{UInt64}, x::SGKmer{K}) = box(UInt64, unbox(SGKmer{K}, x))
 
 
 Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
+Base.write{T <: Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
 #Base.write{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, k::T) = Base.write(io, convert(UInt64, k))
 Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
+Base.read{T <: Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 #Base.read{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 
 

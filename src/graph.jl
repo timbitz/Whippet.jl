@@ -26,14 +26,6 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
 const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
                                    sg"LR", sg"LL", sg"RR", sg"SS" ]
 
-const EDGETYPE_SL = convert(EdgeType, 0b000)
-const EDGETYPE_SR = convert(EdgeType, 0b001)
-const EDGETYPE_LS = convert(EdgeType, 0b010)
-const EDGETYPE_RS = convert(EdgeType, 0b011)
-
-const EDGETYPE_LR = convert(EdgeType, 0b100)
-const EDGETYPE_LL = convert(EdgeType, 0b101)
-const EDGETYPE_RR = convert(EdgeType, 0b110)
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
@@ -46,6 +38,15 @@ Base.convert( ::Type{EdgeType}, edge::UInt8 ) = box(EdgeType, unbox(UInt8, edge 
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = box(UInt8, unbox(EdgeType, edge ))
 Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
 Base.convert( ::Type{SGSequence}, edge::EdgeType ) = EDGETYPE_TO_SG[Base.convert(UInt8, edge)+1]
+
+const EDGETYPE_SL = convert(EdgeType, 0b000)
+const EDGETYPE_SR = convert(EdgeType, 0b001)
+const EDGETYPE_LS = convert(EdgeType, 0b010)
+const EDGETYPE_RS = convert(EdgeType, 0b011)
+
+const EDGETYPE_LR = convert(EdgeType, 0b100)
+const EDGETYPE_LL = convert(EdgeType, 0b101)
+const EDGETYPE_RR = convert(EdgeType, 0b110)
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
