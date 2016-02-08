@@ -3,22 +3,22 @@ import Base.<,Base.>,Base.<=,Base.>=
 
 typealias NodeInt UInt32
 
-immutable SGNodeTup
+immutable SGNode
    gene::NodeInt
    node::NodeInt
 end
 
-typealias SGNodeSet Vector{SGNodeTup}
+typealias SGNodeSet Vector{SGNode}
 
 immutable Edges{K}
    left::Vector{SGNodeSet}
    right::Vector{SGNodeSet}
 end
 
-<( a::SGNodeTup, b::SGNodeTup ) = <( a.gene, b.gene )
->( a::SGNodeTup, b::SGNodeTup ) = >( a.gene, b.gene )
-<=( a::SGNodeTup, b::SGNodeTup ) = <=( a.gene, b.gene )
->=( a::SGNodeTup, b::SGNodeTup ) = >=( a.gene, b.gene )
+<( a::SGNode, b::SGNode ) = <( a.gene, b.gene )
+>( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
+<=( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
+>=( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
 
 Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 
@@ -38,9 +38,9 @@ function is_edge( edge::EdgeType, left::Bool )
    false
 end
 
-Base.intersect( arrA::Vector{SGNodeTup}, arrB::Vector{SGNodeTup} ) = intersect_sorted( arrA, arrB )
+Base.intersect( arrA::Vector{SGNode}, arrB::Vector{SGNode} ) = intersect_sorted( arrA, arrB )
 
-# Intersect two sorted arrays of SGNodeTup by gene entry
+# Intersect two sorted arrays of SGNode by gene entry
 # Return the list of intersected arrB entries
 function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
    res = Vector{T}()
@@ -64,7 +64,7 @@ kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
-                                                  entry::SGNodeTup )
+                                                  entry::SGNode )
    s = seq[l:r]
    ksize = r-l+1
    ind = 0 #default
@@ -111,11 +111,11 @@ function build_edges( graphs::Vector{SpliceGraph}, k::Integer )
       for (j,n) in enumerate(g.nodeoffset)
 
          if is_edge( g.edgetype[j], true ) # left edge
-            lkmer = add_kmer_edge!( left, g.seq, n-k-2, n-3, true,  SGNodeTup(i,j) )
+            lkmer = add_kmer_edge!( left, g.seq, n-k-2, n-3, true,  SGNode(i,j) )
             g.edgeleft[j] = SGKmer{k}(lkmer)
          end
          if is_edge( g.edgetype[j], false ) # right edge
-            rkmer = add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNodeTup(i,j) )
+            rkmer = add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNode(i,j) )
             g.edgeright[j] = SGKmer{k}(rkmer)
          end
 

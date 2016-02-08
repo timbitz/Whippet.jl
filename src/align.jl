@@ -33,11 +33,11 @@ type SGAlignment <: UngappedAlignment
    matches::Int
    mismatches::Int
    offset::Int
-   path::Vector{SGNodeTup}
+   path::Vector{SGNode}
    isvalid::Bool
 end
 
-const DEF_ALIGN = SGAlignment(0, 0, 0, SGNodeTup[], false)
+const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], false)
 
 score( align::SGAlignment ) = align.matches - align.mismatches 
 
@@ -91,20 +91,19 @@ end
 # Returns: SGAlignment
 function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int, 
                               read::SeqRecord, ridx::Int;
-                              align=SGAlignment(p.seed_length,0,sgidx,SGNodeTup[],false),
+                              align=SGAlignment(p.seed_length,0,sgidx,SGNode[],false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
    sg       = lib.graphs[geneind]
    readlen  = length(read.seq)
-   targlen  = length(sg.seq)
    curedge  = nodeidx
 
    passed_edges = Nullable{Vector{Coordint}}() # don't allocate arrays unless
    edge_matches = Nullable{Vector{Coordint}}() # we are going to need them
    extend_match = 0
 
-   push!( align.path, SGNodeTup( geneind, nodeidx ) ) # starting node
+   push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
-   while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= targlen )
+   while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
       @bp
       if read.seq[ridx] == sg.seq[sgidx]
          # match
@@ -126,7 +125,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
                   ridx += p.kmer_size
                   sgidx += 1 + p.kmer_size
                   nodeidx += 1
-                  push!( align.path, SGNodeTup( geneind, nodeidx ) )
+                  push!( align.path, SGNode( geneind, nodeidx ) )
                   align.isvalid = true
                else
                   align = spliced_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
