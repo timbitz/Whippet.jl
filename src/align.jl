@@ -25,7 +25,7 @@ immutable AlignParam
    is_circ_ok::Bool   # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 3, 7, 18, 35, 5, 10, 1, 10, 25, true, false, false, true )
+AlignParam() = AlignParam( 2, 9, 3, 7, 18, 35, 5, 10, 1, 10, 25, false, false, false, true )
 
 abstract UngappedAlignment
 
@@ -61,21 +61,27 @@ function try_seed( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa,curpos
 end
 
-function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord )
+function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; isrev=false )
    seed,readloc = try_seed( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed, lib.index )
    res   = Nullable{Vector{SGAlignment}}()
    for s in locit
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]+10):(s-lib.offset[geneind]+10)+50])")
+      @bp
       align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind] + p.seed_length + 10, 
                                    read, readloc + p.seed_length ) # TODO check
-   #   if align.isvalid
+      if align.isvalid
          if isnull( res )
             res = Nullable(Vector{SGAlignment}())
          end
          push!(get(res), align)
-    #  end
+      end
+   end
+   # if !stranded and no valid alignments, run reverse complement
+   if !p.is_stranded && isnull( res ) && !isrev
+      read.seq = Bio.Seq.reverse_complement( read.seq )
+      res = ungapped_align( p, lib, read, isrev=true )
    end
    res
 end
@@ -83,12 +89,13 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
- function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int, 
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int, 
                               read::SeqRecord, ridx::Int;
                               align=SGAlignment(p.seed_length,0,sgidx,SGNodeTup[],false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
    sg       = lib.graphs[geneind]
    readlen  = length(read.seq)
+   targlen  = length(sg.seq)
    curedge  = nodeidx
 
    passed_edges = Nullable{Vector{Coordint}}() # don't allocate arrays unless
@@ -97,7 +104,7 @@ end
 
    push!( align.path, SGNodeTup( geneind, nodeidx ) ) # starting node
 
-   while( align.mismatches <= p.mismatches && ridx <= readlen )
+   while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= targlen )
       @bp
       if read.seq[ridx] == sg.seq[sgidx]
          # match
@@ -189,8 +196,8 @@ function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, r
    # do a test for trans splicing, and reset right_nodes
    for rn in right_nodes
       rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
-      res_align = ungapped_fwd_extend( p, lib, rn.gene, rn_offset, read, ridx, 
-                                       align=deep_copy(align), nodeidx=rn.node )
+      res_align = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
+                                       align=deepcopy(align), nodeidx=rn.node )
       best = res_align > best ? res_align : best
    end
    if score(best) >= score(align) + p.kmer_size
