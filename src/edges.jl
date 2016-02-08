@@ -22,10 +22,6 @@ end
 
 Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 
-function get_edge( arr::Vector{SgNodeSet} )
-   if isdefined( )
-end 
-
 # Is the EdgeType a connecting edge between two nodes?
 # Check a donor splice site by:   is_edge( edge, true )
 # and an acceptor splice site by: is_edge( edge, false )
