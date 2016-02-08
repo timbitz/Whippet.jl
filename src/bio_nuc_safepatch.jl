@@ -6,7 +6,8 @@
 #  'S' for transcription start/stop site.  
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
-using Bio.Seq
+@everywhere using Bio
+@everywhere using Bio.Seq
 
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.reverse
@@ -18,7 +19,7 @@ import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.rev
 
 # Single nucleotides are represented in bytes using just the two low-order bits
 #abstract Nucleotide
-bitstype 8 SGNucleotide <: Nucleotide
+bitstype 8 SGNucleotide <: Bio.Seq.Nucleotide
 
 # Conversion from/to integers
 # ---------------------------
@@ -53,25 +54,30 @@ const SG_N = convert(SGNucleotide, 0b100)
 const SG_INVALID = convert(SGNucleotide, 0b1000) # Indicates invalid SG when converting string
 
 ## Patch
-const SS_L = convert(SGNucleotide, 0b101)
-const SS_R = convert(SGNucleotide, 0b110)
-const TX_S = convert(SGNucleotide, 0b111) 
+"SG Left Edge Signal"
+const SG_L = convert(SGNucleotide, 0b101)
+
+"SG Right Edge Signal"
+const SG_R = convert(SGNucleotide, 0b110)
+
+"SG Start/Stop Signal"
+const SG_S = convert(SGNucleotide, 0b111) 
 
 "Returns Any SG Nucleotide (SG_N)"
 nnucleotide(::Type{SGNucleotide}) = SG_N
 invalid_nucleotide(::Type{SGNucleotide}) = SG_INVALID
 
 ## Patch
-lnucleotide(::Type{SGNucleotide}) = SS_L
-rnucleotide(::Type{SGNucleotide}) = SS_R
-snucleotide(::Type{SGNucleotide}) = TX_S
+lnucleotide(::Type{SGNucleotide}) = SG_L
+rnucleotide(::Type{SGNucleotide}) = SG_R
+snucleotide(::Type{SGNucleotide}) = SG_S
 
-lnucleotide{N <: Nucleotide}(::Type{N}) = SS_L
-rnucleotide{N <: Nucleotide}(::Type{N}) = SS_R
-snucleotide{N <: Nucleotide}(::Type{N}) = TX_S
+lnucleotide{N <: Nucleotide}(::Type{N}) = SG_L
+rnucleotide{N <: Nucleotide}(::Type{N}) = SG_R
+snucleotide{N <: Nucleotide}(::Type{N}) = SG_S
 
 function isvalid(nt::SGNucleotide)
-    return convert(UInt8, nt) ≤ convert(UInt8, TX_S)
+    return convert(UInt8, nt) ≤ convert(UInt8, SG_S)
 end
 
 
@@ -82,14 +88,14 @@ end
 # lookup table for characters in 'A':'t'
 const char_to_sg = [
     SG_A,       SG_INVALID, SG_C,       SG_INVALID, SG_INVALID, SG_INVALID,
-    SG_G,       SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SS_L,
-    SG_INVALID, SG_N,       SG_INVALID, SG_INVALID, SG_INVALID, SS_R,
-    TX_S,        SG_T,       SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID,
+    SG_G,       SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SG_L,
+    SG_INVALID, SG_N,       SG_INVALID, SG_INVALID, SG_INVALID, SG_R,
+    SG_S,        SG_T,       SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID,
     SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID, SG_INVALID,
     SG_INVALID, SG_INVALID, SG_A,       SG_INVALID, SG_C,       SG_INVALID,
     SG_INVALID, SG_INVALID, SG_G,       SG_INVALID, SG_INVALID, SG_INVALID,
-    SG_INVALID, SS_L,        SG_INVALID, SG_N,       SG_INVALID, SG_INVALID,
-    SG_INVALID, SS_R,        TX_S,        SG_T ]
+    SG_INVALID, SG_L,        SG_INVALID, SG_N,       SG_INVALID, SG_INVALID,
+    SG_INVALID, SG_R,        SG_S,        SG_T ]
 
 @inline function Base.convert(::Type{SGNucleotide}, c::Char)
     @inbounds nt = 'A' <= c <= 't' ? char_to_sg[c - 'A' + 1] : SG_INVALID
@@ -151,7 +157,7 @@ end
 # must make a copy of the data.
 #
 ##
-type NucleotideSequence{T<:Nucleotide} <: Sequence
+type NucleotideSequence{T<:SGNucleotide} <: Bio.Seq.Sequence
     data::Vector{UInt64} # 2-bit encoded sequence
     ns::BitVector        # 'N' mask
     ls::BitVector        # 'L' donor splice site
@@ -174,7 +180,7 @@ end
 
 Construct an empty nucleotide sequence of the given type
 """
-NucleotideSequence{T<:Nucleotide}(::Type{T}; mutable::Bool=false) =
+NucleotideSequence{T<:SGNucleotide}(::Type{T}; mutable::Bool=false) =
     NucleotideSequence{T}(zeros(UInt64, 0), BitVector(0),  BitVector(0),  BitVector(0), 1:0, mutable, false)
 
 
@@ -183,7 +189,7 @@ NucleotideSequence{T<:Nucleotide}(::Type{T}; mutable::Bool=false) =
 
 Construct a subsequence of the given type from another nucleotide sequence
 """
-function NucleotideSequence{T<:Nucleotide}(::Type{T}, other::NucleotideSequence,
+function NucleotideSequence{T<:SGNucleotide}(::Type{T}, other::NucleotideSequence,
                                            part::UnitRange; mutable::Bool=false)
     start = other.part.start + part.start - 1
     stop = start + length(part) - 1
@@ -297,7 +303,7 @@ end
 
 Construct a nucleotide sequence from the `seq[startpos:stoppos]` string
 """
-function NucleotideSequence{T<:Nucleotide}(::Type{T}, seq::Union{AbstractString, Vector{UInt8}},
+function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{AbstractString, Vector{UInt8}},
                                            startpos::Int, stoppos::Int,
                                            unsafe::Bool=false; mutable::Bool=false)
     len = stoppos - startpos + 1
@@ -316,16 +322,16 @@ function NucleotideSequence{T<:Nucleotide}(::Type{T}, seq::Union{AbstractString,
     return NucleotideSequence{T}(data, ns, ls, rs, ss, 1:len, mutable, false)
 end
 
-function NucleotideSequence{T<:Nucleotide}(t::Type{T}, seq::Union{AbstractString, Vector{UInt8}}; mutable::Bool=false)
+function NucleotideSequence{T<:SGNucleotide}(t::Type{T}, seq::Union{AbstractString, Vector{UInt8}}; mutable::Bool=false)
     return NucleotideSequence(t, seq, 1, length(seq), mutable=mutable)
 end
 
 """
-`NucleotideSequence(seq::AbstractVector{T<:Nucleotide}, startpos::Int, stoppos::Int)`
+`NucleotideSequence(seq::AbstractVector{T<:SGNucleotide}, startpos::Int, stoppos::Int)`
 
 Construct a nucleotide sequence from the `seq[startpos:stoppos]` vector
 """
-function NucleotideSequence{T<:Nucleotide}(seq::AbstractVector{T},
+function NucleotideSequence{T<:SGNucleotide}(seq::AbstractVector{T},
                                            startpos::Int, stoppos::Int,
                                            unsafe::Bool=false; mutable::Bool=false)
     len = stoppos - startpos + 1
@@ -353,7 +359,7 @@ end
 """
 Reset the contents of a mutable sequence from a string.
 """
-function Base.copy!{T}(seq::NucleotideSequence{T}, strdata::Vector{UInt8},
+function Base.copy!{T<:SGNucleotide}(seq::NucleotideSequence{T}, strdata::Vector{UInt8},
                   startpos::Integer, stoppos::Integer)
     if !seq.mutable
         error("Cannot copy! to immutable sequnce. Call `mutable!(seq)` first.")
@@ -399,7 +405,7 @@ end
 
 Construct a nucleotide sequence by concatenating the given sequences
 """
-function NucleotideSequence{T<:Nucleotide}(chunks::NucleotideSequence{T}...)
+function NucleotideSequence{T<:SGNucleotide}(chunks::NucleotideSequence{T}...)
     seqlen = 0
     for chunk in chunks
         seqlen += length(chunk)
@@ -429,7 +435,7 @@ end
 """
 Construct a NucleotideSequence from an array of nucleotides.
 """
-function NucleotideSequence{T<:Nucleotide}(seq::AbstractVector{T}; mutable::Bool=false)
+function NucleotideSequence{T<:SGNucleotide}(seq::AbstractVector{T}; mutable::Bool=false)
     return NucleotideSequence(seq, 1, endof(seq), mutable=mutable)
 end
 
@@ -462,7 +468,7 @@ end
 
 Construct a nucleotide sequence by repeating another sequence `n` times
 """
-function repeat{T<:Nucleotide}(chunk::NucleotideSequence{T}, n::Integer)
+function repeat{T<:SGNucleotide}(chunk::NucleotideSequence{T}, n::Integer)
     seqlen = n * length(chunk)
 
     datalen = seq_data_len(seqlen)
@@ -585,9 +591,9 @@ SGSequence(seq::AbstractVector{SGNucleotide}; mutable::Bool=false) =
 # ----------
 
 # Convert from/to vectors of nucleotides
-Base.convert{T<:Nucleotide}(::Type{NucleotideSequence},    seq::AbstractVector{T}) = NucleotideSequence(seq, 1, endof(seq))
-Base.convert{T<:Nucleotide}(::Type{NucleotideSequence{T}}, seq::AbstractVector{T}) = NucleotideSequence(seq, 1, endof(seq))
-Base.convert{T<:Nucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [x for x in seq]
+Base.convert{T<:SGNucleotide}(::Type{NucleotideSequence},    seq::AbstractVector{T}) = NucleotideSequence(seq, 1, endof(seq))
+Base.convert{T<:SGNucleotide}(::Type{NucleotideSequence{T}}, seq::AbstractVector{T}) = NucleotideSequence(seq, 1, endof(seq))
+Base.convert{T<:SGNucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [x for x in seq]
 
 # Convert from/to Strings
 Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
