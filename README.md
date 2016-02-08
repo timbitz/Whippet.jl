@@ -9,7 +9,7 @@
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Differential splicing statistics based on experimental replicates
-- Accurate splice graph modeling simplifies complex events
+- Accurate splice graph representations of all event types (splicing and alt-3'/5' end usage)
   - Pseudo _de novo_ event discovery
   - Circular splicing discovery
   - Trans-splicing discovery
