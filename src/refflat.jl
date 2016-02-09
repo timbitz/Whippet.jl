@@ -11,9 +11,6 @@ typealias Txinfo      Tuple{Genename,Coordint,Coordint,Coordint}
                        #   {Genename, TxStart, TxEnd, ExonCount}
 typealias Geneinfo    Tuple{ASCIIString, Char}
                        #    Chrom/seqname, Strand '+'/'-'
-typealias Microsize  UInt8
-typealias Microtuple Tuple{Vararg{Microsize}}
-
 typealias Coordtree IntervalTree{Coordint,Interval{Coordint}}
 
 # Single Reftx entry

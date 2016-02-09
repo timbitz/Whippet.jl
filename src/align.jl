@@ -177,13 +177,15 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
    # TODO go through passed_edges!!
    if !isnull(passed_edges) && extend_match < p.kmer_size
       # go back.
-      ridx -= extend_match  # check
       for c in 1:length(get(passed_edges))
+         ridx -= (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
          (ridx + p.kmer_size - 1) < readlen || continue
-         lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
+         if c > 1 &&  
+         #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
          rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
-         println("$(read.seq[(ridx-p.kmer_size):(ridx+p.kmer_size-1)])\n$lkmer\n$rkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
+         #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
          #@bp
+         align = 
       end
    end
 
