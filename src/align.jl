@@ -9,7 +9,7 @@ import Bio.Seq.SeqRecord
 
 immutable AlignParam
    mismatches::Int    # Allowable mismatches
-   kmer_size::Int  # Minimum number of matches to extend past an edge
+   kmer_size::Int     # Minimum number of matches to extend past an edge
    seed_try::Int      # Starting number of seeds
    seed_tolerate::Int # Allow at most _ hits for a valid seed
    seed_length::Int   # Seed Size
@@ -68,7 +68,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; isrev=fa
    for s in locit
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]+10):(s-lib.offset[geneind]+10)+50])")
-      @bp
+      #@bp
       align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind] + p.seed_length + 10, 
                                    read, readloc + p.seed_length ) # TODO check
       if align.isvalid
@@ -104,7 +104,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
    while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
-      @bp
+      #@bp
       if read.seq[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
@@ -122,8 +122,8 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
                if sg.edgeright[curedge] == rkmer
                   align.matches += p.kmer_size
-                  ridx += p.kmer_size
-                  sgidx += 1 + p.kmer_size
+                  ridx    += p.kmer_size
+                  sgidx   += 1 + p.kmer_size
                   nodeidx += 1
                   push!( align.path, SGNode( geneind, nodeidx ) )
                   align.isvalid = true
@@ -143,12 +143,13 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
                   edge_matches = Nullable(Vector{Coordint}())
                   extend_match = 0
                else
-                  push!(get(edge_matches), extend_match)
+                  unshift!(get(edge_matches), extend_match)
                end
-               push!(get(passed_edges), curedge)
+               unshift!(get(passed_edges), curedge)
                extend_match = 0
-               sgidx += 1
-               ridx -= 1
+               sgidx   += 1
+               ridx    -= 1
+               nodeidx += 1
          elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
@@ -161,22 +162,36 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
          elseif !(sg.seq[sgind] == SG_N) #'RR' || 'SL'
                # ignore 'RR' and 'SL'
                sgidx += 1
-               ridx -= 1 # offset the lower ridx += 1  
+               ridx  -= 1 # offset the lower ridx += 1  
          end
          # ignore 'N'
       else 
          # mismatch
          align.mismatches += 1
       end
-      ridx += 1
+      ridx  += 1
       sgidx += 1
    end
 
    # if edgemat < K, spliced_extension for each in length(edges)
    # TODO go through passed_edges!!
+   if !isnull(passed_edges) && extend_match < p.kmer_size
+      # go back.
+      ridx -= extend_match  # check
+      for c in 1:length(get(passed_edges))
+         (ridx + p.kmer_size - 1) < readlen || continue
+         lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
+         rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+         println("$(read.seq[(ridx-p.kmer_size):(ridx+p.kmer_size-1)])\n$lkmer\n$rkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
+         #@bp
+      end
+   end
 
-   if score(align) >= p.score_min && length(align.path) == 1
-      align.isvalid = true
+   #TODO alignments that hit the end of the read but < p.kmer_size beyond an
+   # exon-exon junction should still be valid no?  Even if they aren't counted
+   # as junction spanning reads.  Currently they would not be.
+   if score(align) >= p.score_min && length(align.path) == 1  
+      align.isvalid = true 
    end
    align
 end
