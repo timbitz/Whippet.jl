@@ -97,9 +97,8 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
    readlen  = length(read.seq)
    curedge  = nodeidx
 
-   passed_edges = Nullable{Vector{Coordint}}() # don't allocate arrays unless
-   edge_matches = Nullable{Vector{Coordint}}() # we are going to need them
-   extend_match = 0
+   passed_edges = Nullable{Vector{Coordint}}() # don't allocate array unless needed
+   passed_extend = 0
 
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
@@ -108,7 +107,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
       if read.seq[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
-         extend_match  += 1
+         passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 # N,L,R,S
          curedge = nodeidx+1
          if     sg.edgetype[curedge] == EDGETYPE_LR && 
@@ -140,16 +139,13 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
                # those edges. 
                if isnull(passed_edges) # now we have to malloc
                   passed_edges = Nullable(Vector{Coordint}())
-                  edge_matches = Nullable(Vector{Coordint}())
-                  extend_match = 0
-               else
-                  unshift!(get(edge_matches), extend_match)
                end
-               unshift!(get(passed_edges), curedge)
-               extend_match = 0
+               passed_extend = 0
+               push!(get(passed_edges), curedge)
                sgidx   += 1
                ridx    -= 1
                nodeidx += 1
+               push!( align.path, SGNode( geneind, nodeidx ) )
          elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
                # obligate spliced_extension
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
@@ -175,17 +171,32 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
 
    # if edgemat < K, spliced_extension for each in length(edges)
    # TODO go through passed_edges!!
-   if !isnull(passed_edges) && extend_match < p.kmer_size
-      # go back.
-      for c in 1:length(get(passed_edges))
-         ridx -= (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
-         (ridx + p.kmer_size - 1) < readlen || continue
-         if c > 1 &&  
-         #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
-         rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
-         #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
-         #@bp
-         align = 
+   if !isnull(passed_edges)
+      if passed_extend < p.kmer_size
+         # go back.
+         ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
+         ext_len[end] = passed_extend
+         rev_cumarray!(ext_len)
+         for c in length(get(passed_edges)):-1:1  #most recent edge first
+            if ext_len[c] >= p.kmer_size
+               align.isvalid = true
+               break
+            else
+               pop!( align.path ) # extension into current node failed
+               cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
+               (cur_ridx + p.kmer_size - 1) < readlen || continue
+            
+               #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
+               rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+               #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
+               res_align = spliced_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
+               if length(res_align.path) > length(align.path) # we added a valid node
+                  align = res_align > align ? res_align : align
+               end
+            end
+         end
+      else
+         align.isvalid = true
       end
    end
 
@@ -198,7 +209,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
    align
 end
 
- 
+
 
 function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, rkmer, align )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
@@ -220,4 +231,12 @@ function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, r
       best.isvalid = true
    end
    best
+end
+
+
+# Function Cumulative Array
+function rev_cumarray!{T<:Vector}( array::T )
+   for i in (length(array)-1):-1:1
+      array[i] += array[i+1]
+   end 
 end
