@@ -98,7 +98,7 @@ function load_refflat( fh; txbool=false )
 
       exCnt = parse(UInt16, exCnt)
 
-      if exCnt <= 2 continue end # no alternative splicing possible
+      if exCnt <= 2 continue end # no alternative splicing possible  TODO
 
       # get donor and acceptor splice sites, adjust for 0-based coords 
       don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0)

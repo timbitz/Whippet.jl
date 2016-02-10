@@ -148,7 +148,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
          nodesize = secval - minval + 1
-         nodeseq  = genome[Int(minval+seqoffset):Int(secval)] # collect slice
+         nodeseq  = genome[Int(minval+seqoffset+1):Int(secval)] # collect slice
          edge = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval = minval
          thridx = 0

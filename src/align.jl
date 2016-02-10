@@ -146,7 +146,7 @@ end
                passed_mismat = 0
                push!(get(passed_edges), curedge)
                @bp
-               sgidx   += 2
+               sgidx   += 1
                ridx    -= 1
                nodeidx += 1
                push!( align.path, SGNode( geneind, nodeidx ) )
@@ -161,7 +161,7 @@ end
                break # ?
          else #'RR' || 'SL'
                # ignore 'RR' and 'SL'
-               sgidx += 2
+               sgidx += 1
                ridx  -= 1 # offset the lower ridx += 1
                nodeidx += 1
                push!( align.path, SGNode( geneind, nodeidx ) )  
@@ -174,6 +174,7 @@ end
       end
       ridx  += 1
       sgidx += 1
+      print(" $(read.seq[ridx]),$ridx\_$(sg.seq[sgidx]),$sgidx ")
    end
 
    # if edgemat < K, spliced_extension for each in length(edges)
