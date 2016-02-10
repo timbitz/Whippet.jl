@@ -25,7 +25,7 @@ immutable AlignParam
    is_circ_ok::Bool   # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 3, 7, 18, 35, 5, 10, 1, 10, 25, false, false, false, true )
+AlignParam() = AlignParam( 2, 9, 4, 7, 18, 35, 5, 10, 1, 10, 25, false, false, false, true )
 
 abstract UngappedAlignment
 
@@ -47,29 +47,29 @@ score( align::SGAlignment ) = align.matches - align.mismatches
 <=( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 
 
-function try_seed( p::AlignParam, index::FMIndex, read::SeqRecord )
+function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa = 2:1
    cnt = 1000
    ctry = 0
-   curpos = p.seed_buffer
+   curpos = p.seed_buffer - p.seed_inc
    while( cnt > p.seed_tolerate && ctry <= p.seed_try && curpos <= p.seed_maxoff )
+      curpos += p.seed_inc
       sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
       cnt = length(sa)
       ctry += 1
-      curpos += p.seed_inc
    end
    sa,curpos
 end
 
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; isrev=false )
-   seed,readloc = try_seed( p, lib.index, read )
+   seed,readloc = seed_locate( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed, lib.index )
    res   = Nullable{Vector{SGAlignment}}()
    for s in locit
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
-      #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]+10):(s-lib.offset[geneind]+10)+50])")
+      #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
       #@bp
-      align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind] + p.seed_length + 10, 
+      align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length ) # TODO check
       if align.isvalid
          if isnull( res )
@@ -89,7 +89,7 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int, 
+@debug function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Int, sgidx::Int, 
                               read::SeqRecord, ridx::Int;
                               align=SGAlignment(p.seed_length,0,sgidx,SGNode[],false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
@@ -177,6 +177,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind, sgidx::Int,
          ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend
          rev_cumarray!(ext_len)
+         @bp
          for c in length(get(passed_edges)):-1:1  #most recent edge first
             if ext_len[c] >= p.kmer_size
                align.isvalid = true
