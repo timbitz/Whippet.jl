@@ -34,10 +34,11 @@ type SGAlignment <: UngappedAlignment
    mismatches::Int
    offset::Int
    path::Vector{SGNode}
+   strand::Bool
    isvalid::Bool
 end
 
-const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], false)
+const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
 score( align::SGAlignment ) = align.matches - align.mismatches 
 
@@ -61,7 +62,7 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa,curpos
 end
 
-function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; isrev=false )
+function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true )
    seed,readloc = seed_locate( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed, lib.index )
    res   = Nullable{Vector{SGAlignment}}()
@@ -69,8 +70,8 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; isrev=fa
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
       #@bp
-      align = ungapped_fwd_extend( p, lib, geneind, s - lib.offset[geneind] + p.seed_length, 
-                                   read, readloc + p.seed_length ) # TODO check
+      align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
+                                   read, readloc + p.seed_length, ispos=ispos ) # TODO check
       if align.isvalid
          if isnull( res )
             res = Nullable(Vector{SGAlignment}())
@@ -81,7 +82,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; isrev=fa
    # if !stranded and no valid alignments, run reverse complement
    if !p.is_stranded && isnull( res ) && !isrev
       read.seq = Bio.Seq.reverse_complement( read.seq )
-      res = ungapped_align( p, lib, read, isrev=true )
+      res = ungapped_align( p, lib, read, ispos=false )
    end
    res
 end
@@ -89,9 +90,9 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-@debug function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Int, sgidx::Int, 
-                              read::SeqRecord, ridx::Int;
-                              align=SGAlignment(p.seed_length,0,sgidx,SGNode[],false),
+@debug function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+                              read::SeqRecord, ridx::Int; ispos=true,
+                              align=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
    sg       = lib.graphs[geneind]
    readlen  = length(read.seq)
@@ -99,6 +100,7 @@ end
 
    passed_edges = Nullable{Vector{Coordint}}() # don't allocate array unless needed
    passed_extend = 0
+   passed_mismat = 0
 
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
@@ -108,9 +110,9 @@ end
          # match
          align.matches += 1
          passed_extend  += 1
-      elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 # N,L,R,S
+      elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
          curedge = nodeidx+1
-         if     sg.edgetype[curedge] == EDGETYPE_LR && 
+         if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
                 readlen - ridx + 1   >= p.kmer_size
                # check edgeright[curnode+1] == read[ nextkmer ]
@@ -121,7 +123,7 @@ end
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
                if sg.edgeright[curedge] == rkmer
                   align.matches += p.kmer_size
-                  ridx    += p.kmer_size
+                  ridx    += p.kmer_size - 1
                   sgidx   += 1 + p.kmer_size
                   nodeidx += 1
                   push!( align.path, SGNode( geneind, nodeidx ) )
@@ -141,8 +143,10 @@ end
                   passed_edges = Nullable(Vector{Coordint}())
                end
                passed_extend = 0
+               passed_mismat = 0
                push!(get(passed_edges), curedge)
-               sgidx   += 1
+               @bp
+               sgidx   += 2
                ridx    -= 1
                nodeidx += 1
                push!( align.path, SGNode( geneind, nodeidx ) )
@@ -155,15 +159,18 @@ end
                 sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
                # end of alignment
                break # ?
-         elseif !(sg.seq[sgind] == SG_N) #'RR' || 'SL'
+         else #'RR' || 'SL'
                # ignore 'RR' and 'SL'
-               sgidx += 1
-               ridx  -= 1 # offset the lower ridx += 1  
+               sgidx += 2
+               ridx  -= 1 # offset the lower ridx += 1
+               nodeidx += 1
+               push!( align.path, SGNode( geneind, nodeidx ) )  
          end
          # ignore 'N'
       else 
          # mismatch
          align.mismatches += 1
+         passed_mismat += 1
       end
       ridx  += 1
       sgidx += 1
@@ -184,12 +191,14 @@ end
                break
             else
                pop!( align.path ) # extension into current node failed
+               align.mismatches -= passed_mismat
                cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
                (cur_ridx + p.kmer_size - 1) < readlen || continue
             
                #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
-               rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+               rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
+
                res_align = spliced_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align

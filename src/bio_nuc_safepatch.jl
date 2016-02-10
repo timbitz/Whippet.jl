@@ -6,7 +6,7 @@
 #  'S' for transcription start/stop site.  
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
-@everywhere using Bio
+#@everywhere using Bio
 @everywhere using Bio.Seq
 
 using Base.Intrinsics
