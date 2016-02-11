@@ -5,13 +5,13 @@ using IntervalTrees
 bitstype 8 EdgeType
 
 const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
-EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start 
-EDGETYPE_TO_UINT8[4,3] = 0x01 # 'SR' = 0x01; Tandem Last Exon
-EDGETYPE_TO_UINT8[2,4] = 0x02 # 'LS' = 0x02; Tandem First Exon
-EDGETYPE_TO_UINT8[3,4] = 0x03 # 'RS' = 0x03; Tx End
-EDGETYPE_TO_UINT8[2,3] = 0x04 # 'LR' = 0x04; Intron 5'->3' SS
-EDGETYPE_TO_UINT8[2,2] = 0x05 # 'LL' = 0x05; Alt- 5'SS
-EDGETYPE_TO_UINT8[3,3] = 0x06 # 'RR' = 0x06; Alt- 3'SS
+      EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start 
+      EDGETYPE_TO_UINT8[4,3] = 0x01 # 'SR' = 0x01; Tandem Last Exon
+      EDGETYPE_TO_UINT8[2,4] = 0x02 # 'LS' = 0x02; Tandem First Exon
+      EDGETYPE_TO_UINT8[3,4] = 0x03 # 'RS' = 0x03; Tx End
+      EDGETYPE_TO_UINT8[2,3] = 0x04 # 'LR' = 0x04; Intron 5'->3' SS
+      EDGETYPE_TO_UINT8[2,2] = 0x05 # 'LL' = 0x05; Alt- 5'SS
+      EDGETYPE_TO_UINT8[3,3] = 0x06 # 'RR' = 0x06; Alt- 3'SS
 
 const INDEX_TO_EDGETYPE = transpose(reshape([[0x00  for _ in 1:4 ]; 
                                              [0x02,0x05,0x04,0x05];
@@ -96,14 +96,14 @@ SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
 
 # Main constructor
 # Build splice graph here.
-function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
+function SpliceGraph( gene::Refgene, genome::SGSequence )
    # splice graph variables
    nodeoffset = Vector{Coordint}()
    nodecoord  = Vector{Coordint}()
    nodelen    = Vector{Coordint}()
    edgetype   = Vector{EdgeType}()
    seq        = sg""
-   
+
    strand = gene.info[2]
    
    # initialize iterators
@@ -132,7 +132,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       secidx,secval = getmin_ind_val( gene, idx )
 
       # last coordinate in the gene:
-#      if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
+      # if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
       if secval == Inf
          termedge = EdgeType(0x03)
          stranded_push!(edgetype, termedge, strand)
@@ -147,18 +147,18 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       
       # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
-         nodesize = secval - minval + 1
-         nodeseq  = genome[Int(minval+seqoffset+1):Int(secval)] # collect slice
-         edge = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
-         pushval = minval
+         nodesize = Int(secval - minval)
+         nodeseq  = genome[Int(minval+1):Int(secval)] # collect slice
+         edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
+         pushval  = minval+1
          thridx = 0
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
-         nodesize = thrval - secval + 1
-         nodeseq = genome[Int(secval+seqoffset):Int(thrval)]
-         edge = get_edgetype( minidx, secidx, false, strand )
-         pushval = secval
+         nodesize = Int(thrval - secval) + 1
+         nodeseq  = genome[Int(secval):Int(thrval)]
+         edge     = get_edgetype( minidx, secidx, false, strand )
+         pushval  = secval
       end
 
       if strand == '+'
@@ -166,7 +166,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence; seqoffset=0 )
       else # '-' strand
          seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
       end
-      #println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $(Int(pushval)), nodeseq: $nodeseq")
+     # println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $(Int(pushval)), nodeseq: $nodeseq")
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
       stranded_push!(edgetype,  edge,     strand)

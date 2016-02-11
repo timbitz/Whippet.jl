@@ -62,14 +62,15 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa,curpos
 end
 
-function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true )
+@debug function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true )
    seed,readloc = seed_locate( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed, lib.index )
+   @bp
    res   = Nullable{Vector{SGAlignment}}()
    for s in locit
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
-      #@bp
+      @bp
       align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos ) # TODO check
       if align.isvalid
@@ -80,7 +81,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       end
    end
    # if !stranded and no valid alignments, run reverse complement
-   if !p.is_stranded && isnull( res ) && !isrev
+   if ispos && !p.is_stranded && isnull( res )
       read.seq = Bio.Seq.reverse_complement( read.seq )
       res = ungapped_align( p, lib, read, ispos=false )
    end
@@ -105,7 +106,7 @@ end
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
    while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
-      #@bp
+      @bp
       if read.seq[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
@@ -174,7 +175,7 @@ end
       end
       ridx  += 1
       sgidx += 1
-      print(" $(read.seq[ridx]),$ridx\_$(sg.seq[sgidx]),$sgidx ")
+      print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
    end
 
    # if edgemat < K, spliced_extension for each in length(edges)

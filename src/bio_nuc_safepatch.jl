@@ -7,7 +7,7 @@
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
 #@everywhere using Bio
-@everywhere using Bio.Seq
+using Bio.Seq
 
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.reverse
@@ -683,7 +683,7 @@ Base.getindex{T}(seq::NucleotideSequence{T}, r::UnitRange) = NucleotideSequence{
 Base.setindex!{T}(seq::NucleotideSequence{T}, r::UnitRange) = NucleotideSequence{T}(seq, r)
 
 
-function Base.setindex!{T}(seq::NucleotideSequence{T}, nt::T, i::Integer)
+function Base.setindex!{T<:SGNucleotide}(seq::NucleotideSequence{T}, nt::T, i::Integer)
     if !seq.mutable
         error("Cannot mutate an immutable sequence. Call `mutable!(seq)` first.")
     end
@@ -731,7 +731,7 @@ Base.setindex!{T}(seq::NucleotideSequence{T}, nt::Char, i::Integer) =
 #
 # If reorphan = true, copy the data regardless of the start position.
 #
-function orphan!{T}(seq::NucleotideSequence{T}, reorphan=false)
+function orphan!{T<:SGNucleotide}(seq::NucleotideSequence{T}, reorphan=false)
     if !reorphan && seq.part.start == 1
         return seq
     end
@@ -772,12 +772,12 @@ end
 # never have to do this. It's useful only for low-level algorithms like
 # `reverse` which actually do make a copy and modify the copy in
 # place.
-Base.copy{T}(seq::NucleotideSequence{T}) =
+Base.copy{T<:SGNucleotide}(seq::NucleotideSequence{T}) =
     orphan!(NucleotideSequence{T}(seq.data, seq.ns, seq.ls, seq.rs, seq.ss, seq.part, seq.mutable, seq.hasrelatives), true)
 
 
 # Iterating throug nucleotide sequences
-@inline function Base.start(seq::NucleotideSequence)
+@inline function Base.start{T<:SGNucleotide}(seq::NucleotideSequence{T})
     npos = nextone(seq.ns, seq.part.start)
     lpos = nextone(seq.ls, seq.part.start)
     rpos = nextone(seq.rs, seq.part.start)
@@ -785,7 +785,7 @@ Base.copy{T}(seq::NucleotideSequence{T}) =
     return seq.part.start, npos, lpos, rpos, spos
 end
 
-@inline function Base.next{T}(seq::NucleotideSequence{T}, state)
+@inline function Base.next{T<:SGNucleotide}(seq::NucleotideSequence{T}, state)
     i, npos,lpos,rpos,spos = state
     if i == npos
         npos = nextone(seq.ns, i + 1)
@@ -827,7 +827,7 @@ end
 
 # In-place complement (nucleotide complement is equivalent to bitwise complement
 # in the encoding used)
-function unsafe_complement!(seq::NucleotideSequence)
+function unsafe_complement!{T<:SGNucleotide}(seq::NucleotideSequence{T})
     @inbounds for i in 1:length(seq.data)
         seq.data[i] = ~seq.data[i]
     end
@@ -840,7 +840,7 @@ end
 
 The nucleotide complement of the sequence `seq`
 """
-complement(seq::NucleotideSequence) = unsafe_complement!(copy(seq))
+Base.complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(copy(seq))
 
 # Nucleotide reverse. Reverse a kmer stored in a UInt64.
 function nucrev(x::UInt64)
@@ -857,7 +857,7 @@ end
 
 Reversed copy of the nucleotide sequence `seq`
 """
-function Base.reverse{T}(seq::NucleotideSequence{T})
+function Base.reverse{T<:SGNucleotide}(seq::NucleotideSequence{T})
     if isempty(seq)
         return seq
     end
@@ -890,7 +890,7 @@ end
 
 Reversed complement of the nucleotide sequence `seq`
 """
-reverse_complement(seq::NucleotideSequence) = unsafe_complement!(reverse(seq))
+reverse_complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(reverse(copy(seq)))
 
 
 # SequenceNIterator
