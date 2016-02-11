@@ -106,7 +106,7 @@ end
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
    while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
-      @bp
+      #@bp
       if read.seq[ridx] == sg.seq[sgidx]
          # match
          align.matches += 1
