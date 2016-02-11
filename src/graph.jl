@@ -105,6 +105,8 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
    seq        = sg""
 
    strand = gene.info[2]
+
+   used   = Set{Int}()
    
    # initialize iterators
    a,alen = 1,length(gene.acc)
@@ -147,11 +149,12 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
       
       # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
-         nodesize = Int(secval - minval)
-         nodeseq  = genome[Int(minval+1):Int(secval)] # collect slice
+         nodesize = Int(secval - minval) + (minval in used ? 0 : 1 )
+         nodeseq  = genome[(Int(minval)+(minval in used ? 1 : 0)):Int(secval)] # collect slice
          edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
-         pushval  = minval+1
+         pushval  = minval + (minval in used ? 1 : 0)
          thridx = 0
+         push!(used, Int(secval))
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
@@ -159,6 +162,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
          nodeseq  = genome[Int(secval):Int(thrval)]
          edge     = get_edgetype( minidx, secidx, false, strand )
          pushval  = secval
+         push!(used, Int(thrval))
       end
 
       if strand == '+'

@@ -53,7 +53,8 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    cnt = 1000
    ctry = 0
    curpos = p.seed_buffer - p.seed_inc
-   while( cnt > p.seed_tolerate && ctry <= p.seed_try && curpos <= p.seed_maxoff )
+   while( (cnt == 0 || cnt > p.seed_tolerate) && 
+          ctry <= p.seed_try && curpos <= p.seed_maxoff )
       curpos += p.seed_inc
       sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
       cnt = length(sa)
@@ -62,15 +63,15 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa,curpos
 end
 
-@debug function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true )
+function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true )
    seed,readloc = seed_locate( p, lib.index, read )
    locit = FMIndexes.LocationIterator( seed, lib.index )
-   @bp
+   #@bp
    res   = Nullable{Vector{SGAlignment}}()
    for s in locit
       geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
-      @bp
+      #@bp
       align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos ) # TODO check
       if align.isvalid
@@ -91,7 +92,7 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-@debug function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                               read::SeqRecord, ridx::Int; ispos=true,
                               align=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
@@ -146,12 +147,13 @@ end
                passed_extend = 0
                passed_mismat = 0
                push!(get(passed_edges), curedge)
-               @bp
+               #@bp
                sgidx   += 1
                ridx    -= 1
                nodeidx += 1
                push!( align.path, SGNode( geneind, nodeidx ) )
-         elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
+         elseif sg.edgetype[curedge] == EDGETYPE_LS && # 'LS'
+                readlen - ridx + 1   >= p.kmer_size
                # obligate spliced_extension
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
                align = spliced_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
@@ -175,7 +177,7 @@ end
       end
       ridx  += 1
       sgidx += 1
-      print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
+      #print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
    end
 
    # if edgemat < K, spliced_extension for each in length(edges)
@@ -186,7 +188,7 @@ end
          ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend
          rev_cumarray!(ext_len)
-         @bp
+         #@bp
          for c in length(get(passed_edges)):-1:1  #most recent edge first
             if ext_len[c] >= p.kmer_size
                align.isvalid = true
