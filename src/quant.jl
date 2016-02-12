@@ -15,3 +15,11 @@ SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(), Vector{UInt32}(),
 
 
 
+
+function add!( quant::SpliceGraphQuant, align::Nullable{SGAlignment} )
+   if !isnull(align)
+      for n in 1:get(align).path
+
+      end
+   end
+end
