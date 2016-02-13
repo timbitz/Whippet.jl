@@ -31,7 +31,7 @@ abstract UngappedAlignment
 
 type SGAlignment <: UngappedAlignment
    matches::Int
-   mismatches::Float16
+   mismatches::Float64
    offset::Int
    path::Vector{SGNode}
    strand::Bool
@@ -48,7 +48,7 @@ score( align::SGAlignment ) = align.matches - align.mismatches
 <=( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 
 # add prob of being accurate base to mismatch, rather than integer.
-phred_to_prob( phred::Int8 ) = Float16(1-10^(-phred/10))
+phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
 
 function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa = 2:1
@@ -230,7 +230,7 @@ end
 
 
 
-function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, rkmer, align )
+function spliced_fwd_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, rkmer, align )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
    isdefined( lib.edges.right, kmer_index(rkmer) ) || return DEF_ALIGN
@@ -395,12 +395,13 @@ function spliced_rev_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, rea
 
    best = DEF_ALIGN
    right_kmer = lib.graphs[geneind].edgeright[edgeind] # TODO
-   left_nodes = lib.edges.left[ kmer_index(left_kmer) ] ∩ lib.edges.right[ kmer_index(rkmer) ]
+   left_nodes = intersect_sorted( lib.edges.left[ kmer_index(left_kmer) ],
+                                  lib.edges.right[ kmer_index(rkmer) ], right=false)
 
    # do a test for trans splicing, and reset right_nodes
-   for rn in right_nodes
-      rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
-      res_align = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
+   for rn in left_nodes
+      rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node] # + nodelen 
+      res_align = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
                                        align=deepcopy(align), nodeidx=rn.node )
       best = res_align > best ? res_align : best
    end
