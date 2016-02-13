@@ -74,6 +74,9 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       #@bp
       align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos ) # TODO check
+ 
+      align = ungapped_rev_extend( p, lib, s - lib.offset[geneid] - 1,
+                                   read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1][2] )
       if align.isvalid
          if isnull( res )
             res = Nullable(Vector{SGAlignment}())
