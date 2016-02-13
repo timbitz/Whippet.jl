@@ -99,7 +99,7 @@ end
 # Returns: SGAlignment
 function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                               read::SeqRecord, ridx::Int; ispos=true,
-                              align=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
+                              align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
    sg       = lib.graphs[geneind]
    readlen  = length(read.seq)
@@ -207,7 +207,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
                rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
-
+               
                res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align
@@ -230,20 +230,21 @@ end
 
 
 
-function spliced_fwd_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, rkmer, align )
+function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::UInt32, edgeind::Int, 
+                                  read::SeqRecord, ridx::Int, rkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
    isdefined( lib.edges.right, kmer_index(rkmer) ) || return DEF_ALIGN
 
    best = DEF_ALIGN
-   left_kmer = lib.graphs[geneind].edgeleft[edgeind]
+   left_kmer::Kmer{SGNucleotide,K} = lib.graphs[geneind].edgeleft[edgeind]
    right_nodes = lib.edges.left[ kmer_index(left_kmer) ] ∩ lib.edges.right[ kmer_index(rkmer) ]
 
    # do a test for trans splicing, and reset right_nodes
    for rn in right_nodes
       rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
-      res_align = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
-                                       align=deepcopy(align), nodeidx=rn.node )
+      res_align::SGAlignment = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
+                                                    align=deepcopy(align), nodeidx=rn.node )
       best = res_align > best ? res_align : best
    end
    if score(best) >= score(align) + p.kmer_size
@@ -264,7 +265,7 @@ end
 # Returns: SGAlignment
 function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                               read::SeqRecord, ridx::Int; ispos=true,
-                              align=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
+                              align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                               nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
    sg       = lib.graphs[geneind]
    readlen  = length(read.seq)
@@ -388,21 +389,22 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
 end
 
 #TODO whole function needs fixing.
-function spliced_rev_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, lkmer, align )
+function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::UInt32, edgeind::Int,
+                                  read::SeqRecord, ridx::Int, lkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
    isdefined( lib.edges.left, kmer_index(lkmer) ) || return DEF_ALIGN
 
    best = DEF_ALIGN
-   right_kmer = lib.graphs[geneind].edgeright[edgeind] # TODO
+   right_kmer::Kmer{SGNucleotide,K} = lib.graphs[geneind].edgeright[edgeind] # TODO
    left_nodes = intersect_sorted( lib.edges.left[ kmer_index(left_kmer) ],
                                   lib.edges.right[ kmer_index(rkmer) ], right=false)
 
    # do a test for trans splicing, and reset right_nodes
    for rn in left_nodes
       rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node] # + nodelen 
-      res_align = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
-                                       align=deepcopy(align), nodeidx=rn.node )
+      res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
+                                                    align=deepcopy(align), nodeidx=rn.node )
       best = res_align > best ? res_align : best
    end
    if score(best) >= score(align) + p.kmer_size
