@@ -385,3 +385,25 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    align
 end
 
+#TODO whole function needs fixing.
+function spliced_rev_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, ridx, lkmer, align )
+   # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
+   # returns right nodes with matching genes
+   isdefined( lib.edges.left, kmer_index(lkmer) ) || return DEF_ALIGN
+
+   best = DEF_ALIGN
+   right_kmer = lib.graphs[geneind].edgeright[edgeind] # TODO
+   left_nodes = lib.edges.left[ kmer_index(left_kmer) ] ∩ lib.edges.right[ kmer_index(rkmer) ]
+
+   # do a test for trans splicing, and reset right_nodes
+   for rn in right_nodes
+      rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
+      res_align = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
+                                       align=deepcopy(align), nodeidx=rn.node )
+      best = res_align > best ? res_align : best
+   end
+   if score(best) >= score(align) + p.kmer_size
+      best.isvalid = true
+   end
+   best
+end
