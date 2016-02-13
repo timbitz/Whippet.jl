@@ -257,3 +257,131 @@ function rev_cumarray!{T<:Vector}( array::T )
       array[i] += array[i+1]
    end 
 end
+
+# This is the main ungapped alignment extension function in the <-- direction
+# Returns: SGAlignment
+function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+                              read::SeqRecord, ridx::Int; ispos=true,
+                              align=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
+                              nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
+   sg       = lib.graphs[geneind]
+   readlen  = length(read.seq)
+   curedge  = nodeidx
+
+   passed_edges = Nullable{Vector{Coordint}}() # don't allocate array unless needed
+   passed_extend = 0
+   passed_mismat = 0
+
+   if align.path[1] != SGNode( geneind, nodeidx )
+      unshift!( align.path, SGNode( geneind, nodeidx ) ) # starting node if not already there
+   end
+
+   while( align.mismatches <= p.mismatches && ridx > 0 && sgidx > 0 )
+      #@bp
+      if read.seq[ridx] == sg.seq[sgidx]
+         # match
+         align.matches -= 1
+         passed_extend  -= 1
+      elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
+         leftnode = nodeidx - 1
+         if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
+                sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
+                                ridx >= p.kmer_size  # TODO check
+                                
+               lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
+               if sg.edgeleft[nodeidx] == lkmer
+                  align.matches += p.kmer_size
+                  ridx    -= p.kmer_size + 1
+                  sgidx   -= 1 + p.kmer_size # TODO check
+                  nodeidx -= 1
+                  unshift!( align.path, SGNode( geneind, nodeidx ) )
+                  align.isvalid = true
+               else
+                  align = spliced_rev_extend( p, lib, geneind, curedge, read, ridx, lkmer, align ) #TODO check
+                  break
+               end
+         elseif sg.edgetype[nodeidx] == EDGETYPE_LR || 
+                sg.edgetype[nodeidx] == EDGETYPE_RR # 'LR' || 'RR'
+                
+               if isnull(passed_edges) # now we have to malloc
+                  passed_edges = Nullable(Vector{Coordint}())
+               end
+               passed_extend = 0
+               passed_mismat = 0
+               push!(get(passed_edges), nodeidx)
+               #@bp
+               sgidx   -= 1
+               ridx    += 1
+               nodeidx -= 1
+               unshift!( align.path, SGNode( geneind, nodeidx ) )
+         elseif sg.edgetype[nodeidx] == EDGETYPE_SR && # 'SR'
+                                ridx >= p.kmer_size
+               # obligate spliced_extension
+               lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
+               align = spliced_rev_extend( p, lib, geneind, curedge, read, ridx, lkmer, align ) ## TODO
+               break
+         elseif sg.edgetype[curedge] == EDGETYPE_SL ||
+                sg.edgetype[curedge] == EDGETYPE_LS # 'SL' || 'LS'
+               # end of alignment
+               break # ?
+         else #'LL' || 'RS'
+               # ignore 'LL' and 'RS'
+               sgidx -= 1
+               ridx  += 1 # offset the lower ridx += 1
+               nodeidx -= 1
+               unshift!( align.path, SGNode( geneind, nodeidx ) )  
+         end
+         # ignore 'N'
+      else 
+         # mismatch
+         align.mismatches += 1
+         passed_mismat += 1
+      end
+      ridx  -= 1
+      sgidx -= 1
+      #print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
+   end
+
+   # if edgemat < K, spliced_extension for each in length(edges)
+   # TODO go through passed_edges!!
+   if !isnull(passed_edges)
+      if passed_extend < p.kmer_size
+         # go back.
+         ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
+         ext_len[end] = passed_extend
+         rev_cumarray!(ext_len)
+         #@bp
+         for c in length(get(passed_edges)):-1:1  #most recent edge first
+            if ext_len[c] >= p.kmer_size
+               align.isvalid = true
+               break
+            else
+               pop!( align.path ) # extension into current node failed
+               align.mismatches -= passed_mismat
+               cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ]) #TODO untouched
+               (cur_ridx + p.kmer_size - 1) < readlen || continue
+            
+               #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
+               rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
+               #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
+
+               res_align = spliced_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
+               if length(res_align.path) > length(align.path) # we added a valid node
+                  align = res_align > align ? res_align : align
+               end
+            end
+         end
+      else
+         align.isvalid = true
+      end
+   end
+
+   #TODO alignments that hit the end of the read but < p.kmer_size beyond an
+   # exon-exon junction should still be valid no?  Even if they aren't counted
+   # as junction spanning reads.  Currently they would not be.
+   if score(align) >= p.score_min && length(align.path) == 1  
+      align.isvalid = true 
+   end
+   align
+end
+
