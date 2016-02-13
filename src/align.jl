@@ -31,7 +31,7 @@ abstract UngappedAlignment
 
 type SGAlignment <: UngappedAlignment
    matches::Int
-   mismatches::Int
+   mismatches::Float16
    offset::Int
    path::Vector{SGNode}
    strand::Bool
@@ -47,6 +47,8 @@ score( align::SGAlignment ) = align.matches - align.mismatches
 >=( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
 <=( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 
+# add prob of being accurate base to mismatch, rather than integer.
+phred_to_prob( phred::Int8 ) = Float16(1-10^(-phred/10))
 
 function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord )
    sa = 2:1
@@ -75,8 +77,8 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos ) # TODO check
  
-      align = ungapped_rev_extend( p, lib, s - lib.offset[geneid] - 1,
-                                   read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1][2] )
+      #align = ungapped_rev_extend( p, lib, s - lib.offset[geneid] - 1,
+      #                             read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1][2] )
       if align.isvalid
          if isnull( res )
             res = Nullable(Vector{SGAlignment}())
@@ -105,7 +107,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
 
    passed_edges = Nullable{Vector{Coordint}}() # don't allocate array unless needed
    passed_extend = 0
-   passed_mismat = 0
+   passed_mismat = 0.0
 
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
@@ -134,7 +136,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                   push!( align.path, SGNode( geneind, nodeidx ) )
                   align.isvalid = true
                else
-                  align = spliced_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
+                  align = spliced_fwd_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                   break
                end
          elseif sg.edgetype[curedge] == EDGETYPE_LR || 
@@ -159,7 +161,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                 readlen - ridx + 1   >= p.kmer_size
                # obligate spliced_extension
                rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
-               align = spliced_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
+               align = spliced_fwd_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                break
          elseif sg.edgetype[curedge] == EDGETYPE_SR ||
                 sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
@@ -175,8 +177,8 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          # ignore 'N'
       else 
          # mismatch
-         align.mismatches += 1
-         passed_mismat += 1
+         align.mismatches += phred_to_prob( read.metadata.quality[ridx] )
+         passed_mismat += phred_to_prob( read.metadata.quality[ridx] )
       end
       ridx  += 1
       sgidx += 1
@@ -206,7 +208,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
 
-               res_align = spliced_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
+               res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align
                end
@@ -250,13 +252,13 @@ function spliced_extend( p::AlignParam, lib::GraphLib, geneind, edgeind, read, r
    best
 end
 
-
 # Function Cumulative Array
 function rev_cumarray!{T<:Vector}( array::T )
    for i in (length(array)-1):-1:1
       array[i] += array[i+1]
    end 
 end
+
 
 # This is the main ungapped alignment extension function in the <-- direction
 # Returns: SGAlignment
