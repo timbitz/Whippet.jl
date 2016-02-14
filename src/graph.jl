@@ -13,15 +13,15 @@ const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
       EDGETYPE_TO_UINT8[2,2] = 0x05 # 'LL' = 0x05; Alt- 5'SS
       EDGETYPE_TO_UINT8[3,3] = 0x06 # 'RR' = 0x06; Alt- 3'SS
 
-const INDEX_TO_EDGETYPE = transpose(reshape([[0x00  for _ in 1:4 ]; 
-                                             [0x02,0x05,0x04,0x05];
+const INDEX_TO_EDGETYPE = transpose(reshape([[0x03,0x01,0x03,0x03]; 
                                              [0x06  for _ in 1:4 ];
-                                             [0x03,0x03,0x01,0x03] ], (4,4)))
+                                             [0x05,0x04,0x05,0x02];
+                                             [0x00  for _ in 1:4 ] ], (4,4)))
 
-const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x00  for _ in 1:4 ];
-                                                  [0x05  for _ in 1:4 ];
+const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x03  for _ in 1:4 ];
                                                   [0x06  for _ in 1:4 ];
-                                                  [0x03  for _ in 1:4 ] ], (4,4)))
+                                                  [0x05  for _ in 1:4 ];
+                                                  [0x00  for _ in 1:4 ] ], (4,4)))
 
 const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
                                    sg"LR", sg"LL", sg"RR", sg"SS" ]
@@ -105,8 +105,6 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
    seq        = sg""
 
    strand = gene.info[2]
-
-   used   = Set{Int}()
    
    # initialize iterators
    a,alen = 1,length(gene.acc)
@@ -119,10 +117,10 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
    # return a tuple containing the min coordinate's idx,val
    # each of 4 categories, txstart, donor, acceptor, txend
    function getmin_ind_val( gene::Refgene, idx; def=Inf )
-      retarr = [ get(gene.txst, idx[1], def),
-                 get(gene.don,  idx[2], def),
-                 get(gene.acc,  idx[3], def),
-                 get(gene.txen, idx[4], def) ]
+      retarr = [ get(gene.txen, idx[1], def),
+                 get(gene.acc,  idx[2], def),
+                 get(gene.don,  idx[3], def),
+                 get(gene.txst, idx[4], def) ]
       indmin( retarr ), min( retarr... )
    end
 
@@ -149,12 +147,14 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
       
       # now should we make a node?
       if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
-         nodesize = Int(secval - minval) + (minval in used ? 0 : 1 )
-         nodeseq  = genome[(Int(minval)+(minval in used ? 1 : 0)):Int(secval)] # collect slice
+         leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
+         rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
+         nodesize = Int(secval - minval) - leftadj - rightadj + 1
+         println("$minval, $secval, $leftadj, $rightadj, $nodesize")
+         nodeseq  = genome[(Int(minval)+leftadj):(Int(secval)-rightadj)] # collect slice
          edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
-         pushval  = minval + (minval in used ? 1 : 0)
+         pushval  = minval + leftadj
          thridx = 0
-         push!(used, Int(secval))
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
@@ -162,7 +162,6 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
          nodeseq  = genome[Int(secval):Int(thrval)]
          edge     = get_edgetype( minidx, secidx, false, strand )
          pushval  = secval
-         push!(used, Int(thrval))
       end
 
       if strand == '+'
