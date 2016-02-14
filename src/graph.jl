@@ -158,8 +158,9 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
       else # don't make a node, this is a sequence gap, make edge and inc+=2
          idx[secidx] += 1 #skip ahead again
          thridx,thrval = getmin_ind_val( gene, idx )
-         nodesize = Int(thrval - secval) + 1
-         nodeseq  = genome[Int(secval):Int(thrval)]
+         rightadj = (thridx == 2 || thridx == 4) && secval != thrval ? 1 : 0
+         nodesize = Int(thrval - secval) - rightadj + 1
+         nodeseq  = genome[Int(secval):(Int(thrval)-rightadj)]
          edge     = get_edgetype( minidx, secidx, false, strand )
          pushval  = secval
       end

@@ -85,7 +85,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       #@bp
       align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos ) # TODO check
-     # println("$ispos $align") 
+      #println("$ispos $align") 
       align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] - 1,
                                    read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1].node )
       if align.isvalid
@@ -98,6 +98,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    # if !stranded and no valid alignments, run reverse complement
    if ispos && !p.is_stranded && isnull( res )
       read.seq = Bio.Seq.reverse_complement( read.seq )
+      reverse!(read.metadata.quality)
       res = ungapped_align( p, lib, read, ispos=false )
    end
    res
@@ -106,7 +107,7 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-@inbounds function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                                 nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
@@ -212,6 +213,7 @@ end
             else
                pop!( align.path ) # extension into current node failed
                @fastmath align.mismatches -= passed_mismat
+               align.matches -= ext_len[c]
                cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
                (cur_ridx + p.kmer_size - 1) < readlen || continue #TODO should be <= readlen?
             
@@ -249,8 +251,8 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
    isdefined( lib.edges.right, kmer_index(rkmer) ) || return align
 
    best = align
-   left_kmer::Kmer{SGNucleotide,K} = lib.graphs[geneind].edgeleft[edgeind]
-   right_nodes = lib.edges.left[ kmer_index(left_kmer) ] ∩ lib.edges.right[ kmer_index(rkmer) ]
+   left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
+   right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ kmer_index(rkmer) ]
 
    # do a test for trans splicing, and reset right_nodes
    for rn in right_nodes
@@ -274,7 +276,7 @@ end
 
 # This is the main ungapped alignment extension function in the <-- direction
 # Returns: SGAlignment
-@inbounds function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                                 nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
@@ -373,6 +375,7 @@ end
             else
                shift!( align.path ) # extension into current node failed
                @fastmath align.mismatches -= passed_mismat
+               align.matches -= ext_len[c]
                cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2) #TODO untouched
                (cur_ridx - p.kmer_size) > 0 || continue
             
@@ -408,8 +411,8 @@ function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
    isdefined( lib.edges.left, kmer_index(lkmer) ) || return align
 
    best = align
-   right_kmer::Kmer{SGNucleotide,K} = lib.graphs[geneind].edgeright[edgeind] # TODO
-   left_nodes = lib.edges.right[ kmer_index(right_kmer) ] ∩ lib.edges.left[ kmer_index(lkmer) ]
+   right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind]) # TODO
+   left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ kmer_index(lkmer) ]
 
    #println("$left_nodes, $lkmer")
 
