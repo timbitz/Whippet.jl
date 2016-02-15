@@ -22,11 +22,20 @@ function increment!( quant::SpliceGraphQuant, align::Nullable{SGAlignment}; val=
    if !isnull(align)
       if length(get(align).path) == 1
          # access node -> [ SGNode( gene, *node* ) ]
-         quant.node[ get(align).path[1][2] ] += val
+         quant.node[ get(align).path[1].node ] += val
       else
-         for n in 1:get(align).path
-            
+         for n in 1:(get(align).path-1)
+            lnode = get(align).path[n].node
+            rnode = get(align).path[n+1].node
+            if lnode < rnode
+               edge = Interval{Coordint}( lnode, rnode )
+               
+            elseif 
+
+            end
          end
       end
    end
 end
+
+

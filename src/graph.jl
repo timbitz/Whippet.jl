@@ -91,8 +91,8 @@ end
 
 # empty constructor
 SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
-                             Vector{Exonmax}(),  Vector{Exonmax}(),
-                             Vector{Exonmax}() )
+                             Vector{Coordint}(),  Vector{EdgeType}(),
+                             Vector{SGKmer}(), Vector{SGKmer}(), sg"" )
 
 # Main constructor
 # Build splice graph here.
