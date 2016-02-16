@@ -387,7 +387,7 @@ end
                #rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
 
-               res_align = spliced_rev_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, lkmer, align )
+               res_align = spliced_rev_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx-1, lkmer, align )
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align
                end
@@ -415,17 +415,17 @@ end
    isdefined( lib.edges.left, kmer_index(lkmer) ) || return align
 
    best = align
-   right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind]) # TODO
+   right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind])
    left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ kmer_index(lkmer) ]
 
    println("$left_nodes, $lkmer")
    @bp
 
-   # do a test for trans splicing, and reset right_nodes
+   # do a test for trans-splicing, and reset left_nodes
    for rn in left_nodes
       rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node-1] + lib.graphs[rn.gene].nodelen[rn.node-1] - 1
       #println("$(lib.graphs[rn.gene].seq[rn_offset-50:rn_offset])") 
-      res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx - 1, 
+      res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
                                                     align=deepcopy(align), nodeidx=rn.node-1 )
       best = res_align > best ? res_align : best
    end

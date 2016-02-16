@@ -18,21 +18,23 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen
                                                         Dict{Tuple{Exonmax,Exonmax},Float64}() )
 
 
-function increment!( quant::SpliceGraphQuant, align::Nullable{SGAlignment}; val=1.0 )
-   if !isnull(align)
-      if length(get(align).path) == 1
-         # access node -> [ SGNode( gene, *node* ) ]
-         quant.node[ get(align).path[1].node ] += val
-      else
-         for n in 1:(get(align).path-1)
-            lnode = get(align).path[n].node
-            rnode = get(align).path[n+1].node
-            if lnode < rnode
-               edge = Interval{Coordint}( lnode, rnode )
-               
-            elseif 
+function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
+   align.isvalid == true || return
+   if length(get(align).path) == 1
+      # access node -> [ SGNode( gene, *node* ) ]
+      quant.node[ get(align).path[1].node ] += val
+   else
+      # TODO: potentially handle trans-splicing here via align.istrans variable?
 
-            end
+      # Otherwise, lets step through pairs of nodes and add val to those edges
+      for n in 1:(length(align.path)-1)
+         lnode = align.path[n].node
+         rnode = align.path[n+1].node
+         if lnode < rnode
+            interv = Interval{Exonmax}( lnode, rnode )
+            quant.edge[ interv ] = get( quant.edge, interv, 0.0 ).value + val
+         elseif lnode >= rnode
+            quant.circ[ (lnode, rnode) ] = get( quant.circ, (lnode,rnode), 0.0) + val
          end
       end
    end
