@@ -4,27 +4,19 @@
 using FMIndexes
 using IntArrays
 
-include("types.jl")
-include("bio_nuc_safepatch.jl")
-include("refflat.jl")
-include("graph.jl")
-include("edges.jl")
-
-typealias Str ASCIIString
-
 abstract SeqLibrary
 
 immutable SeqLib <: SeqLibrary
    seq::NucleotideSequence
    offset::Vector{Coordint}
-   names::Vector{Str}
+   names::Vector{Genename}
    index::FMIndex
    sorted::Bool
 end
 
 immutable GraphLib <: SeqLibrary
    offset::Vector{Coordint}
-   names::Vector{Str}
+   names::Vector{Genename}
    graphs::Vector{SpliceGraph}
    edges::Edges
    index::FMIndex
@@ -46,7 +38,7 @@ end
 
 offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, Coordint(offset), lower=true) )
 
-function name_to_offset( seqlib::SeqLibrary, name::Str )
+function name_to_offset( seqlib::SeqLibrary, name::Genename )
    if seqlib.sorted
       ind = search_sorted( seqlib.names, name, true )
       ret = seqlib.names[ind]
@@ -56,7 +48,7 @@ function name_to_offset( seqlib::SeqLibrary, name::Str )
    ret
 end
 
-function brute_getoffset( seqlib::SeqLibrary, name::Str )
+function brute_getoffset( seqlib::SeqLibrary, name::Genename )
    ret = -1
    for n in 1:length(seqlib.names)
      if seqlib.names[n] == name
@@ -78,7 +70,7 @@ function build_offset_dict{I <: Integer,
 end
 
 function build_chrom_dict( ref::Refset )
-   ret = Dict{Str,Vector{Genename}}() # refgenomeseq->geneid[]
+   ret = Dict{Seqname,Vector{Genename}}() # refgenomeseq->geneid[]
    for g in keys(ref.geneset)
       chrom = ref.geneset[g].info[1]
       if !haskey(ret, chrom)
@@ -113,10 +105,11 @@ function threebit_enc(seq)
    ret
 end
 
+
 function load_fasta( fhIter; verbose=false )
    seq = SGSequence(mutable=false)
    offset = Int[]
-   names = Str[]
+   names = Seqname[]
    for r in fhIter
       immutable!(r.seq)
       push!(names, r.name)
@@ -124,22 +117,6 @@ function load_fasta( fhIter; verbose=false )
       println( STDERR, r )
       @time seq *= r.seq
    end
-   seq, offset, names
-end
-
-#TODO test offset
-function load_fasta_sg( fhIter; verbose=false )
-   seq = sg""
-   offset = Int[]
-   names = Str[]
-   for r in fhIter
-      Bio.Seq.immutable!(r.seq)
-      sg = SGSequence( r.seq )
-      push!(names, r.name)
-      push!(offset, length(seq)+1)
-      println( STDERR, r )
-      @time seq *= sg 
-   end    
    seq, offset, names
 end
 
@@ -188,5 +165,27 @@ function trans_index!( fhIter, ref::Refset )
    edges = build_edges( xgraph, 9 ) # TODO make variable kmer
 
    GraphLib( xoffset, xgenes, xgraph, edges, fm, true)
+end
+
+
+function fasta_to_index( dir, ref::Refset )
+   index = nothing
+   for f in readdir(dir)
+      re = match(r"(\S+).(fa|fasta)(.gz?)", f)
+
+      if re != nothing
+         mainname = re.captures[1]
+         if re.captures[3] != nothing #then gzipped
+            println(STDERR, "Decompressing and Indexing $mainname...")
+            to_open = open( re.match ) |> ZlibInflateInputStream
+         else
+            println(STDERR, "Indexing $mainname...")
+            to_open = string(dir, "/$f")
+         end
+         # iterate through fasta entries
+         index = @time trans_index!(open( to_open, FASTA ), ref)
+      end
+   end
+   index
 end
 

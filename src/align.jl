@@ -111,8 +111,9 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                                 nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
-   sg       = lib.graphs[geneind]
-   readlen  = length(read.seq)
+   const sg       = lib.graphs[geneind]
+   const readlen  = length(read.seq)
+
    curedge  = nodeidx
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
@@ -137,7 +138,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                # This is a std exon-exon junction, if the read is an inclusion read
                # then we simply jump ahead, otherwise lets try to find a compatible right
                # node
-               rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+               const rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
                if sg.edgeright[curedge] == rkmer
                   align.matches += p.kmer_size
                   ridx    += p.kmer_size - 1
@@ -170,7 +171,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          elseif sg.edgetype[curedge] == EDGETYPE_LS && # 'LS'
                 readlen - ridx + 1   >= p.kmer_size
                # obligate spliced_extension
-               rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+               const rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
                align = spliced_fwd_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                break
          elseif sg.edgetype[curedge] == EDGETYPE_SR #||
@@ -188,7 +189,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          # ignore 'N'
       else 
          # mismatch
-         prob  = phred_to_prob( read.metadata.quality[ridx] )
+         const prob  = phred_to_prob( read.metadata.quality[ridx] )
          @fastmath align.mismatches += prob
          @fastmath passed_mismat += prob
       end
@@ -219,7 +220,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                (cur_ridx + p.kmer_size - 1) <= readlen || continue
             
                #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
-               rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
+               const rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(cur_ridx-p.kmer_size-20):(cur_ridx+p.kmer_size-1)])\n$rkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
                
                res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
@@ -252,8 +253,8 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
    isdefined( lib.edges.right, kmer_index(rkmer) ) || return align
 
    best = align
-   left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
-   right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ kmer_index(rkmer) ]
+   const left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
+   const right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ kmer_index(rkmer) ]
 
    # do a test for trans splicing, and reset right_nodes
    for rn in right_nodes
@@ -281,8 +282,9 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                                 nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
-   sg       = lib.graphs[geneind]
-   readlen  = length(read.seq)
+   const sg       = lib.graphs[geneind]
+   const readlen  = length(read.seq)
+
    leftnode  = nodeidx
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
@@ -306,7 +308,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
                                 ridx >= p.kmer_size  # TODO check
                                 
-               lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
+               const lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
                if sg.edgeleft[nodeidx] == lkmer
                   align.matches += p.kmer_size
                   ridx    -= p.kmer_size - 1 
@@ -335,7 +337,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          elseif sg.edgetype[nodeidx] == EDGETYPE_SR && # 'SR'
                                 ridx >= p.kmer_size
                # obligate spliced_extension
-               lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
+               const lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
                align = spliced_rev_extend( p, lib, geneind, UInt32(nodeidx), read, ridx, lkmer, align ) ## TODO
                break
          elseif sg.edgetype[nodeidx] == EDGETYPE_LS #||
@@ -351,7 +353,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          # ignore 'N'
       else 
          # mismatch
-         prob  = phred_to_prob( read.metadata.quality[ridx] )
+         const prob  = phred_to_prob( read.metadata.quality[ridx] )
          @fastmath align.mismatches += prob
          @fastmath passed_mismat += prob
       end
@@ -380,7 +382,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2)
                (cur_ridx - p.kmer_size) > 0 || continue
             
-               lkmer = DNAKmer{p.kmer_size}(read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)])
+               const lkmer = DNAKmer{p.kmer_size}(read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)])
                #@bp
                #rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
@@ -413,8 +415,8 @@ function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
    isdefined( lib.edges.left, kmer_index(lkmer) ) || return align
 
    best = align
-   right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind])
-   left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ kmer_index(lkmer) ]
+   const right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind])
+   const left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ kmer_index(lkmer) ]
 
    #println("$left_nodes, $lkmer")
    #@bp

@@ -1,6 +1,8 @@
 
 using IntervalTrees
 
+const SCALING_FACTOR = 1_000_000
+
 # This is where we count reads for nodes/edges/circular-edges
 immutable SpliceGraphQuant
    node::Vector{Float64}
@@ -36,6 +38,18 @@ function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
             quant.circ[ (lnode, rnode) ] = get( quant.circ, (lnode,rnode), 0.0) + val
          end
       end
+   end
+end
+
+
+function transcripts_per_mil!( tpm::Vector{Float64}, counts::Vector{Float64}, lengths::Vector{Float64}; 
+                               readlen=50 )
+   for i in 1:length(counts)
+      tpm[ i ] = counts[i] * readlen / lengths[i]
+   end
+   const rpk_sum = sum( tpm )
+   for i in 1:length(tpm)
+      tpm[i] = ( tpm[i] * SCALING_FACTOR / rpk_sum )
    end
 end
 
