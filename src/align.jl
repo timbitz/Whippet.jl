@@ -64,7 +64,7 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_lef
       sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
       cnt = length(sa)
       ctry += 1
-      println("$sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
+      #println("$sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
       if cnt == 0 || cnt > p.seed_tolerate
          curpos += increment
       else
@@ -107,7 +107,7 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-@debug function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                                 nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
@@ -128,7 +128,7 @@ end
          passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
          curedge::UInt32 = nodeidx+1
-         @bp
+         #@bp
          if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
                 readlen - ridx + 1   >= p.kmer_size
@@ -162,7 +162,7 @@ end
                passed_extend = 0
                passed_mismat = 0
                push!(get(passed_edges), curedge)
-               @bp
+               #@bp
                sgidx   += 1
                ridx    -= 1
                nodeidx += 1
@@ -174,8 +174,7 @@ end
                align = spliced_fwd_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                break
          elseif sg.edgetype[curedge] == EDGETYPE_SR #||
-                @bp
-                #sg.edgetype[curedge] == EDGETYPE_RS # 'SR' || 'RS'
+                #@bp
                # end of alignment
                break # ?
          else #'RR' || 'SL' || 'RS'
@@ -184,7 +183,7 @@ end
                ridx  -= 1 # offset the lower ridx += 1
                nodeidx += 1
                push!( align.path, SGNode( geneind, nodeidx ) )  
-               @bp
+               #@bp
          end
          # ignore 'N'
       else 
@@ -195,7 +194,7 @@ end
       end
       ridx  += 1
       sgidx += 1
-      print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
+      #print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
    end
 
 
@@ -278,7 +277,7 @@ end
 
 # This is the main ungapped alignment extension function in the <-- direction
 # Returns: SGAlignment
-@debug function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
                                 nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
@@ -302,7 +301,7 @@ end
          passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
          leftnode = nodeidx - 1
-         @bp
+         #@bp
          if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
                                 ridx >= p.kmer_size  # TODO check
@@ -328,7 +327,7 @@ end
                passed_extend = 0
                passed_mismat = 0
                push!(get(passed_edges), nodeidx)
-               @bp
+              # @bp
                sgidx   -= 1
                ridx    += 1
                nodeidx -= 1
@@ -340,7 +339,6 @@ end
                align = spliced_rev_extend( p, lib, geneind, UInt32(nodeidx), read, ridx, lkmer, align ) ## TODO
                break
          elseif sg.edgetype[nodeidx] == EDGETYPE_LS #||
-                #sg.edgetype[nodeidx] == EDGETYPE_SL # 'SL' || 'LS'
                # end of alignment
                break # ?
          else #'LL' || 'RS' || 'SL'
@@ -359,7 +357,7 @@ end
       end
       ridx  -= 1
       sgidx -= 1
-      print(" $(read.seq[ridx+1]),$ridx\_$(sg.seq[sgidx+1]),$sgidx ")
+      #print(" $(read.seq[ridx+1]),$ridx\_$(sg.seq[sgidx+1]),$sgidx ")
    end
 
    # if passed_extend < K, spliced_extension for each in length(edges)
@@ -370,7 +368,7 @@ end
          ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend
          rev_cumarray!(ext_len)
-         @bp
+         #@bp
          for c in length(get(passed_edges)):-1:1  #most recent edge first
             if ext_len[c] >= p.kmer_size
                align.isvalid = true
@@ -379,11 +377,11 @@ end
                shift!( align.path ) # extension into current node failed
                @fastmath align.mismatches -= passed_mismat
                align.matches -= ext_len[c]
-               cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2) #TODO untouched
+               cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2)
                (cur_ridx - p.kmer_size) > 0 || continue
             
                lkmer = DNAKmer{p.kmer_size}(read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)])
-               @bp
+               #@bp
                #rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
                #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
 
@@ -408,7 +406,7 @@ end
 end
 
 #TODO whole function needs fixing.
-@debug function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
+function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
                                   read::SeqRecord, ridx::Int, lkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
@@ -418,8 +416,8 @@ end
    right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind])
    left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ kmer_index(lkmer) ]
 
-   println("$left_nodes, $lkmer")
-   @bp
+   #println("$left_nodes, $lkmer")
+   #@bp
 
    # do a test for trans-splicing, and reset left_nodes
    for rn in left_nodes
