@@ -17,7 +17,6 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen
                                                         IntervalMap{Exonmax,Float64}(),
                                                         Dict{Tuple{Exonmax,Exonmax},Float64}() )
 
-
 function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
    align.isvalid == true || return
    if length(align.path) == 1
@@ -39,6 +38,5 @@ function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
       end
    end
 end
-
 
 
