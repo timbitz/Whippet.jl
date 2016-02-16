@@ -177,7 +177,7 @@ function fasta_to_index( dir, ref::Refset )
          mainname = re.captures[1]
          if re.captures[3] != nothing #then gzipped
             println(STDERR, "Decompressing and Indexing $mainname...")
-            to_open = open( re.match ) |> ZlibInflateInputStream
+            to_open = open( string(dir, "/$(re.match)") ) |> ZlibInflateInputStream
          else
             println(STDERR, "Indexing $mainname...")
             to_open = string(dir, "/$f")

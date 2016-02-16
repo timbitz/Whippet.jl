@@ -11,3 +11,4 @@ typealias Coordtuple Tuple{Vararg{Coordint}}
 typealias Coordarray Vector{Coordint}
 typealias Exonmax    UInt16
 typealias Genename   ASCIIString
+typealias Seqname    ASCIIString

@@ -23,12 +23,12 @@ end
 # Single Refgene entry
 immutable Refgene
    info::Geneinfo
-   #meanlen::Coordint
    don::Coordtuple # make Coordarray instead?
    acc::Coordtuple # TODO?
    txst::Coordtuple
    txen::Coordtuple
    exons::Coordtree
+   length::Float64
 end
 
 # Full Annotation Set
@@ -67,13 +67,15 @@ end
 function load_refflat( fh; txbool=false )
    
    # Temporary variables   
-   gninfo = Dict{Genename,Geneinfo}()
-   gndon = Dict{Genename,Coordtuple}()
-   gnacc = Dict{Genename,Coordtuple}()
-   gntxst = Dict{Genename,Coordtuple}()
-   gntxen = Dict{Genename,Coordtuple}()
-   gnlens = Dict{Genename,Coordtuple}()
-   gnexons = Dict{Genename,Coordtree}()
+   gninfo   = Dict{Genename,Geneinfo}()
+   gndon    = Dict{Genename,Coordtuple}()
+   gnacc    = Dict{Genename,Coordtuple}()
+   gntxst   = Dict{Genename,Coordtuple}()
+   gntxen   = Dict{Genename,Coordtuple}()
+   gnlens   = Dict{Genename,Coordtuple}()
+   gnexons  = Dict{Genename,Coordtree}()
+   gnlen    = Dict{Genename,Float64}()
+   gncnt    = Dict{Genename,Int}()
 
    # Refset variables
    txset    = Dict{Refseqid,Reftx}()
@@ -100,20 +102,22 @@ function load_refflat( fh; txbool=false )
 
       if exCnt <= 2 continue end # no alternative splicing possible  TODO
 
+      txlen = 0
+
       # get donor and acceptor splice sites, adjust for 0-based coords 
       don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0)
       acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0, c=1)
 
       # Add original exons to interval tree-->
       for i in 1:length(don)
+         insval = Interval{Coordint}(acc[i],don[i])
+         txlen += don[i] - acc[i] + 1
          if haskey(gnexons, gene)
-            insval = Interval{Coordint}(acc[i],don[i])
             # make sure we are adding a unique value
             if !haskey(gnexons[gene], (acc[i],don[i]))
                push!(gnexons[gene], insval)
             end
          else
-            insval = Interval{Coordint}(acc[i],don[i])
             gnexons[gene] = Coordtree()
             push!(gnexons[gene], insval)
          end
@@ -134,25 +138,28 @@ function load_refflat( fh; txbool=false )
       if haskey(genetotx, gene)
          chrom == gninfo[gene][1] || continue # can have only one chrom
          push!(genetotx[gene], refid)
-         gndon[gene] = unique_tuple(gndon[gene], don)
-         gnacc[gene] = unique_tuple(gnacc[gene], acc)
+         gndon[gene]  = unique_tuple(gndon[gene], don)
+         gnacc[gene]  = unique_tuple(gnacc[gene], acc)
          gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS, c=1))
          gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
-         #gnlens[gene] += genelen(don, acc)  # TODO finish
+         gnlen[gene] += txlen
+         gncnt[gene] += 1
       else
          genetotx[gene] = Refseqid[refid]
-         gndon[gene] = don
-         gnacc[gene] = acc
+         gndon[gene]  = don
+         gnacc[gene]  = acc
          gninfo[gene] = (chrom,strand[1])
          gntxst[gene] = tuppar(txS, c=1)
          gntxen[gene] = tuppar(txE)
-         #gnlens[gene] = genelen(don, acc)
+         gnlen[gene]  = txlen
+         gncnt[gene]  = 1
       end
    end
    # now make Refset and add genes.
    for gene in keys(genetotx)
       geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
-                               gntxst[gene], gntxen[gene], gnexons[gene] )
+                               gntxst[gene], gntxen[gene], gnexons[gene], 
+                               gnlen[gene] / gncnt[gene] )
    end
 
    if !txbool
@@ -161,41 +168,5 @@ function load_refflat( fh; txbool=false )
    end
 
    return Refset( txset, geneset, genetotx )
-end
-
-
-function main()
-   
-   println(STDERR, "Loading Refflat file...")
-   fh = open("$(pwd())/../genome/genes.flat", "r")
-   @time ref = load_refflat(fh)
-   close(fh)
-
-   println(STDERR, "Saving gene annotations...")
-   open("$(pwd())/../index/reflat.jls", "w+") do fh
-      @time serialize(fh, ref)
-   end 
-   println(STDERR, "Loading annotation index...")
-   @time ref = open(deserialize, "$(pwd())/../index/reflat.jls")
-   #=
-   Loading Refflat file...
-    45.661196 seconds (149.57 M allocations: 3.433 GB, 4.67% gc time)
-   Saving gene annotations...
-     2.310959 seconds (3.66 M allocations: 126.598 MB, 2.11% gc time)
-   Loading annotation index...
-     1.510497 seconds (6.74 M allocations: 175.154 MB, 18.79% gc time)
-   =#
-   gc()
-   return ref  
-
-   println(STDERR, "Loading genome index...")
-   @time genome = open(deserialize, "$(pwd())/index/genome.jls")
-   @time junclib_d,junclib_a = donor_junc_table( genome, ref, 9 )
-   open("$(pwd())/index/donor.jls", "w+") do fh
-      @time serialize(fh, junclib_d)
-      @time serialize(fh, junclib_a)
-   end
-   gc()
-   sleep(10)
 end
 

@@ -19,6 +19,24 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen
                                                         IntervalMap{Exonmax,Float64}(),
                                                         Dict{Tuple{Exonmax,Exonmax},Float64}() )
 
+immutable GraphLibQuant
+   tpm::Vector{Float64}
+   count::Vector{Float64}
+   length::Vector{Float64}
+   quant::Vector{SpliceGraphQuant}
+end
+
+function GraphLibQuant( lib::GraphLib )
+   tpm    = zeros( length(lib.graphs) )
+   count  = zeros( length(lib.graphs) )
+   length =  ones( length(lib.graphs) )
+   quant::Vector{SpliceGraphQuant}()
+   for i in 1:length( lib.graphs )
+      name = lib.names[i]
+      
+   end
+end
+
 function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
    align.isvalid == true || return
    if length(align.path) == 1
@@ -40,6 +58,13 @@ function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
       end
    end
 end
+
+
+immutable Multimap
+   align::Nullable{Vector{SGAlignment}}
+   prop::Nullable{Vector{Float64}}
+end
+
 
 
 function transcripts_per_mil!( tpm::Vector{Float64}, counts::Vector{Float64}, lengths::Vector{Float64}; 

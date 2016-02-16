@@ -4,15 +4,16 @@
 using Bio.Seq
 using FMIndexes
 using IntArrays
+using Libz
 
 using ArgParse
  
 include("types.jl")
-include("index.jl")
 include("bio_nuc_safepatch.jl")
 include("refflat.jl")
 include("graph.jl")
 include("edges.jl")
+include("index.jl")
 include("align.jl")
 
 function parse_cmd()
@@ -42,10 +43,10 @@ function main()
 
    genomedir = string(pwd(), "/../genome")
    println(STDERR, "Indexing transcriptome...")
-   graphome = fasta_to_index( genomedir, refflat )
+   @time graphome = fasta_to_index( genomedir, ref )
 
    println(STDERR, "Saving Annotations...")
-   open("$(pwd())/../index/flat.jls", "w+") do fh
+   open("$(pwd())/../index/graph_anno.jls", "w+") do fh
       @time serialize(fh, ref)
    end
 
