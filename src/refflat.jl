@@ -199,4 +199,3 @@ function main()
    sleep(10)
 end
 
-refflat = main()
