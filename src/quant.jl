@@ -26,15 +26,19 @@ immutable GraphLibQuant
    quant::Vector{SpliceGraphQuant}
 end
 
-function GraphLibQuant( lib::GraphLib )
+function GraphLibQuant( lib::GraphLib, ref::Refset )
    tpm    = zeros( length(lib.graphs) )
    count  = zeros( length(lib.graphs) )
    length =  ones( length(lib.graphs) )
    quant::Vector{SpliceGraphQuant}()
    for i in 1:length( lib.graphs )
       name = lib.names[i]
-      
+      if haskey( ref.geneset, name )
+         length[i] = ref.geneset[name]
+      end
+      push!( quant, SpliceGraphQuant( lib.graphs[i] ) )
    end
+   GraphLibQuant( tpm, count, length, quant )
 end
 
 function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
@@ -64,7 +68,6 @@ immutable Multimap
    align::Nullable{Vector{SGAlignment}}
    prop::Nullable{Vector{Float64}}
 end
-
 
 
 function transcripts_per_mil!( tpm::Vector{Float64}, counts::Vector{Float64}, lengths::Vector{Float64}; 
