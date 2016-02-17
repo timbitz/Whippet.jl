@@ -65,7 +65,7 @@ function GraphLibQuant( lib::GraphLib, ref::Refset )
    GraphLibQuant( tpm, count, len, quant )
 end
 
-function transcripts_per_mil!( quant::GraphLibQuant; readlen=50 )
+function calculate_tpm!( quant::GraphLibQuant; readlen=50 )
    for i in 1:length(quant.count)
       quant.tpm[ i ] = quant.count[i] * readlen / quant.length[i]
    end
@@ -74,7 +74,6 @@ function transcripts_per_mil!( quant::GraphLibQuant; readlen=50 )
       quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
    end
 end
-
 
 immutable Multimap
    align::Vector{SGAlignment}

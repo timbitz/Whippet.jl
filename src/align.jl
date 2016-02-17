@@ -97,9 +97,16 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    end
    # if !stranded and no valid alignments, run reverse complement
    if ispos && !p.is_stranded && isnull( res )
-      read.seq = Bio.Seq.reverse_complement( read.seq ) # TODO: Fix for parallel
-      reverse!(read.metadata.quality)
-      res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
+      if nprocs() > 1 # if parallel we can't write to read safely, make copy
+         rc = copy( read )
+         rc.seq = Bio.Seq.reverse_complement( read.seq )
+         reverse!( rc.metadata.quality )
+         res = ungapped_align( p, lib,   rc, ispos=false, anchor_left=!anchor_left )
+      else
+         read.seq = Bio.Seq.reverse_complement( read.seq )
+         reverse!( read.metadata.quality )
+         res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
+      end
    end
    res
 end
