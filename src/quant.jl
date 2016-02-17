@@ -19,33 +19,12 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen
                                                         IntervalMap{Exonmax,Float64}(),
                                                         Dict{Tuple{Exonmax,Exonmax},Float64}() )
 
-immutable GraphLibQuant
-   tpm::Vector{Float64}
-   count::Vector{Float64}
-   length::Vector{Float64}
-   quant::Vector{SpliceGraphQuant}
-end
 
-function GraphLibQuant( lib::GraphLib, ref::Refset )
-   tpm    = zeros( length(lib.graphs) )
-   count  = zeros( length(lib.graphs) )
-   length =  ones( length(lib.graphs) )
-   quant::Vector{SpliceGraphQuant}()
-   for i in 1:length( lib.graphs )
-      name = lib.names[i]
-      if haskey( ref.geneset, name )
-         length[i] = ref.geneset[name]
-      end
-      push!( quant, SpliceGraphQuant( lib.graphs[i] ) )
-   end
-   GraphLibQuant( tpm, count, length, quant )
-end
-
-function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
+function increment!( sgq::SpliceGraphQuant, align::SGAlignment; val=1.0 )
    align.isvalid == true || return
    if length(align.path) == 1
       # access node -> [ SGNode( gene, *node* ) ]
-      quant.node[ align.path[1].node ] += val
+      sgq.node[ align.path[1].node ] += val
    else
       # TODO: potentially handle trans-splicing here via align.istrans variable?
 
@@ -55,30 +34,56 @@ function increment!( quant::SpliceGraphQuant, align::SGAlignment; val=1.0 )
          rnode = align.path[n+1].node
          if lnode < rnode
             interv = Interval{Exonmax}( lnode, rnode )
-            quant.edge[ interv ] = get( quant.edge, interv, IntervalValue(0,0,0.0) ).value + val
+            sgq.edge[ interv ] = get( sgq.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
-            quant.circ[ (lnode, rnode) ] = get( quant.circ, (lnode,rnode), 0.0) + val
+            sgq.circ[ (lnode, rnode) ] = get( sgq.circ, (lnode,rnode), 0.0) + val
          end
       end
    end
 end
 
+# Here we store whole graphome quantification
+immutable GraphLibQuant
+   tpm::Vector{Float64}
+   count::Vector{Float64}
+   length::Vector{Float64}
+   quant::Vector{SpliceGraphQuant}
+end
+
+function GraphLibQuant( lib::GraphLib, ref::Refset )
+   tpm    = zeros( length(lib.graphs) )
+   count  =  ones( length(lib.graphs) )
+   len    =  ones( length(lib.graphs) )
+   quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
+   for i in 1:length( lib.graphs )
+      name = lib.names[i]
+      if haskey( ref.geneset, name )
+         len[i] = ref.geneset[name].length
+      end
+      quant[i] = SpliceGraphQuant( lib.graphs[i] )
+   end
+   GraphLibQuant( tpm, count, len, quant )
+end
+
+function transcripts_per_mil!( quant::GraphLibQuant; readlen=50 )
+   for i in 1:length(quant.count)
+      quant.tpm[ i ] = quant.count[i] * readlen / quant.length[i]
+   end
+   const rpk_sum = sum( quant.tpm )
+   for i in 1:length(quant.tpm)
+      quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
+   end
+end
+
 
 immutable Multimap
-   align::Nullable{Vector{SGAlignment}}
-   prop::Nullable{Vector{Float64}}
+   align::Vector{SGAlignment}
+   prop::Vector{Float64}
 end
 
+Multimap( align::SGAlignment ) = length(align.path) >= 1 ? 
+                                    Multimap( align, ones(length(align.path)) / length(align.path) )
+                                    Multimap( align, Float64[] )
 
-function transcripts_per_mil!( tpm::Vector{Float64}, counts::Vector{Float64}, lengths::Vector{Float64}; 
-                               readlen=50 )
-   for i in 1:length(counts)
-      tpm[ i ] = counts[i] * readlen / lengths[i]
-   end
-   const rpk_sum = sum( tpm )
-   for i in 1:length(tpm)
-      tpm[i] = ( tpm[i] * SCALING_FACTOR / rpk_sum )
-   end
-end
 
 

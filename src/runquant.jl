@@ -13,6 +13,7 @@ include("graph.jl")
 include("edges.jl")
 include("index.jl")
 include("align.jl")
+include("quant.jl")
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -37,12 +38,14 @@ end
 function main()
 
    println(STDERR, "Loading splice graph index...")
-   @time lib = open(deserialize, "$(pwd())/index/graph.jls")
+   @time lib = open(deserialize, "$(pwd())/../index/graph.jls")
 
    println(STDERR, "Loading annotation index...")
    @time anno = open(deserialize, "$(pwd())/../index/graph_anno.jls")
 
    const ap = AlignParam() # defaults for now
+
+   quant = GraphLibQuant( lib, anno )
 
    # Load Fastq files in chunks
    # Parallel reduction loop through fastq chunks 
