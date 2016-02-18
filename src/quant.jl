@@ -106,8 +106,8 @@ end
 # and sets the quant.tpm array as the proposed expression set
 # at each iteration.   It also requires that calculate_tpm! be 
 # run initially once prior to rec_gene_em!() call.
-@fastmath function rec_gene_em!( quant::GraphLibQuant,
-                                 ambig::Vector{Multimap}, 
+function rec_gene_em!( quant::GraphLibQuant,
+                                 ambig::Vector{Multimap}; 
                                  temp::Vector{Float64}=ones(length(quant.count)),
                                  uniqsum=sum(quant.count),
                                  ambigsum=length(ambig),
@@ -127,7 +127,9 @@ end
       
       for ai in 1:length(mm.align)
          init_gene = mm.align[ai].path[1].gene
-         temp[ init_gene ] += (mm.prop[ai] / mm.prop_sum)
+         @fastmath prop = mm.prop[ai] / mm.prop_sum
+         mm.prop[ai] = prop
+         temp[ init_gene ] += prop
       end
    end
 
@@ -135,7 +137,7 @@ end
      
    #iterate
    if temp != quant.tpm && it < max
-      it = rec_gene_em( quant, ambig, temp, uniqsum=uniqsum, ambigsum=ambigsum, 
+      it = rec_gene_em( quant, ambig, temp=temp, uniqsum=uniqsum, ambigsum=ambigsum, 
                         it=it+1, max=max, sig=sig)
    end
    it

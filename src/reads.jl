@@ -70,6 +70,8 @@ end
 
 function process_reads!( parser, param::AlignParam, quant::GraphLibQuant, 
                          multi::Vector{Multimap}; bufsize=100000 )
+   mapped = 0
+   unmapped = 0
    reads  = allocate_chunk( parser, bufsize )
    while !done(parser)
       read_chunk!( reads, parser )
@@ -81,9 +83,14 @@ function process_reads!( parser, param::AlignParam, quant::GraphLibQuant,
             else
                count!( quant, get(align) )
             end
+            mapped += 1
+         else
+            unmapped += 1
          end
       end
+      nreads += length(reads)
    end # end while
+   mapped,unmapped
 end
 
 

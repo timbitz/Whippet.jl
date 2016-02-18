@@ -19,11 +19,12 @@ immutable AlignParam
    score_min::Int     # Minimum score for a valid alignment
    is_stranded::Bool  # Is input data + strand only?
    is_paired::Bool    # Paired end data?
+   is_pair_rc::Bool   # Is mate 2 the reverse complement of mate 1
    is_trans_ok::Bool  # Do we allow edges from one gene to another
    is_circ_ok::Bool   # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 4, 7, 18, 5, 10, 10, 35, false, false, false, true )
+AlignParam() = AlignParam( 2, 9, 4, 7, 18, 5, 10, 10, 35, false, false, true, false, true )
 
 abstract UngappedAlignment
 

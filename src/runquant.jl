@@ -12,14 +12,20 @@ include("refflat.jl")
 include("graph.jl")
 include("edges.jl")
 include("index.jl")
-include("reads.jl")
 include("align.jl")
 include("quant.jl")
+include("reads.jl")
 
 function parse_cmd()
-  s = ArgParseSettings()
+  s = ArgParseSettings(version="0.0.1", add_version=true)
   # TODO finish options...
   @add_arg_table s begin
+    "filename.fastq[.gz]"
+      arg_type = ASCIIString
+      required = true
+    "paired_mate.fastq[.gz]"
+      arg_type = ASCIIString
+      required = false
     "--seed_len", "-K"
       help = "Seed length (default 18)"
       arg_type = Int
@@ -38,6 +44,8 @@ end
 
 function main()
 
+   args = parse_cmd()
+
    println(STDERR, "Loading splice graph index...")
    @time const lib = open(deserialize, "$(pwd())/../index/graph.jls")
 
@@ -51,15 +59,26 @@ function main()
    parser = make_fqparser( "../test/sample_01.fq.gz" )
 
    if nprocs() > 1
-      include("align_parallel.jl")
+      #include("align_parallel.jl")
       # Load Fastq files in chunks
       # Parallel reduction loop through fastq chunks 
+      return #TODO
    else
-      process_reads!( parser, quant, multi, param, lib )
+      println(STDERR, "Processing reads...")
+      @time mapped,unmapped = process_reads!( parser, quant, multi, param, lib )
+      println(STDERR, "Finished $mapped mapped reads out of a total $(mapped+unmapped) reads...")
    end
 
    # TPM_EM
+   println(STDERR, "Calculating expression values...")
+   calculate_tpm!( quant )
+   @time iter = rec_gene_em!( quant, multi )
+   println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
+
+   # Now assign multi to edges.
+
    # Iterate through Events and do PSI_EM 
+   #calculate_psi( quant )
 end
 
 main()
