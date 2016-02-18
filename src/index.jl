@@ -167,6 +167,7 @@ function trans_index!( fhIter, ref::Refset )
    GraphLib( xoffset, xgenes, xgraph, edges, fm, true)
 end
 
+fixpath( str::ASCIIString ) = abspath( expanduser( str ) )
 
 function fasta_to_index( dir, ref::Refset )
    index = nothing
