@@ -1,14 +1,14 @@
 #!/usr/bin/env julia
 
 function check_and_install( pkg )
-   try
-      print( STDERR, "Checking $pkg ... " )
-      ver = Pkg.installed(pkg)
+   print( STDERR, "Checking $pkg ... " )
+   ver = Pkg.installed(pkg)
+   if ver != nothing
       println( STDERR, "Found version $ver" )
-   catch
+   else
       println( STDERR, "Trying to install $pkg ..." )
       Pkg.add(pkg)
-      Pkg.test(pkg)
+      #Pkg.test(pkg)
    end
 end
 
@@ -17,8 +17,9 @@ pkgs = [ "ArgParse",
          "SuffixArrays", 
          "FMIndexes", 
          "IntArrays", 
-         "IntervalTrees", 
-         "GZip" ]
+         "IntervalTrees",
+         "BufferedStreams", 
+         "Libz" ]
 Pkg.update()
 map( check_and_install, pkgs )
 

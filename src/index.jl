@@ -169,6 +169,13 @@ end
 
 fixpath( str::ASCIIString ) = abspath( expanduser( str ) )
 
+function isgzipped( filename, ext="" )
+   restr = "(\\S+)$ext(.gz?)"
+   re = match(Regex(restr), filename)
+   @assert re != nothing
+   return re.captures[end] == ".gz" ? true : false
+end
+
 function fasta_to_index( dir, ref::Refset )
    index = nothing
    for f in readdir(dir)
