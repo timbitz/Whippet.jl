@@ -48,26 +48,14 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
+   parser = make_fqparser( "../test/sample_01.fq.gz" )
+
    if nprocs() > 1
       include("align_parallel.jl")
       # Load Fastq files in chunks
       # Parallel reduction loop through fastq chunks 
    else
-      parser = make_fqparser( "../test/sample_01.fq.gz" )
-      reads  = allocate_chunk( parser, 10000 )
-      while !done(parser)
-         read_chunk!( reads, parser )
-         for r in reads
-            align = ungapped_align( param, lib, r )
-            if !isnull( align )
-               if length( get(align) ) > 1
-                  push!( multi, Multimap( get(align) ) )
-               else
-                  count!( quant, get(align) )
-               end
-            end
-         end
-      end # end while
+      process_reads!( parser, quant, multi, param, lib )
    end
 
    # TPM_EM

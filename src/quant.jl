@@ -43,9 +43,9 @@ function GraphLibQuant( lib::GraphLib, ref::Refset )
    GraphLibQuant( tpm, count, len, quant )
 end
 
-function calculate_tpm!( quant::GraphLibQuant; readlen=50 )
-   for i in 1:length(quant.count)
-      quant.tpm[ i ] = quant.count[i] * readlen / quant.length[i]
+function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen=50 )
+   for i in 1:length(counts)
+      quant.tpm[ i ] = counts[i] * readlen / quant.length[i]
    end
    const rpk_sum = sum( quant.tpm )
    for i in 1:length(quant.tpm)
@@ -59,8 +59,9 @@ immutable Multimap
 end
 
 Multimap( align::SGAlignment ) = length(align.path) >= 1 ? 
-                                    Multimap( align, ones(length(align.path)) / length(align.path) )
+                                    Multimap( align, ones(length(align.path)) / length(align.path) ) :
                                     Multimap( align, Float64[] )
+
 
 
 function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
@@ -88,4 +89,11 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
          end
       end
    end
+end
+
+
+@fastmath function rec_gene_em!( quant::GraphLibQuant,
+                                 ambig::Vector{Multimap}, 
+                                 it=1, max=1000, sig=0)
+    
 end

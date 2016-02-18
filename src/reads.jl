@@ -55,7 +55,6 @@ macro broadcast(nm, val)
    end
 end
 
-
 function chunk_ranges( datasize, num=nworkers() )
    size,left = divrem( datasize, num )
    len = fill( size, num )
@@ -67,6 +66,24 @@ function chunk_ranges( datasize, num=nworkers() )
       offset += len[i]
    end
    ranges
+end
+
+function process_reads!( parser, param::AlignParam, quant::GraphLibQuant, 
+                         multi::Vector{Multimap}; bufsize=100000 )
+   reads  = allocate_chunk( parser, bufsize )
+   while !done(parser)
+      read_chunk!( reads, parser )
+      for r in reads
+         align = ungapped_align( param, lib, r )
+         if !isnull( align )
+            if length( get(align) ) > 1
+               push!( multi, Multimap( get(align) ) )
+            else
+               count!( quant, get(align) )
+            end
+         end
+      end
+   end # end while
 end
 
 
