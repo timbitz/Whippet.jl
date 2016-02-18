@@ -5,6 +5,7 @@ using Bio.Seq
 using FMIndexes
 using IntArrays
 using Libz
+using BufferedStreams
 
 using ArgParse
  
@@ -14,7 +15,7 @@ include("refflat.jl")
 include("graph.jl")
 include("edges.jl")
 include("index.jl")
-include("align.jl")
+#include("align.jl")
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -24,9 +25,14 @@ function parse_cmd()
       help = "Kmer size to use for exon-exon junctions (default 9)"
       arg_type = Int
       default  = 9
+    "--fasta"
+      help = "Directory or file containg the genome files in fasta"
+      arg_type = ASCIIString
+      required = true
     "--flat"
       help = "Gene annotation file in RefFlat format"
       arg_type = ASCIIString
+      required = true
     "--index"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = ASCIIString
@@ -36,22 +42,27 @@ function parse_cmd()
 end
 
 function main()
-   println(STDERR, "Loading Refflat file...")
-   fh = open("$(pwd())/../genome/genes.flat", "r")
-   @time ref = load_refflat(fh)
-   close(fh)
 
-   genomedir = string(pwd(), "/../genome")
+   args = parse_cmd()
+
+   println(STDERR, "Loading Refflat file...")
+   fh = open( fixpath(args["flat"]) , "r")
+   if isgzipped( args["flat"] )
+      fh = fh |> ZlibInflateInputStream
+   end
+   @time ref = load_refflat(fh)
+
+   genomedir = args["fasta"]
    println(STDERR, "Indexing transcriptome...")
-   @time graphome = fasta_to_index( genomedir, ref )
+   @time graphome = fasta_to_index( fixpath(genomedir) , ref )
 
    println(STDERR, "Saving Annotations...")
-   open("$(pwd())/../index/graph_anno.jls", "w+") do fh
+   open("$(args["index"])_anno.jls", "w+") do fh
       @time serialize(fh, ref)
    end
 
    println(STDERR, "Saving splice graph index...")
-   open("$(pwd())/../index/graph.jls", "w+") do io
+   open("$(args["index"]).jls", "w+") do io
       @time serialize( io, graphome )
    end
 

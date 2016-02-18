@@ -56,7 +56,7 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   parser = make_fqparser( "../test/sample_01.fq.gz" )
+   parser = make_fqparser( args["filename.fastq[.gz]"] )
 
    if nprocs() > 1
       #include("align_parallel.jl")
