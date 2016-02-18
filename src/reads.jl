@@ -1,12 +1,9 @@
 
 function make_fqparser( filename )
-   re = match( r"(\S+).(fq|fastq)(.gz?)", filename )
-   if re != nothing
-      if re.captures[3] != nothing #then gzipped
-         to_open = open( filename ) |> ZlibInflateInputStream
-      else
-         to_open = filename
-      end
+   if isgzipped( filename )
+      to_open = open( filename, "r" ) |> ZlibInflateInputStream
+   else
+      to_open = filename
    end 
    open( to_open, FASTQ )
 end
@@ -68,12 +65,12 @@ function chunk_ranges( datasize, num=nworkers() )
    ranges
 end
 
-function process_reads!( parser, param::AlignParam, quant::GraphLibQuant, 
+function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
                          multi::Vector{Multimap}; bufsize=100000 )
    mapped = 0
    unmapped = 0
    reads  = allocate_chunk( parser, bufsize )
-   while !done(parser)
+   while length(reads) > 0
       read_chunk!( reads, parser )
       for r in reads
          align = ungapped_align( param, lib, r )
@@ -92,5 +89,3 @@ function process_reads!( parser, param::AlignParam, quant::GraphLibQuant,
    end # end while
    mapped,unmapped
 end
-
-

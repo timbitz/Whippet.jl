@@ -3,8 +3,9 @@
 
 using Bio.Seq
 using FMIndexes
-
+using Libz
 using ArgParse
+using BufferedStreams
  
 include("types.jl")
 include("bio_nuc_safepatch.jl")
@@ -56,7 +57,7 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   parser = make_fqparser( args["filename.fastq[.gz]"] )
+   parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]) )
 
    if nprocs() > 1
       #include("align_parallel.jl")
@@ -65,7 +66,7 @@ function main()
       return #TODO
    else
       println(STDERR, "Processing reads...")
-      @time mapped,unmapped = process_reads!( parser, quant, multi, param, lib )
+      @time mapped,unmapped = process_reads!( parser, param, lib, quant, multi )
       println(STDERR, "Finished $mapped mapped reads out of a total $(mapped+unmapped) reads...")
    end
 

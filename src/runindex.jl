@@ -46,15 +46,15 @@ function main()
    args = parse_cmd()
 
    println(STDERR, "Loading Refflat file...")
-   fh = open( fixpath(args["flat"]) , "r")
-   if isgzipped( args["flat"] )
+   flat = fixpath( args["flat"] )
+   fh = open( flat , "r")
+   if isgzipped( flat )
       fh = fh |> ZlibInflateInputStream
    end
    @time ref = load_refflat(fh)
 
-   genomedir = args["fasta"]
    println(STDERR, "Indexing transcriptome...")
-   @time graphome = fasta_to_index( fixpath(genomedir) , ref )
+   @time graphome = fasta_to_index( fixpath( args["fasta"] ) , ref )
 
    println(STDERR, "Saving Annotations...")
    open("$(args["index"])_anno.jls", "w+") do fh

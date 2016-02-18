@@ -169,31 +169,22 @@ end
 
 fixpath( str::ASCIIString ) = abspath( expanduser( str ) )
 
-function isgzipped( filename, ext="" )
-   restr = "(\\S+)$ext(.gz?)"
+function isgzipped( filename::ASCIIString )
+   restr = "\.gz\$"
    re = match(Regex(restr), filename)
-   @assert re != nothing
-   return re.captures[end] == ".gz" ? true : false
+   return re == nothing ? false : true
 end
 
-function fasta_to_index( dir, ref::Refset )
-   index = nothing
-   for f in readdir(dir)
-      re = match(r"(\S+).(fa|fasta)(.gz?)", f)
-
-      if re != nothing
-         mainname = re.captures[1]
-         if re.captures[3] != nothing #then gzipped
-            println(STDERR, "Decompressing and Indexing $mainname...")
-            to_open = open( string(dir, "/$(re.match)") ) |> ZlibInflateInputStream
-         else
-            println(STDERR, "Indexing $mainname...")
-            to_open = string(dir, "/$f")
-         end
-         # iterate through fasta entries
-         index = @time trans_index!(open( to_open, FASTA ), ref)
-      end
+function fasta_to_index( filename::ASCIIString, ref::Refset )
+   if isgzipped( filename )
+      println(STDERR, "Decompressing and Indexing $mainname...")
+      to_open = open( filename ) |> ZlibInflateInputStream
+   else
+      println(STDERR, "Indexing $filename...")
+      to_open = filename
    end
+   # iterate through fasta entries
+   index = @time trans_index!(open( to_open, FASTA ), ref)
    index
 end
 
