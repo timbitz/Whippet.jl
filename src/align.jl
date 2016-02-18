@@ -97,20 +97,39 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    end
    # if !stranded and no valid alignments, run reverse complement
    if ispos && !p.is_stranded && isnull( res )
-      if nprocs() > 1 # if parallel we can't write to read safely, make copy
-         rc = copy( read )
-         rc.seq = Bio.Seq.reverse_complement( read.seq )
-         reverse!( rc.metadata.quality )
-         res = ungapped_align( p, lib,   rc, ispos=false, anchor_left=!anchor_left )
-      else
-         read.seq = Bio.Seq.reverse_complement( read.seq )
-         reverse!( read.metadata.quality )
-         res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
-      end
+      read.seq = Bio.Seq.reverse_complement( read.seq )
+      reverse!( read.metadata.quality )
+      res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
    end
    res
 end
 
+function ungapped_align_safe( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
+   seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
+   locit = FMIndexes.LocationIterator( seed, lib.index )
+   res   = Nullable{Vector{SGAlignment}}()
+   for s in locit
+      geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true )
+      align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length,
+                                   read, readloc + p.seed_length, ispos=ispos )
+      align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] - 1,
+                                   read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1].node )
+      if align.isvalid
+         if isnull( res )
+            res = Nullable(Vector{SGAlignment}())
+         end
+         push!(get(res), align)
+      end
+   end
+   # if !stranded and no valid alignments, run reverse complement
+   if ispos && !p.is_stranded && isnull( res )
+      rc = copy( read )
+      rc.seq = Bio.Seq.reverse_complement( read.seq )
+      reverse!( rc.metadata.quality )
+      res = ungapped_align( p, lib,   rc, ispos=false, anchor_left=!anchor_left )
+   end
+   res
+end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment

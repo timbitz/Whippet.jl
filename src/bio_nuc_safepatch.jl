@@ -1117,7 +1117,9 @@ function mismatches{T}(a::NucleotideSequence{T}, b::NucleotideSequence{T},
     return count
 end
 
-
+# Additional read/write functions
+Base.write(io::Base.TCPSocket, nt::Bio.Seq.QualityEncoding) = Base.write(io, convert(UInt16, nt))
+Base.read{T <: Bio.Seq.QualityEncoding}(io::Base.TCPSocket, t::Type{T}) = convert(T, Base.read(io, UInt16))
 
 # K-mer
 # =====
@@ -1147,10 +1149,11 @@ Base.convert{K}(::Type{UInt64}, x::SGKmer{K}) = box(UInt64, unbox(SGKmer{K}, x))
 
 Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
 Base.write{T <: Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
-#Base.write{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, k::T) = Base.write(io, convert(UInt64, k))
+Base.write{T <: Kmer}(io::Base.TCPSocket, k::T) = Base.write(io, convert(UInt64, k))
+
 Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
 Base.read{T <: Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
-#Base.read{T <: Bio.Seq.Kmer}(io::GZip.GZipStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
+Base.read{T <: Kmer}(io::Base.TCPSocket, t::Type{T}) = convert(T, Base.read(io, UInt64))
 
 ==( a::Bio.Seq.DNAKmer, b::SGKmer ) = convert(UInt64, a) == convert(UInt64, b)
 ==( a::SGKmer, b::Bio.Seq.DNAKmer ) = convert(UInt64, a) == convert(UInt64, b)
