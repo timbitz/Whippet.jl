@@ -63,9 +63,9 @@ type Multimap
    prop_sum::Float64
 end
 
-Multimap( align::SGAlignment ) = length(align.path) >= 1 ? 
-                                    Multimap( align, ones(length(align.path)) / length(align.path) ) :
-                                    Multimap( align, Float64[] )
+Multimap( aligns::Vector{SGAlignment} ) = length(aligns) >= 1 ? 
+                                    Multimap( aligns, ones(length(aligns)) / length(aligns), 1.0 ) :
+                                    Multimap( aligns, Float64[], 0.0 )
 
 
 

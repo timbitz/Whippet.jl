@@ -78,7 +78,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
             if length( get(align) ) > 1
                push!( multi, Multimap( get(align) ) )
             else
-               count!( quant, get(align) )
+               count!( quant, get(align)[1] )
             end
             mapped += 1
          else
