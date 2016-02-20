@@ -85,7 +85,6 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
             unmapped += 1
          end
       end
-      nreads += length(reads)
    end # end while
    mapped,unmapped
 end

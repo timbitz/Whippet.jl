@@ -1,21 +1,25 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-using Bio.Seq
-using FMIndexes
-using Libz
+#using Bio.Seq
+#using FMIndexes
+#using Libz
 using ArgParse
-using BufferedStreams
+#using BufferedStreams
  
-include("types.jl")
-include("bio_nuc_safepatch.jl")
-include("refflat.jl")
-include("graph.jl")
-include("edges.jl")
-include("index.jl")
-include("align.jl")
-include("quant.jl")
-include("reads.jl")
+#include("types.jl")
+#include("bio_nuc_safepatch.jl")
+#include("refflat.jl")
+#include("graph.jl")
+#include("edges.jl")
+#include("index.jl")
+#include("align.jl")
+#include("quant.jl")
+#include("reads.jl")
+
+push!( LOAD_PATH, splitdir(@__FILE__)[1] )
+import SpliceGraphs
+@everywhere using SpliceGraphs
 
 function parse_cmd()
   s = ArgParseSettings(version="0.0.1", add_version=true)
