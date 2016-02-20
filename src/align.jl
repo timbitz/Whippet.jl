@@ -24,7 +24,7 @@ immutable AlignParam
    is_circ_ok::Bool   # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 4, 7, 18, 5, 10, 10, 35, false, false, true, false, true )
+AlignParam() = AlignParam( 2, 9, 3, 7, 18, 5, 18, 10, 45, false, false, true, false, true )
 
 abstract UngappedAlignment
 
@@ -50,7 +50,7 @@ score( align::SGAlignment ) = align.matches - align.mismatches
 phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
 
 function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
-   sa = 2:1
+   best_sa = 2:1
    cnt = 1000
    ctry = 1
    if offset_left
@@ -69,31 +69,35 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_lef
       if cnt == 0 || cnt > p.seed_tolerate
          curpos += increment
       else
+         best_sa = sa
          break
       end
    end
-   sa,curpos
+   best_sa,curpos
 end
 
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
-   seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
-   locit = FMIndexes.LocationIterator( seed, lib.index )
+   const seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
    #@bp
    res   = Nullable{Vector{SGAlignment}}()
-   for s in locit
-      geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
+   for s in FMIndexes.LocationIterator( seed, lib.index )
+      const geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
       #@bp
-      align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length, 
+      align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), 
+                                   s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos )
       #println("$ispos $align") 
-      align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] - 1,
-                                   read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1].node )
+      align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), 
+                                   s - lib.offset[geneind] - 1,
+                                   read, readloc - 1, ispos=ispos, align=align, 
+                                   nodeidx=align.path[1].node )
       if align.isvalid
          if isnull( res )
-            res = Nullable(Vector{SGAlignment}())
+            res = Nullable(SGAlignment[ align ])
+         else
+            push!(get(res), align)
          end
-         push!(get(res), align)
       end
    end
    # if !stranded and no valid alignments, run reverse complement
@@ -165,7 +169,9 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                # This is a std exon-exon junction, if the read is an inclusion read
                # then we simply jump ahead, otherwise lets try to find a compatible right
                # node
-               const rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+               const rseq = read.seq[ridx:(ridx+p.kmer_size-1)]
+               Bio.Seq.hasn( rseq ) && break
+               const rkmer = DNAKmer{p.kmer_size}( rseq )
                if sg.edgeright[curedge] == rkmer
                   align.matches += p.kmer_size
                   ridx    += p.kmer_size - 1
@@ -198,7 +204,9 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          elseif sg.edgetype[curedge] == EDGETYPE_LS && # 'LS'
                 readlen - ridx + 1   >= p.kmer_size
                # obligate spliced_extension
-               const rkmer = DNAKmer{p.kmer_size}(read.seq[ridx:(ridx+p.kmer_size-1)])
+               const rseq = read.seq[ridx:(ridx+p.kmer_size-1)]
+               Bio.Seq.hasn( rseq ) && break
+               const rkmer = DNAKmer{p.kmer_size}( rseq )
                align = spliced_fwd_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                break
          elseif sg.edgetype[curedge] == EDGETYPE_SR #||
@@ -246,11 +254,12 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                (cur_ridx + p.kmer_size - 1) <= readlen || continue
             
                #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
-               const rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
-               #println("$(read.seq[(cur_ridx-p.kmer_size-20):(cur_ridx+p.kmer_size-1)])\n$rkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
-               
-               res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx, rkmer, align )
-               #println("$res_align")
+               const rseq  = read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)]
+               Bio.Seq.hasn( rseq ) && continue
+               const rkmer = DNAKmer{p.kmer_size}( rseq ) 
+               res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], 
+                                               read, cur_ridx, rkmer, align )
+                  #println("$res_align")
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align
                end
@@ -333,8 +342,10 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
                                 ridx >= p.kmer_size 
-                                
-               const lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
+                
+               const rseq  = read.seq[(ridx-p.kmer_size+1):ridx]
+               Bio.Seq.hasn( rseq ) && break 
+               const lkmer = DNAKmer{p.kmer_size}( rseq )
                if sg.edgeleft[nodeidx] == lkmer
                   align.matches += p.kmer_size
                   ridx    -= p.kmer_size - 1 
@@ -363,7 +374,9 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          elseif sg.edgetype[nodeidx] == EDGETYPE_SR && # 'SR'
                                 ridx >= p.kmer_size
                # obligate spliced_extension
-               const lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size+1):ridx])
+               const rseq  = read.seq[(ridx-p.kmer_size+1):ridx]
+               Bio.Seq.hasn( rseq ) && break
+               const lkmer = DNAKmer{p.kmer_size}( rseq )
                align = spliced_rev_extend( p, lib, geneind, UInt32(nodeidx), read, ridx, lkmer, align )
                break
          elseif sg.edgetype[nodeidx] == EDGETYPE_LS #||
@@ -407,12 +420,11 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2)
                (cur_ridx - p.kmer_size) > 0 || continue
             
-               const lkmer = DNAKmer{p.kmer_size}(read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)])
-               #@bp
-               #rkmer = DNAKmer{p.kmer_size}(read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)])
-               #println("$(read.seq[(ridx-p.kmer_size):(ridx-1)])\n$lkmer\n$(sg.edgeleft[get(passed_edges)[c]])")
-
-               res_align = spliced_rev_extend( p, lib, geneind, get(passed_edges)[c], read, cur_ridx-1, lkmer, align )
+               const rseq  = read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)]
+               Bio.Seq.hasn( rseq ) && continue
+               const lkmer = DNAKmer{p.kmer_size}( rseq )
+               res_align = spliced_rev_extend( p, lib, geneind, get(passed_edges)[c], 
+                                                  read, cur_ridx-1, lkmer, align )
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align
                end

@@ -77,9 +77,11 @@ function main()
    # TPM_EM
    println(STDERR, "Calculating expression values...")
    calculate_tpm!( quant )
-   @time iter = rec_gene_em!( quant, multi )
+   @time iter = rec_gene_em!( quant, multi, sig=6 )
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
+   #println( quant.tpm )
+   #println( multi )
    # Now assign multi to edges.
 
    # Iterate through Events and do PSI_EM 

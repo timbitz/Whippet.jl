@@ -106,14 +106,16 @@ end
 # and sets the quant.tpm array as the proposed expression set
 # at each iteration.   It also requires that calculate_tpm! be 
 # run initially once prior to rec_gene_em!() call.
-function rec_gene_em!( quant::GraphLibQuant,
-                                 ambig::Vector{Multimap}; 
-                                 temp::Vector{Float64}=ones(length(quant.count)),
+function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap}; 
+                                 count_temp::Vector{Float64}=ones(length(quant.count)),
+                                 tpm_temp::Vector{Float64}=ones(length(quant.count)),
                                  uniqsum=sum(quant.count),
                                  ambigsum=length(ambig),
                                  it=1, max=1000, sig=0)
    
-   unsafe_copy!( temp, quant.count )
+   unsafe_copy!( count_temp, quant.count )
+   unsafe_copy!( tpm_temp, quant.tpm )
+
    for mm in ambig
       if it > 1 # Maximization
          mm.prop_sum = 0.0
@@ -129,15 +131,15 @@ function rec_gene_em!( quant::GraphLibQuant,
          init_gene = mm.align[ai].path[1].gene
          @fastmath prop = mm.prop[ai] / mm.prop_sum
          mm.prop[ai] = prop
-         temp[ init_gene ] += prop
+         count_temp[ init_gene ] += prop
       end
    end
 
-   calculate_tpm!( quant, temp, sig=sig ) # Expectation
-     
+   calculate_tpm!( quant, count_temp, sig=sig ) # Expectation
+ 
    #iterate
-   if temp != quant.tpm && it < max
-      it = rec_gene_em( quant, ambig, temp=temp, uniqsum=uniqsum, ambigsum=ambigsum, 
+   if tpm_temp != quant.tpm && it < max
+      it = rec_gene_em!( quant, ambig, count_temp=count_temp, tpm_temp=tpm_temp, uniqsum=uniqsum, ambigsum=ambigsum, 
                         it=it+1, max=max, sig=sig)
    end
    it

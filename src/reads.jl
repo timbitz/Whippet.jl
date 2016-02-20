@@ -19,7 +19,7 @@ function read_chunk!( chunk, parser )
    parser
 end
 
-function allocate_chunk( parser, size=250000 )
+function allocate_chunk( parser, size=100000 )
   chunk = Vector{eltype(parser)}( size )
   for i in 1:length(chunk)
      chunk[i] = eltype(parser)()
@@ -66,14 +66,14 @@ function chunk_ranges( datasize, num=nworkers() )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=100000 )
+                         multi::Vector{Multimap}; bufsize=50 )
    mapped = 0
    unmapped = 0
    reads  = allocate_chunk( parser, bufsize )
    while length(reads) > 0
       read_chunk!( reads, parser )
-      for r in reads
-         align = ungapped_align( param, lib, r )
+      for i in 1:length(reads)
+         align = ungapped_align( param, lib, reads[i] )
          if !isnull( align )
             if length( get(align) ) > 1
                push!( multi, Multimap( get(align) ) )

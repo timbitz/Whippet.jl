@@ -232,7 +232,6 @@ function seq_data_len(n::Integer)
     return cld(n, 32)
 end
 
-
 # This is the body of the NucleotideSequence constructor below. It's separated
 # into a macro so we can generate two versions depending on wether the `unsafe`
 # flag is set.
@@ -657,6 +656,15 @@ end
 @inline function getnuc(T::Type, data::Vector{UInt64}, i::Integer)
     d, r = divrem32(i - 1)
     return convert(T, convert(UInt8, (data[d + 1] >>> (2*r)) & 0b11))
+end
+
+# This function returns true if there are no n's in the sequence
+# it returns false if there are. TODO use parts. for now use hasn?
+function iskmersafe{T <: Bio.Seq.NucleotideSequence}( seq::T )
+   for i in 1:length( seq.ns.chunks )
+      seq.ns.chunks[i] == 0 || return false
+   end
+   return true
 end
 
 function Base.getindex{T}(seq::NucleotideSequence{T}, i::Integer)
