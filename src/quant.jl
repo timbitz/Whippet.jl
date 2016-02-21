@@ -45,14 +45,14 @@ end
 
 function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen=50, sig=0 )
    for i in 1:length(counts)
-      quant.tpm[ i ] = counts[i] * readlen / quant.length[i]
+      @fastmath quant.tpm[ i ] = counts[i] * readlen / quant.length[i]
    end
    const rpk_sum = sum( quant.tpm )
    for i in 1:length(quant.tpm)
       if sig > 0
-         quant.tpm[i] = signif( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
+         @fastmath quant.tpm[i] = signif( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
       else
-         quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
+         @fastmath quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
       end
    end
 end
@@ -131,7 +131,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
          init_gene = mm.align[ai].path[1].gene
          @fastmath prop = mm.prop[ai] / mm.prop_sum
          mm.prop[ai] = prop
-         count_temp[ init_gene ] += prop
+         @fastmath count_temp[ init_gene ] += prop
       end
    end
 

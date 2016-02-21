@@ -24,7 +24,7 @@ immutable AlignParam
    is_circ_ok::Bool   # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 3, 7, 18, 5, 18, 10, 45, false, false, true, false, true )
+AlignParam() = AlignParam( 2, 9, 2, 4, 18, 5, 18, 10, 45, false, false, true, false, true )
 
 abstract UngappedAlignment
 
@@ -50,18 +50,18 @@ score( align::SGAlignment ) = align.matches - align.mismatches
 phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
 
 function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
-   best_sa = 2:1
+   const def_sa = 2:1
    cnt = 1000
    ctry = 1
    if offset_left
-      increment = p.seed_inc
+      const increment = p.seed_inc
       curpos = p.seed_buffer
    else
-      increment = -p.seed_inc
+      const increment = -p.seed_inc
       curpos = length(read.seq) - p.seed_length - p.seed_buffer
    end
-   while( ctry <= p.seed_try &&
-          p.seed_buffer <= curpos <= length(read.seq) - p.seed_length - p.seed_buffer )
+   const maxright = length(read.seq) - p.seed_length - p.seed_buffer
+   while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
       sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
       cnt = length(sa)
       ctry += 1
@@ -69,11 +69,10 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_lef
       if cnt == 0 || cnt > p.seed_tolerate
          curpos += increment
       else
-         best_sa = sa
-         break
+         return sa,curpos
       end
    end
-   best_sa,curpos
+   def_sa,curpos
 end
 
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
@@ -145,7 +144,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    const sg       = lib.graphs[geneind]
    const readlen  = length(read.seq)
 
-   curedge  = nodeidx
+   #curedge  = nodeidx
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
    passed_extend = 0
@@ -159,7 +158,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          align.matches += 1
          passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
-         curedge::UInt32 = nodeidx+1
+         const curedge::UInt32 = nodeidx+1
          #@bp
          if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
@@ -250,7 +249,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                pop!( align.path ) # extension into current node failed
                @fastmath align.mismatches -= passed_mismat
                align.matches -= ext_len[c]
-               cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
+               const cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
                (cur_ridx + p.kmer_size - 1) <= readlen || continue
             
                #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
@@ -293,7 +292,7 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
 
    # do a test for trans splicing, and reset right_nodes
    for rn in right_nodes
-      rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
+      const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
       res_align::SGAlignment = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
                                                     align=deepcopy(align), nodeidx=rn.node )
       best = res_align > best ? res_align : best
@@ -320,7 +319,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    const sg       = lib.graphs[geneind]
    const readlen  = length(read.seq)
 
-   leftnode  = nodeidx
+   #leftnode  = nodeidx
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
    passed_extend = 0
@@ -337,7 +336,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
          align.matches += 1
          passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
-         leftnode = nodeidx - 1
+         const leftnode = nodeidx - 1
          #@bp
          if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
@@ -417,7 +416,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                shift!( align.path ) # extension into current node failed
                @fastmath align.mismatches -= passed_mismat
                align.matches -= ext_len[c]
-               cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2)
+               const cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx - 2)
                (cur_ridx - p.kmer_size) > 0 || continue
             
                const rseq  = read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)]
@@ -459,7 +458,7 @@ function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
 
    # do a test for trans-splicing, and reset left_nodes
    for rn in left_nodes
-      rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node-1] + lib.graphs[rn.gene].nodelen[rn.node-1] - 1
+      const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node-1] + lib.graphs[rn.gene].nodelen[rn.node-1] - 1
       #println("$(lib.graphs[rn.gene].seq[rn_offset-50:rn_offset])") 
       res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
                                                     align=deepcopy(align), nodeidx=rn.node-1 )
