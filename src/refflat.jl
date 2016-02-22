@@ -1,5 +1,3 @@
-using DataStructures
-using IntervalTrees
 
 #requires
 include("types.jl")

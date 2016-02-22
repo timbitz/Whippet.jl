@@ -7,7 +7,7 @@
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
 #@everywhere using Bio
-using Bio.Seq
+#using Bio.Seq
 
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.reverse

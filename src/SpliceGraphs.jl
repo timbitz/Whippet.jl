@@ -2,6 +2,7 @@
 
 module SpliceGraphs
 
+   import DataStructures
    import BufferedStreams
    import Bio
    import Bio.Seq
@@ -9,6 +10,7 @@ module SpliceGraphs
    import IntervalTrees
    import Libz
 
+   using DataStructures
    using BufferedStreams
    using Bio.Seq
    using FMIndexes

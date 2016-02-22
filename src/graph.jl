@@ -1,6 +1,5 @@
 # requires:
 # include("bio_nuc_safepatch.jl")
-using IntervalTrees
 
 bitstype 8 EdgeType
 

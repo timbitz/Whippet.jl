@@ -1,8 +1,6 @@
 # index.jl - tim.sterne.weiler@utoronto.ca, 1/28/16
 
 # requires
-using FMIndexes
-using IntArrays
 
 abstract SeqLibrary
 
