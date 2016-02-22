@@ -39,7 +39,7 @@ end
 
 const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
-score( align::SGAlignment ) = align.matches - align.mismatches 
+score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
 
 >( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 <( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -237,7 +237,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    if !isnull(passed_edges)
       if passed_extend < p.kmer_size
          # go back.
-         ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
+         const ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend
          rev_cumarray!(ext_len)
          #@bp
@@ -353,7 +353,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                   unshift!( align.path, SGNode( geneind, nodeidx ) )
                   align.isvalid = true
                else
-                  align = spliced_rev_extend( p, lib, geneind, UInt32(nodeidx), read, ridx, lkmer, align ) 
+                  align = spliced_rev_extend( p, lib, geneind, convert(UInt32,nodeidx), read, ridx, lkmer, align ) 
                   break
                end
          elseif sg.edgetype[nodeidx] == EDGETYPE_LR || 
@@ -376,7 +376,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                const rseq  = read.seq[(ridx-p.kmer_size+1):ridx]
                Bio.Seq.hasn( rseq ) && break
                const lkmer = DNAKmer{p.kmer_size}( rseq )
-               align = spliced_rev_extend( p, lib, geneind, UInt32(nodeidx), read, ridx, lkmer, align )
+               align = spliced_rev_extend( p, lib, geneind, convert(UInt32,nodeidx), read, ridx, lkmer, align )
                break
          elseif sg.edgetype[nodeidx] == EDGETYPE_LS #||
                # end of alignment
@@ -404,7 +404,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    if !isnull(passed_edges)
       if passed_extend < p.kmer_size
          # go back.
-         ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
+         const ext_len = Int[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend
          rev_cumarray!(ext_len)
          #@bp

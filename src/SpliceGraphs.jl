@@ -1,4 +1,4 @@
-__precompile__()
+#__precompile__()
 
 module SpliceGraphs
 
@@ -13,6 +13,7 @@ module SpliceGraphs
    using Bio.Seq
    using FMIndexes
    using Libz
+   using Base.Threads
 
    include("types.jl")
    include("bio_nuc_safepatch.jl")

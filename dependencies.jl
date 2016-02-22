@@ -12,11 +12,11 @@ function check_and_install( pkg )
    end
 end
 
-pkgs = [ "ArgParse", 
+pkgs = [ "DataStructures",
+         "ArgParse", 
          "Bio", 
          "SuffixArrays", 
          "FMIndexes", 
-         "IntArrays", 
          "IntervalTrees",
          "BufferedStreams", 
          "Libz" ]

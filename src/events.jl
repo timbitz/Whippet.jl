@@ -61,16 +61,19 @@ Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE
 
 isobligate( motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
 
-function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
-   for g in 1:length(lib.graphs)
-      bias_correct!( lib.graphs[g], graphq.quant[g] )
-      calculate_psi( lib.graphs[g], graphq.quant[g] )
+@inline function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
+   @simd for g in 1:length(lib.graphs)
+      process_events!( lib.graphs[g], graphq.quant[g] )
    end
 end
 
 
 function calculate_bias( sg::SpliceGraph, sgquant::SpliceGraphQuant )
    nodelen = relative_length(  )
+end
+
+function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint )
+   
 end
 
 function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
@@ -84,10 +87,10 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
    for i in 1:length(sg.edges)-1
       motif = convert(EdgeMotif, sg.edges[i], sg.edges[i+1] )
       motif == NONE_MOTIF && continue
-      if isobligate( motif )
-         # we have to calculate something for sure
-      else
-         # Check for spanning edge 
+      if isobligate( motif ) # is utr event
+          
+      else  # is a spliced node
+         spliced_psi( sg, sgquant, sg.edges[i] )
       end  
    end
 end

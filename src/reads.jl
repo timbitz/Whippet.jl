@@ -66,14 +66,17 @@ function chunk_ranges( datasize, num=nworkers() )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=50 )
+                         multi::Vector{Multimap}; bufsize=100 )
    mapped = 0
-   unmapped = 0
    reads  = allocate_chunk( parser, bufsize )
+   mean_readlen = 0.0
+   total = 0
+   #mut = Mutex()
    while length(reads) > 0
       read_chunk!( reads, parser )
       for i in 1:length(reads)
          align = ungapped_align( param, lib, reads[i] )
+         #lock!(mut)
          if !isnull( align )
             if length( get(align) ) > 1
                push!( multi, Multimap( get(align) ) )
@@ -81,10 +84,12 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
                count!( quant, get(align)[1] )
             end
             mapped += 1
-         else
-            unmapped += 1
          end
+      
+         total += 1
+         @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / total
+         #unlock!(mut)
       end
    end # end while
-   mapped,unmapped
+   mapped,total,mean_readlen
 end

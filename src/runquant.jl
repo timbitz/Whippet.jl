@@ -70,8 +70,8 @@ function main()
       return #TODO
    else
       println(STDERR, "Processing reads...")
-      @time mapped,unmapped = process_reads!( parser, param, lib, quant, multi )
-      println(STDERR, "Finished $mapped mapped reads out of a total $(mapped+unmapped) reads...")
+      @time mapped,total,readlen = process_reads!( parser, param, lib, quant, multi )
+      println(STDERR, "Finished $mapped mapped reads of length $readlen out of a total $total reads...")
    end
 
    # TPM_EM
