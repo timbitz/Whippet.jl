@@ -37,6 +37,8 @@ type SGAlignment <: UngappedAlignment
    isvalid::Bool
 end
 
+typealias SGAlignVec Nullable{Vector{SGAlignment}}
+
 const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
 score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 

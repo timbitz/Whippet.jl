@@ -18,7 +18,7 @@ function _process_reads_faster!( parser, param::AlignParam, lib::GraphLib, quant
    while length(reads) > 0
       read_chunk!( reads, parser )
       @threads for i in 1:length(reads)
-         local align = ungapped_align( param, lib, reads[i] )
+         align = ungapped_align( param, lib, reads[i] )
          lock!(mut)
          if !isnull( align )
             if length( get(align) ) > 1

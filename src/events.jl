@@ -67,13 +67,47 @@ isobligate( motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 
    end
 end
 
-
 function calculate_bias( sg::SpliceGraph, sgquant::SpliceGraphQuant )
    nodelen = relative_length(  )
 end
 
-function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint )
+isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
+isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
+
+# this is meant for short arrays when it is faster
+# than using the overhead of a set
+function unique_push!{T}( arr::Vector{T}, el::T )
+   if !( el in arr )
+      push!( arr, el )
+   end
+end
+
+function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint; junc_min=2 )
+   inc_cnt = 0.0
+   exc_cnt = 0.0
+   inc_len = 0.0
+   exc_len = 0.0
+   nodeset = Vector{Coordint}()
+
+   for edg in intersect( sgquant.edge, (node, node) )
+      if isconnecting( edg, node )
+         inc_cnt += edg.value
+         inc_len += 1
+         node == edg.first || unique_push!( nodeset, edg.first )
+         node == edg.last  || unique_push!( nodeset, edg.last  )
+      elseif isspanning( edg, node )
+         exc_cnt += edg.value
+         exc_len += 1
+         unique_push!( nodeset, edg.first )
+         unique_push!( nodeset, edg.last  )
+      else
+         error("Edge has to be connecting or spanning!!!!" )
+      end
+   end
    
+   if exc_len == 0 && inc_len >= 1
+      # 100%?
+   end
 end
 
 function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
@@ -94,3 +128,5 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
       end  
    end
 end
+
+
