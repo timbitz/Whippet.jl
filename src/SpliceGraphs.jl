@@ -1,4 +1,4 @@
-#__precompile__()
+__precompile__()
 
 module SpliceGraphs
 
@@ -15,7 +15,7 @@ module SpliceGraphs
    using Bio.Seq
    using FMIndexes
    using Libz
-   using Base.Threads
+   using IntervalTrees
 
    include("types.jl")
    include("bio_nuc_safepatch.jl")
@@ -26,6 +26,11 @@ module SpliceGraphs
    include("align.jl")
    include("quant.jl")
    include("reads.jl")
+
+   if VERSION >= v"0.5.0-dev"
+      using Base.Threads
+      include("threaded.jl")
+   end
 
    export SpliceGraph,
           SpliceGraphQuant,

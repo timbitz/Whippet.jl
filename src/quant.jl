@@ -96,7 +96,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
    end
 end
 
-function unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T} )
+function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T} )
    for i in 1:length(src)
       dest[i] = src[i]
    end

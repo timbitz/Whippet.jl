@@ -502,7 +502,7 @@ This is unsafe in the following ways:
 It's really only suitable for use in the concatenation constructor.
 """
 ## TODO
-function unsafe_copy!{T}(dest::NucleotideSequence{T}, pos::Int, src::NucleotideSequence{T})
+function Base.unsafe_copy!{T}(dest::NucleotideSequence{T}, pos::Int, src::NucleotideSequence{T})
     abspos = dest.part.start + pos - 1
     copy!(dest.ns, abspos, src.ns, src.part.start, length(src))
     copy!(dest.ls, abspos, src.ls, src.part.start, length(src))
@@ -1022,6 +1022,7 @@ nucleotides are compared.
 ### Returns
 The number of mismatches
 """
+#=
 function mismatches{T}(a::NucleotideSequence{T}, b::NucleotideSequence{T},
                        nmatches::Bool=false)
 
@@ -1124,6 +1125,7 @@ function mismatches{T}(a::NucleotideSequence{T}, b::NucleotideSequence{T},
 
     return count
 end
+=#
 
 # Additional read/write functions
 Base.write(io::Base.TCPSocket, nt::Bio.Seq.QualityEncoding) = Base.write(io, convert(UInt16, nt))
