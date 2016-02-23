@@ -81,7 +81,7 @@ function main()
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    for i in 1:length(lib.names)
-      println(lib.names[i] * "\t" * string(quant.tpm[i]) ) 
+      println(lib.names[i] * "\t" * string(quant.count[i]) ) 
    end
    # Now assign multi to edges.
 
