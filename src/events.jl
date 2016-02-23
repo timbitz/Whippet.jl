@@ -105,8 +105,14 @@ function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint
       end
    end
    
-   if exc_len == 0 && inc_len >= 1
-      # 100%?
+   if exc_len == 0
+      if inc_len >= 1
+         # psi = 0.99 && mle_ci( psi, inc_cnt, z=1.64 )
+      else
+         # NA
+      end
+   else # do EM
+      
    end
 end
 

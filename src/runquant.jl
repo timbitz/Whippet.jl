@@ -80,8 +80,9 @@ function main()
    @time iter = rec_gene_em!( quant, multi, sig=6 )
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
-   #println( quant.tpm )
-   #println( multi )
+   for i in 1:length(lib.names)
+      println(lib.names[i] * "\t" * string(quant.tpm[i]) ) 
+   end
    # Now assign multi to edges.
 
    # Iterate through Events and do PSI_EM 

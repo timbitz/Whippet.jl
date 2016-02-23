@@ -149,7 +149,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
          nodesize = Int(secval - minval) - leftadj - rightadj + 1
-         println("$minval, $secval, $leftadj, $rightadj, $nodesize")
+         #println("$minval, $secval, $leftadj, $rightadj, $nodesize")
          nodeseq  = genome[(Int(minval)+leftadj):(Int(secval)-rightadj)] # collect slice
          edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval  = minval + leftadj
