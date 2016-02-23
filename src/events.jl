@@ -84,7 +84,7 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif )
+function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
    inc_cnt = 0.0
    exc_cnt = 0.0
    inc_len = 0.0
@@ -125,7 +125,7 @@ function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F,
    
 end
 
-function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
+function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -139,7 +139,7 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
       if isobligate( motif ) # is utr event
           
       else  # is a spliced node
-         _process_spliced( sg, sgquant, sg.edges[i], motif )
+         _process_spliced( sg, sgquant, sg.edges[i], motif, eff_len )
       end  
    end
 end

@@ -76,8 +76,8 @@ function main()
 
    # TPM_EM
    println(STDERR, "Calculating expression values...")
-   calculate_tpm!( quant )
-   @time iter = rec_gene_em!( quant, multi, sig=6 )
+   calculate_tpm!( quant, readlen=readlen )
+   @time iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen )
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    for i in 1:length(lib.names)

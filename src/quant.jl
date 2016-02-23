@@ -30,7 +30,7 @@ end
 
 function GraphLibQuant( lib::GraphLib, ref::Refset )
    tpm    = zeros( length(lib.graphs) )
-   count  =  ones( length(lib.graphs) )
+   count  = zeros( length(lib.graphs) )
    len    =  ones( length(lib.graphs) )
    quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
    for i in 1:length( lib.graphs )
@@ -45,7 +45,7 @@ end
 
 function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen=50, sig=0 )
    for i in 1:length(counts)
-      @fastmath quant.tpm[ i ] = counts[i] / quant.length[i]
+      @fastmath quant.tpm[ i ] = counts[i] / (quant.length[i] - readlen)
    end
    const rpk_sum = sum( quant.tpm )
    for i in 1:length(quant.tpm)
@@ -111,7 +111,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
                                  tpm_temp::Vector{Float64}=ones(length(quant.count)),
                                  uniqsum=sum(quant.count),
                                  ambigsum=length(ambig),
-                                 it=1, max=1000, sig=0)
+                                 it=1, max=1000, sig=0, readlen=50 )
    
    unsafe_copy!( count_temp, quant.count )
    unsafe_copy!( tpm_temp, quant.tpm )
@@ -135,12 +135,12 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
       end
    end
 
-   calculate_tpm!( quant, count_temp, sig=sig ) # Expectation
+   calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
  
    #iterate
    if tpm_temp != quant.tpm && it < max
       it = rec_gene_em!( quant, ambig, count_temp=count_temp, tpm_temp=tpm_temp, uniqsum=uniqsum, ambigsum=ambigsum, 
-                        it=it+1, max=max, sig=sig)
+                        it=it+1, max=max, sig=sig, readlen=readlen)
    end
    it
 end
