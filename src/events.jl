@@ -60,6 +60,7 @@ Base.convert(::Type{EdgeMotif}, tup::Tuple{EdgeType,EdgeType}) = Base.convert(Ed
 Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE[ (UInt8(current) << 3) | UInt8(next) + 1 ]
 
 isobligate( motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
+isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
 
 @inline function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
    @simd for g in 1:length(lib.graphs)
@@ -74,6 +75,7 @@ end
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
 
+
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
 function unique_push!{T}( arr::Vector{T}, el::T )
@@ -82,7 +84,7 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint; junc_min=2 )
+function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif )
    inc_cnt = 0.0
    exc_cnt = 0.0
    inc_len = 0.0
@@ -105,15 +107,22 @@ function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint
       end
    end
    
-   if exc_len == 0
-      if inc_len >= 1
+   if exc_len == 0 # no spanning edge
+      # check if we have both inclusion edges represented, or one if alt 5'/3'
+      if inc_len >= 2 || (inc_len >= 1 && isaltsplice(motif)) 
          # psi = 0.99 && mle_ci( psi, inc_cnt, z=1.64 )
       else
-         # NA
+         # NA is ignored.
       end
    else # do EM
-      
+      # calculate effective lengths from nodeset 
+      nodelen = effective_lengths( nodeset, )
    end
+end
+
+function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F, 
+                                         nodes::Vector{Coordint}, node::Coordint )
+   
 end
 
 function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
@@ -130,7 +139,7 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
       if isobligate( motif ) # is utr event
           
       else  # is a spliced node
-         spliced_psi( sg, sgquant, sg.edges[i] )
+         _process_spliced( sg, sgquant, sg.edges[i], motif )
       end  
    end
 end
