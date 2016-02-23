@@ -116,7 +116,7 @@ function spliced_psi( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint
    end
 end
 
-function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
+function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -130,7 +130,7 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant )
       if isobligate( motif ) # is utr event
           
       else  # is a spliced node
-         spliced_psi( sg, sgquant, sg.edges[i] )
+         spliced_psi( sg, sgquant, sg.edges[i], eff_len )
       end  
    end
 end
