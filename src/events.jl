@@ -62,21 +62,35 @@ Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE
 isobligate( motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
 
-@inline function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
-   @simd for g in 1:length(lib.graphs)
+function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
+   for g in 1:length(lib.graphs)
       process_events!( lib.graphs[g], graphq.quant[g] )
    end
 end
 
-function calculate_bias( sg::SpliceGraph, sgquant::SpliceGraphQuant )
-   nodelen = relative_length(  )
+function calculate_bias( sgquant::SpliceGraphQuant )
+   
 end
 
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
 
-function effective_lengths( node::Coordint, nodeset::Vector{Coordint}, sg::SpliceGraph )
-   
+# Every exon-exon junction has an effective mappable space of readlength - K*2.
+# Since we only count nodes that don't map over edges, we can give
+# give each junction an effective_length of one, and now the space
+# inside of a node for which a read could map without overlapping a junction
+# is put into units of junction derived effective_length
+# kadj is minimum of (readlength - minalignlen) and k-1
+@inline function effective_length( node, sg::SpliceGraph, eff_len::Int, kadj::Int ) 
+   len = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
+                            (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
+   len / eff_len
+end
+
+function effective_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
+   for i in 1:length(nodeset)
+      sgquant.leng[i] = effective_length( i, sg, eff_len, kadj )
+   end
 end
 
 # this is meant for short arrays when it is faster

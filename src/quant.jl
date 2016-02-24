@@ -3,21 +3,24 @@ using IntervalTrees
 
 const SCALING_FACTOR = 1_000_000
 
-# This is where we count reads for nodes/edges/circular-edges
+# This is where we count reads for nodes/edges/circular-edges/effective_lengths
 immutable SpliceGraphQuant
    node::Vector{Float64}
    edge::IntervalMap{Exonmax,Float64}
    circ::Dict{Tuple{Exonmax,Exonmax},Float64}
+   leng::Vector{Int}
 end
 
 # Default constructer
 SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(),
                                        IntervalMap{Exonmax,Float64}(),
-                                       Dict{Tuple{Exonmax,Exonmax},Float64}() )
+                                       Dict{Tuple{Exonmax,Exonmax},Float64}(),
+                                       Vector{Int}() )
 
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
                                                         IntervalMap{Exonmax,Float64}(),
-                                                        Dict{Tuple{Exonmax,Exonmax},Float64}() )
+                                                        Dict{Tuple{Exonmax,Exonmax},Float64}(),
+                                                        zeros(Int, length(sg.nodelen)) )
 
 
 # Here we store whole graphome quantification

@@ -52,18 +52,6 @@ macro broadcast(nm, val)
    end
 end
 
-function chunk_ranges( datasize, num=nworkers() )
-   size,left = divrem( datasize, num )
-   len = fill( size, num )
-   len[1:left] += 1
-   offset = 1
-   ranges = UnitRange[]
-   for i in 1:num
-      push!(ranges, offset:(offset+len[i]-1))
-      offset += len[i]
-   end
-   ranges
-end
 
 process_reads!( parser, param::AlignParam, lib::GraphLib,
                 quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=100) = _process_reads!( parser, param, lib, quant,

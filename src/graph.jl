@@ -47,6 +47,9 @@ const EDGETYPE_LR = convert(EdgeType, 0b100)
 const EDGETYPE_LL = convert(EdgeType, 0b101)
 const EDGETYPE_RR = convert(EdgeType, 0b110)
 
+istxstart( edge::EdgeType ) = edge == EDGETYPE_SL || edge == EDGETYPE_LS ? true : false
+istxstop(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true : false
+
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
 function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Char='+' )
