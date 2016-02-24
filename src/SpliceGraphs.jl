@@ -54,6 +54,7 @@ module SpliceGraphs
           process_reads!,
           calculate_tpm!,
           rec_gene_em!,
+          assign_ambig!,
           fixpath,
           effective_lengths!,
           global_bias 

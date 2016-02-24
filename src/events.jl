@@ -59,44 +59,13 @@ const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
 Base.convert(::Type{EdgeMotif}, tup::Tuple{EdgeType,EdgeType}) = Base.convert(EdgeMotif, tup... )
 Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE[ (UInt8(current) << 3) | UInt8(next) + 1 ]
 
-isobligate( motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
+isobligate(  motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
 
 function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
    for g in 1:length(lib.graphs)
       process_events!( lib.graphs[g], graphq.quant[g] )
    end
-end
-
-function calculate_bias( sgquant::SpliceGraphQuant )
-   edgecnt = 0.0
-   for edgev in sgquant.edge
-      edgecnt += edgev.value
-   end
-   @fastmath edgelevel = edgecnt / length(sgquant.edge)
-   nodecnt = 0.0
-   for nodev in sgquant.node
-      nodecnt += nodev
-   end
-   @fastmath nodelevel = nodecnt / sum( sgquant.leng )
-   @fastmath min( edgelevel / nodelevel, 1.0 )
-end
-
-function global_bias( graphq::GraphLibQuant )
-   bias_ave = 0.0
-   bias_var = 0.0
-   n = 1
-   for sgq in graphq.quant
-      curbias = calculate_bias( sgq )
-      if curbias > 2
-         println( sgq )
-      end
-      old = bias_ave
-      @fastmath bias_ave += (curbias - bias_ave) / n
-      @fastmath bias_var += old*(curbias - bias_ave)
-      n += 1
-   end
-   bias_ave,bias_var
 end
 
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
@@ -159,18 +128,15 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coo
    
    if exc_len == 0 # no spanning edge
       # check if we have both inclusion edges represented, or one if alt 5'/3'
-      if inc_len >= 2 || (inc_len >= 1 && isaltsplice(motif)) 
+      if (inc_len >= 2 && inc_cnt >= 1) || (inc_len >= 1 && inc_cnt >= 1  && isaltsplice(motif)) 
          # psi = 0.99 && mle_ci( psi, inc_cnt, z=1.64 )
       else
          # NA is ignored.
       end
    else # do EM
-      # calculate effective lengths from nodeset 
-      nodelen = effective_lengths( node, nodeset, sg )
+      rec_spliced_em!(  )
    end
 end
-
-
 
 
 function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F, 

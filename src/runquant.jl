@@ -91,6 +91,8 @@ function main()
    end
 
    # Now assign multi to edges.
+   assign_ambig!( quant, multi )
+
    @time effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
    @time bias_ave,bias_var = global_bias( quant )
    println("Calculating global bias to $bias_ave +/- $bias_var ")

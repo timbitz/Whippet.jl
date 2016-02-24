@@ -4,23 +4,26 @@ using IntervalTrees
 const SCALING_FACTOR = 1_000_000
 
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
+# bias is an adjusting multiplier for nodecounts to bring them to the same level
+# as junction counts, which should always be at a lower level, e.g. bias < 1
 immutable SpliceGraphQuant
    node::Vector{Float64}
    edge::IntervalMap{Exonmax,Float64}
    circ::Dict{Tuple{Exonmax,Exonmax},Float64}
    leng::Vector{Float64}
+   bias::Float64
 end
 
 # Default constructer
 SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(),
                                        IntervalMap{Exonmax,Float64}(),
                                        Dict{Tuple{Exonmax,Exonmax},Float64}(),
-                                       Vector{Float64}() )
+                                       Vector{Float64}(), 1.0 )
 
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
                                                         IntervalMap{Exonmax,Float64}(),
                                                         Dict{Tuple{Exonmax,Exonmax},Float64}(),
-                                                        zeros( length(sg.nodelen) ) )
+                                                        zeros( length(sg.nodelen) ), 1.0 )
 
 
 # Here we store whole graphome quantification
@@ -71,6 +74,13 @@ Multimap( aligns::Vector{SGAlignment} ) = length(aligns) >= 1 ?
                                     Multimap( aligns, Float64[], 0.0 )
 
 
+function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap} )
+   for mm in ambig
+      for i in 1:length(mm.prop)
+         count!( graphq, mm.align[i], val=mm.prop[i] )
+      end
+   end
+end
 
 function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
    align.isvalid == true || return
@@ -97,6 +107,42 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
          end
       end
    end
+end
+
+function calculate_bias!( sgquant::SpliceGraphQuant )
+   edgecnt = 0.0
+   for edgev in sgquant.edge
+      edgecnt += edgev.value
+   end
+   @fastmath edgelevel = edgecnt / length(sgquant.edge)
+   nodecnt = 0.0
+   for nodev in sgquant.node
+      nodecnt += nodev
+   end
+   @fastmath nodelevel = nodecnt / sum( sgquant.leng )
+   # never down-weight junction reads, only exon-body reads
+   bias = @fastmath min( edgelevel / nodelevel, 1.0 )
+   sgquant.bias = bias
+   bias
+end
+
+function global_bias( graphq::GraphLibQuant )
+   bias_ave = 0.0
+   bias_var = 0.0
+   n = 1
+   for sgq in graphq.quant
+      curbias = calculate_bias!( sgq )
+      if curbias > 10
+         println( sgq )
+      end
+      old = bias_ave
+      @fastmath bias_ave += (curbias - bias_ave) / n
+      if n > 1
+        @fastmath bias_var += (curbias - old)*(curbias - bias_ave)
+      end
+      n += 1
+   end
+   bias_ave,bias_var
 end
 
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T} )
