@@ -26,6 +26,7 @@ module SpliceGraphs
    include("align.jl")
    include("quant.jl")
    include("reads.jl")
+   include("events.jl")
 
    if VERSION >= v"0.5.0-dev"
       using Base.Threads
@@ -53,6 +54,8 @@ module SpliceGraphs
           process_reads!,
           calculate_tpm!,
           rec_gene_em!,
-          fixpath 
+          fixpath,
+          effective_lengths!,
+          global_bias 
  
 end

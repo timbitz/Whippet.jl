@@ -31,6 +31,9 @@ function parse_cmd()
     "paired_mate.fastq[.gz]"
       arg_type = ASCIIString
       required = false
+    "--tpm"
+      help     = "Should tpm file be sent to STDOUT? (default off)"
+      action   = :store_true
     "--seed_len", "-K"
       help = "Seed length (default 18)"
       arg_type = Int
@@ -71,6 +74,7 @@ function main()
    else
       println(STDERR, "Processing reads...")
       @time mapped,total,readlen = process_reads!( parser, param, lib, quant, multi )
+      readlen = round(Int, readlen)
       println(STDERR, "Finished $mapped mapped reads of length $readlen out of a total $total reads...")
    end
 
@@ -80,11 +84,16 @@ function main()
    @time iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen )
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
-   for i in 1:length(lib.names)
-      println(lib.names[i] * "\t" * string(quant.tpm[i]) ) 
+   if args["tpm"]
+      for i in 1:length(lib.names)
+         println(lib.names[i] * "\t" * string(quant.tpm[i]) ) 
+      end
    end
-   # Now assign multi to edges.
 
+   # Now assign multi to edges.
+   @time effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
+   @time bias_ave,bias_var = global_bias( quant )
+   println("Calculating global bias to $bias_ave +/- $bias_var ")
    # Iterate through Events and do PSI_EM 
    #calculate_psi( quant )
 end

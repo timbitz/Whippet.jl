@@ -54,7 +54,7 @@ function main()
    @time ref = load_refflat(fh)
 
    println(STDERR, "Indexing transcriptome...")
-   @time graphome = fasta_to_index( fixpath( args["fasta"] ) , ref )
+   @time graphome = fasta_to_index( fixpath( args["fasta"] ) , ref, args["kmer"] )
 
    println(STDERR, "Saving Annotations...")
    open("$(args["index"])_anno.jls", "w+") do fh

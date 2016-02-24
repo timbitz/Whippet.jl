@@ -8,19 +8,19 @@ immutable SpliceGraphQuant
    node::Vector{Float64}
    edge::IntervalMap{Exonmax,Float64}
    circ::Dict{Tuple{Exonmax,Exonmax},Float64}
-   leng::Vector{Int}
+   leng::Vector{Float64}
 end
 
 # Default constructer
 SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(),
                                        IntervalMap{Exonmax,Float64}(),
                                        Dict{Tuple{Exonmax,Exonmax},Float64}(),
-                                       Vector{Int}() )
+                                       Vector{Float64}() )
 
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
                                                         IntervalMap{Exonmax,Float64}(),
                                                         Dict{Tuple{Exonmax,Exonmax},Float64}(),
-                                                        zeros(Int, length(sg.nodelen)) )
+                                                        zeros( length(sg.nodelen) ) )
 
 
 # Here we store whole graphome quantification

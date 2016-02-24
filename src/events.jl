@@ -69,7 +69,34 @@ function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
 end
 
 function calculate_bias( sgquant::SpliceGraphQuant )
-   
+   edgecnt = 0.0
+   for edgev in sgquant.edge
+      edgecnt += edgev.value
+   end
+   @fastmath edgelevel = edgecnt / length(sgquant.edge)
+   nodecnt = 0.0
+   for nodev in sgquant.node
+      nodecnt += nodev
+   end
+   @fastmath nodelevel = nodecnt / sum( sgquant.leng )
+   @fastmath min( edgelevel / nodelevel, 1.0 )
+end
+
+function global_bias( graphq::GraphLibQuant )
+   bias_ave = 0.0
+   bias_var = 0.0
+   n = 1
+   for sgq in graphq.quant
+      curbias = calculate_bias( sgq )
+      if curbias > 2
+         println( sgq )
+      end
+      old = bias_ave
+      @fastmath bias_ave += (curbias - bias_ave) / n
+      @fastmath bias_var += old*(curbias - bias_ave)
+      n += 1
+   end
+   bias_ave,bias_var
 end
 
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
@@ -81,15 +108,21 @@ isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == n
 # inside of a node for which a read could map without overlapping a junction
 # is put into units of junction derived effective_length
 # kadj is minimum of (readlength - minalignlen) and k-1
-@inline function effective_length( node, sg::SpliceGraph, eff_len::Int, kadj::Int ) 
+@inline function eff_length( node, sg::SpliceGraph, eff_len::Int, kadj::Int ) 
    len = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
                             (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
-   len / eff_len
+   @fastmath len / eff_len
 end
 
-function effective_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
-   for i in 1:length(nodeset)
-      sgquant.leng[i] = effective_length( i, sg, eff_len, kadj )
+function eff_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
+   for i in 1:length( sg.nodelen )
+      sgquant.leng[i] = eff_length( i, sg, eff_len, kadj )
+   end
+end
+
+function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int, kadj::Int )
+   for i in 1:length( lib.graphs )
+      eff_lengths!( lib.graphs[i], graphq.quant[i], eff_len, kadj )
    end
 end
 

@@ -127,7 +127,7 @@ function single_genome_index!( fhIter; verbose=false )
 end
 
 
-function trans_index!( fhIter, ref::Refset )
+function trans_index!( fhIter, ref::Refset; kmer=9 )
    seqdic  = build_chrom_dict( ref )
    xcript  = sg""
    xoffset = Vector{UInt64}()
@@ -160,7 +160,7 @@ function trans_index!( fhIter, ref::Refset )
    xcript = sg""
    gc()
 
-   edges = build_edges( xgraph, 9 ) # TODO make variable kmer
+   edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
    GraphLib( xoffset, xgenes, xgraph, edges, fm, true)
 end
@@ -173,7 +173,7 @@ function isgzipped( filename::ASCIIString )
    return re == nothing ? false : true
 end
 
-function fasta_to_index( filename::ASCIIString, ref::Refset )
+function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
    if isgzipped( filename )
       println(STDERR, "Decompressing and Indexing $mainname...")
       to_open = open( filename ) |> ZlibInflateInputStream
@@ -182,7 +182,7 @@ function fasta_to_index( filename::ASCIIString, ref::Refset )
       to_open = filename
    end
    # iterate through fasta entries
-   index = @time trans_index!(open( to_open, FASTA ), ref)
+   index = @time trans_index!(open( to_open, FASTA ), ref, kmer=kmer)
    index
 end
 
