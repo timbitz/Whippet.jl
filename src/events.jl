@@ -71,30 +71,6 @@ end
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
 
-# Every exon-exon junction has an effective mappable space of readlength - K*2.
-# Since we only count nodes that don't map over edges, we can give
-# give each junction an effective_length of one, and now the space
-# inside of a node for which a read could map without overlapping a junction
-# is put into units of junction derived effective_length
-# kadj is minimum of (readlength - minalignlen) and k-1
-@inline function eff_length( node, sg::SpliceGraph, eff_len::Int, kadj::Int ) 
-   len = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
-                            (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
-   @fastmath len / eff_len
-end
-
-function eff_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
-   for i in 1:length( sg.nodelen )
-      sgquant.leng[i] = eff_length( i, sg, eff_len, kadj )
-   end
-end
-
-function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int, kadj::Int )
-   for i in 1:length( lib.graphs )
-      eff_lengths!( lib.graphs[i], graphq.quant[i], eff_len, kadj )
-   end
-end
-
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
 function unique_push!{T}( arr::Vector{T}, el::T )
