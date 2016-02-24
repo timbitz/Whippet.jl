@@ -75,6 +75,9 @@ end
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
 
+function effective_lengths( node::Coordint, nodeset::Vector{Coordint}, sg::SpliceGraph )
+   
+end
 
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
@@ -116,9 +119,12 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coo
       end
    else # do EM
       # calculate effective lengths from nodeset 
-      nodelen = effective_lengths( nodeset, )
+      nodelen = effective_lengths( node, nodeset, sg )
    end
 end
+
+
+
 
 function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F, 
                                          nodes::Vector{Coordint}, node::Coordint )
