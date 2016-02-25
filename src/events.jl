@@ -94,12 +94,16 @@ end
 
 # This function seeks to join graphs that
 # should not be disjoint
-function reduce_graph!( vec::Vector{IntSet}  )
+function reduce_graph!( vec::Vector{IntSet}, cnt::Vector{Float64}, len::Vector{Float64}  )
    i = 1
    while i < length(vec)
       if hasintersect( vec[i], vec[i+1] )
          vec[i+1] = union( vec[i], vec[i+1] )
+         cnt[i+1] += cnt[i]
+         len[i+1] += len[i]
          shift!(vec)
+         shift!(cnt)
+         shift!(len)
          i -= 1
       end
       i += 1
@@ -109,12 +113,13 @@ end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
    inc_cnt = 0.0
-   exc_cnt = 0.0
    inc_len = 0.0
-   exc_len = 0.0
    inc_set = IntSet()
+   exc_cnt = Vector{Float64}()
+   exc_len = Vector{Float64}()
    exc_set = Vector{IntSet}()
 
+   # push initial graph structure for inclusion/exclusion-set
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
          inc_cnt += edg.value
@@ -122,25 +127,32 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coo
          push!( inc_set, edg.first )
          push!( inc_set, edg.last  )
       elseif isspanning( edg, node )
-         exc_cnt += edg.value
-         exc_len += 1
+         push!( exc_cnt, edg.value )
+         push!( exc_len, 1.0 )
          push!( exc_set, IntSet([edg.first, edg.last]) )
-         reduce_graph!( exc_set )
+         reduce_graph!( exc_set, exc_cnt, exc_len )
       else
          error("Edge has to be connecting or spanning!!!!" )
       end
    end
-   
+
+   # if the min or max of any exclusion set is greater than the min/max
+   # of the inclusion set we have a disjoint graph module and we can go
+   # ahead and try to bridge nodes by iteratively adding ambiguous edges
+    
+
+   # lets finish up now.
    if exc_len == 0 # no spanning edge
       # check if we have both inclusion edges represented, or one if alt 5'/3'
       if (inc_len >= 2 && inc_cnt >= 1) || (inc_len >= 1 && inc_cnt >= 1  && isaltsplice(motif)) 
-         # psi = 0.99 && mle_ci( psi, inc_cnt, z=1.64 )
+         # psi = 0.99 && likelihood_ci( psi, inc_cnt, z=1.64 )
       else
          # NA is ignored.
       end
    else # do EM
-      rec_spliced_em!(  )
+      psi = rec_spliced_em!(  )
    end
+   #conf_int = likelihood_ci()
 end
 
 
