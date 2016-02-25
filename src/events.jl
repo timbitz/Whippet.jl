@@ -71,8 +71,6 @@ end
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
 
-sorted_in
-
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
 # DEPRECATED, IntSet is very efficient
@@ -80,6 +78,17 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    if !( el in arr )
       push!( arr, el )
    end
+end
+
+# This holds one or many sets of connected
+# nodes + the count of the reads and the eff_len
+# We also store the min and max node of all sets
+type PsiGraph
+   count::Vector{Float64}
+   length::Vector{Float64}
+   nodes::Vector{IntSet}
+   min::Coordint
+   max::Coordint
 end
 
 function hasintersect( a::IntSet, b::IntSet )
@@ -111,13 +120,76 @@ function reduce_graph!( vec::Vector{IntSet}, cnt::Vector{Float64}, len::Vector{F
    vec
 end
 
+function reduce_graph!( pgraph::PsiGraph )
+   i = 1
+   while i < length(pgraph.nodes)
+      if hasintersect( pgraph.nodes[i], pgraph.nodes[i+1] )
+         pgraph.nodes[i+1]   = union( pgraph.nodes[i], pgraph.nodes[i+1] )
+         pgraph.count[i+1]  += pgraph.count[i]
+         pgraph.length[i+1] += pgraph.length[i]
+         shift!( pgraph.nodes  )
+         shift!( pgraph.count  )
+         shift!( pgraph.length )
+         i -= 1
+      end
+      i += 1
+   end
+end
+
+function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
+   inc_cnt = 0.0
+   inc_len = 0.0
+   inc_set = IntSet()
+   exc_graph = Nullable{PsiGraph}()
+
+   for edg in intersect( sgquant.edge, (node, node) )
+      if   isconnecting( edg, node )
+         inc_cnt += edg.value
+         inc_len += 1
+         push!( inc_set, edg.first )
+         push!( inc_set, edg.last  )
+      elseif isspanning( edg, node )
+         if isnull( exc_graph ) #don't allocate unless there is alt splicing
+            exc_graph = Nullable(PsiGraph( Vector{Float64}(), 
+                                           Vector{Float64}(), 
+                                           Vector{IntSet}(), edg.first, edg.last ))
+         end
+         push!( get(exc_graph).count, edg.value )
+         push!( get(exc_graph).length, 1.0 )
+         push!( get(exc_graph).nodes, IntSet([edg.first, edg.last]) )
+         reduce_graph!( get(exc_graph) )
+         if edg.first < get(exc_graph).min 
+            get(exc_graph).min = edg.first
+         end
+         if edg.last > get(exc_graph).max
+            get(exc_graph).max = edg.last
+         end
+      else
+         error("Edge has to be connecting or spanning!!!!" )
+      end
+   end
+
+   # if the min or max of any exclusion set is different than the min/max
+   # of the inclusion set we have a disjoint graph module and we can go
+   # ahead and try to bridge nodes by iteratively adding ambiguous edges
+   if !isnull( exc_graph ) && ( get(exc_graph).min == first(inc_set) ||
+                                get(exc_graph).max == last(inc_set) )
+      i,n = 1,length(inc_set)
+      while i <= n && ( get(exc_graph).min != first(inc_set) ||
+                        get(exc_graph).max != last(inc_set) )
+         
+      end
+   end
+
+end
+
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
    inc_cnt = 0.0
    inc_len = 0.0
    inc_set = IntSet()
-   exc_cnt = Vector{Float64}()
-   exc_len = Vector{Float64}()
-   exc_set = Vector{IntSet}()
+   exc_cnt = Nullable{Vector{Float64}}()
+   exc_len = Nullable{Vector{Float64}}()
+   exc_set = Nullable{Vector{IntSet}}()
 
    # push initial graph structure for inclusion/exclusion-set
    for edg in intersect( sgquant.edge, (node, node) )
@@ -127,10 +199,15 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coo
          push!( inc_set, edg.first )
          push!( inc_set, edg.last  )
       elseif isspanning( edg, node )
-         push!( exc_cnt, edg.value )
-         push!( exc_len, 1.0 )
-         push!( exc_set, IntSet([edg.first, edg.last]) )
-         reduce_graph!( exc_set, exc_cnt, exc_len )
+         if isnull( exc_set ) #don't allocate unless there is alt splicing
+            exc_cnt = Nullable(Vector{Float64}())
+            exc_len = Nullable(Vector{Float64}())
+            exc_set = Nullable(Vector{IntSet}())
+         end
+         push!( get(exc_cnt), edg.value )
+         push!( get(exc_len), 1.0 )
+         push!( get(exc_set), IntSet([edg.first, edg.last]) )
+         reduce_graph!( get(exc_set), get(exc_cnt), get(exc_len) )
       else
          error("Edge has to be connecting or spanning!!!!" )
       end
@@ -139,7 +216,9 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coo
    # if the min or max of any exclusion set is greater than the min/max
    # of the inclusion set we have a disjoint graph module and we can go
    # ahead and try to bridge nodes by iteratively adding ambiguous edges
-    
+   if !isnull( exc_set )
+      while 
+   end 
 
    # lets finish up now.
    if exc_len == 0 # no spanning edge
