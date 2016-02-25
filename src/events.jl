@@ -152,8 +152,7 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
          push!( inc_set, edg.last  )
       elseif isspanning( edg, node )
          if isnull( exc_graph ) #don't allocate unless there is alt splicing
-            exc_graph = Nullable(PsiGraph( Vector{Float64}(), 
-                                           Vector{Float64}(), 
+            exc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(), 
                                            Vector{IntSet}(), edg.first, edg.last ))
          end
          push!( get(exc_graph), edg )
@@ -164,7 +163,7 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
 
    # if the min or max of any exclusion set is different than the min/max
    # of the inclusion set we have a disjoint graph module and we can go
-   # ahead and try to bridge nodes by iteratively adding ambiguous edges
+   # ahead and try to bridge nodes by extending with potentially ambiguous edges
    if !isnull( exc_graph ) && ( get(exc_graph).min == first(inc_set) ||
                                 get(exc_graph).max == last(inc_set) )
 
