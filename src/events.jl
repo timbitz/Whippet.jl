@@ -101,23 +101,11 @@ function hasintersect( a::IntSet, b::IntSet )
    false
 end
 
-# This function seeks to join graphs that
-# should not be disjoint
-function reduce_graph!( vec::Vector{IntSet}, cnt::Vector{Float64}, len::Vector{Float64}  )
-   i = 1
-   while i < length(vec)
-      if hasintersect( vec[i], vec[i+1] )
-         vec[i+1] = union( vec[i], vec[i+1] )
-         cnt[i+1] += cnt[i]
-         len[i+1] += len[i]
-         shift!(vec)
-         shift!(cnt)
-         shift!(len)
-         i -= 1
-      end
-      i += 1
+function Base.in( i::Int, pgraph::PsiGraph )
+   for nodeset in pgraph.nodes
+      (i in nodeset) && return true
    end
-   vec
+   return false
 end
 
 function reduce_graph!( pgraph::PsiGraph )
@@ -136,11 +124,25 @@ function reduce_graph!( pgraph::PsiGraph )
    end
 end
 
+function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; value_bool=true, length=1.0 )
+   value_bool && push!( pgraph.count, edg.value )
+   push!( pgraph.length, 1.0 )
+   push!( pgraph.nodes, IntSet([edg.first, edg.last]) )
+   reduce_graph!( pgraph )
+   if edg.first < pgraph.min
+      pgraph.min = edg.first
+   end
+   if edg.last > pgraph.max
+      pgraph.max = edg.last
+   end
+end
+
 function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
    inc_cnt = 0.0
    inc_len = 0.0
    inc_set = IntSet()
-   exc_graph = Nullable{PsiGraph}()
+   exc_graph  = Nullable{PsiGraph}()
+   ambig_edge = Nullable{Vector{IntervalValue}}()
 
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
@@ -154,16 +156,7 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
                                            Vector{Float64}(), 
                                            Vector{IntSet}(), edg.first, edg.last ))
          end
-         push!( get(exc_graph).count, edg.value )
-         push!( get(exc_graph).length, 1.0 )
-         push!( get(exc_graph).nodes, IntSet([edg.first, edg.last]) )
-         reduce_graph!( get(exc_graph) )
-         if edg.first < get(exc_graph).min 
-            get(exc_graph).min = edg.first
-         end
-         if edg.last > get(exc_graph).max
-            get(exc_graph).max = edg.last
-         end
+         push!( get(exc_graph), edg )
       else
          error("Edge has to be connecting or spanning!!!!" )
       end
@@ -174,14 +167,79 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
    # ahead and try to bridge nodes by iteratively adding ambiguous edges
    if !isnull( exc_graph ) && ( get(exc_graph).min == first(inc_set) ||
                                 get(exc_graph).max == last(inc_set) )
-      i,n = 1,length(inc_set)
-      while i <= n && ( get(exc_graph).min != first(inc_set) ||
-                        get(exc_graph).max != last(inc_set) )
-         
-      end
-   end
+
+      ambig_edge,inc_len = extend_edges!( sgquant.edge, get(exc_graph),
+                                          inc_set, inc_len, ambig_edge )
+   end # end expanding module
+
+   # now we need to make ambiguous counts, and then do EM
 
 end
+
+function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, 
+                        inc_set::IntSet, inc_len::Float64,
+                        ambig_edge::Nullable{Vector{IntervalValue}} )
+
+   min = min( pgraph.min, first(inc_set) )
+   max = max( pgraph.max, last(inc_set)  )
+   idx = node - 1
+   shouldpush = false
+   while idx > min # <----- node iter left
+      #iterate through local edges to the left
+      for edg in intersect( edges, (idx,idx) )
+         # if this is a new edge and connects to our idx from the left
+         if isconnecting( edg, idx ) && edg.last == idx && edg.first >= min
+            shouldpush = false
+            if edg.last in pgraph
+               push!( pgraph, edg, value_bool=false )
+               shouldpush = true
+            end
+            if edg.last in inc_set
+               push!( inc_set, edg.first )
+               inc_len += 1
+               shouldpush = true
+            end
+            if shouldpush
+               if isnull( ambig_edge )
+                  ambig_edge = Nullable( Vector{IntervalValue}() )
+               end
+               push!( ambig_edge, edg )
+            end
+         end
+      end
+      idx -= 1
+   end
+
+   idx = node + 1
+   while idx < max # iter right node ------->
+      # iterate through local edges to the right
+      for edg in intersect( edges, (idx,idx) )
+         # if this is a new edge and connects to our idx from the left
+         if isconnecting( edg, idx ) && edg.first == idx && edg.last <= min
+            shouldpush = false
+            if edg.last in pgraph
+               push!( pgraph, edg, value_bool=false )
+               shouldpush = true
+            end
+            if edg.last in inc_set
+               push!( inc_set, edg.first )
+               inc_len += 1
+               shouldpush = true
+            end
+            if shouldpush
+               if isnull( ambig_edge )
+                  ambig_edge = Nullable( Vector{IntervalValue}() )
+               end
+               push!( ambig_edge, edg )
+            end
+         end
+      end
+      idx += 1
+   end
+
+   ambig_edge, inc_len
+end
+
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
    inc_cnt = 0.0
