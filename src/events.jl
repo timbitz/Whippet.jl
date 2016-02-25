@@ -172,7 +172,22 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
    end # end expanding module
 
    # now we need to make ambiguous counts, and then do EM
+   if !isnull( ambig_edge )
 
+   end
+
+  # lets finish up now.
+   if isnull( exc_graph ) # no spanning edge
+      # check if we have both inclusion edges represented, or one if alt 5'/3'
+      if (inc_len >= 2 && inc_cnt >= 1) || (inc_len >= 1 && inc_cnt >= 1  && isaltsplice(motif)) 
+         # psi = 0.99 && likelihood_ci( psi, inc_cnt, z=1.64 )
+      else
+         # NA is ignored.
+      end
+   else # do EM
+      psi = rec_spliced_em!(  )
+   end
+   
 end
 
 function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, 
@@ -240,63 +255,6 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph,
 end
 
 
-function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
-   inc_cnt = 0.0
-   inc_len = 0.0
-   inc_set = IntSet()
-   exc_cnt = Nullable{Vector{Float64}}()
-   exc_len = Nullable{Vector{Float64}}()
-   exc_set = Nullable{Vector{IntSet}}()
-
-   # push initial graph structure for inclusion/exclusion-set
-   for edg in intersect( sgquant.edge, (node, node) )
-      if   isconnecting( edg, node )
-         inc_cnt += edg.value
-         inc_len += 1
-         push!( inc_set, edg.first )
-         push!( inc_set, edg.last  )
-      elseif isspanning( edg, node )
-         if isnull( exc_set ) #don't allocate unless there is alt splicing
-            exc_cnt = Nullable(Vector{Float64}())
-            exc_len = Nullable(Vector{Float64}())
-            exc_set = Nullable(Vector{IntSet}())
-         end
-         push!( get(exc_cnt), edg.value )
-         push!( get(exc_len), 1.0 )
-         push!( get(exc_set), IntSet([edg.first, edg.last]) )
-         reduce_graph!( get(exc_set), get(exc_cnt), get(exc_len) )
-      else
-         error("Edge has to be connecting or spanning!!!!" )
-      end
-   end
-
-   # if the min or max of any exclusion set is greater than the min/max
-   # of the inclusion set we have a disjoint graph module and we can go
-   # ahead and try to bridge nodes by iteratively adding ambiguous edges
-   if !isnull( exc_set )
-      while 
-   end 
-
-   # lets finish up now.
-   if exc_len == 0 # no spanning edge
-      # check if we have both inclusion edges represented, or one if alt 5'/3'
-      if (inc_len >= 2 && inc_cnt >= 1) || (inc_len >= 1 && inc_cnt >= 1  && isaltsplice(motif)) 
-         # psi = 0.99 && likelihood_ci( psi, inc_cnt, z=1.64 )
-      else
-         # NA is ignored.
-      end
-   else # do EM
-      psi = rec_spliced_em!(  )
-   end
-   #conf_int = likelihood_ci()
-end
-
-
-function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F, 
-                                         nodes::Vector{Coordint}, node::Coordint )
-   
-end
-
 function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
@@ -316,4 +274,7 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::In
    end
 end
 
+function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F,
+                                         nodes::Vector{Coordint}, node::Coordint )
 
+end
