@@ -71,12 +71,40 @@ end
 isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
 
+sorted_in
+
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
+# DEPRECATED, IntSet is very efficient
 function unique_push!{T}( arr::Vector{T}, el::T )
    if !( el in arr )
       push!( arr, el )
    end
+end
+
+function hasintersect( a::IntSet, b::IntSet )
+   seta,setb = length(a) > length(b) ? (b,a) : (a,b)
+   for elem in seta
+      if elem in setb
+         return true
+      end
+   end
+   false
+end
+
+# This function seeks to join graphs that
+# should not be disjoint
+function reduce_graph!( vec::Vector{IntSet}  )
+   i = 1
+   while i < length(vec)
+      if hasintersect( vec[i], vec[i+1] )
+         vec[i+1] = union( vec[i], vec[i+1] )
+         shift!(vec)
+         i -= 1
+      end
+      i += 1
+   end
+   vec
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
@@ -84,19 +112,20 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coo
    exc_cnt = 0.0
    inc_len = 0.0
    exc_len = 0.0
-   nodeset = Vector{Coordint}()
+   inc_set = IntSet()
+   exc_set = Vector{IntSet}()
 
    for edg in intersect( sgquant.edge, (node, node) )
-      if isconnecting( edg, node )
+      if   isconnecting( edg, node )
          inc_cnt += edg.value
          inc_len += 1
-         node == edg.first || unique_push!( nodeset, edg.first )
-         node == edg.last  || unique_push!( nodeset, edg.last  )
+         push!( inc_set, edg.first )
+         push!( inc_set, edg.last  )
       elseif isspanning( edg, node )
          exc_cnt += edg.value
          exc_len += 1
-         unique_push!( nodeset, edg.first )
-         unique_push!( nodeset, edg.last  )
+         push!( exc_set, IntSet([edg.first, edg.last]) )
+         reduce_graph!( exc_set )
       else
          error("Edge has to be connecting or spanning!!!!" )
       end
