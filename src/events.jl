@@ -1,6 +1,4 @@
 
-import Base.==, Base.+ 
-
 bitstype 8 EdgeMotif
 
 Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = box(EdgeMotif, unbox(UInt8, motif ))
@@ -132,7 +130,8 @@ function reduce_graph!( pgraph::PsiGraph )
    end
 end
 
-function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; value_bool=true, length=1.0 )
+function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; 
+                                            value_bool=true, length=1.0 )
    value_bool && push!( pgraph.count, edg.value )
    push!( pgraph.length, 1.0 )
    push!( pgraph.nodes, IntSet([edg.first, edg.last]) )
@@ -145,28 +144,72 @@ function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; value_bool
    end
 end
 
-function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; value_bool=true, length=1.0 )
+function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; 
+                                            value_bool=true, length=1.0 )
    value_bool && (ppath.count += edg.value)
    ppath.length += length
    push!( ppath.nodes, edg.first )
    push!( ppath.nodes, edg.last  )
 end
 
-type AmbigPath
+type AmbigCounts
    paths::Vector{NodeInt}
    prop::Vector{Float64}
    prop_sum::Float64
-   multiplier::Int
+   multiplier::UInt
 end
 
-Base.(:(==))( a::AmbigPath, b::AmbigPath ) = a.paths == b.paths
+Base.(:(==))( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
+Base.(:(==))( a::AmbigCounts, b::IntSet ) = ( a.paths == b )
+Base.(:(==))( a::IntSet, b::AmbigCounts ) = ( a == b.paths )
+Base.(:(==)){I <: Integer}( a::Vector{I}, b::IntSet ) = ( b == a )
+function Base.(:(==)){I <: Integer}( a::IntSet, b::Vector{I} )
+   length(iset) != length(ivec) && return false
+   for intv in ivec
+      !(intv in iset) && return false
+   end
+   true
+end
 
+function add_node_counts!( ambig::Vector{AmbigCounts}, 
+                           ipath::PsiPath, 
+                           egraph::PsiGraph, 
+                           sgquant::SpliceGraphQuant )
 
-function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::NodeInt, motif::EdgeMotif, eff_len::Int )
+   minv = min( egraph.min, first(ipath.nodes) )
+   maxv = max( egraph.max, last(ipath.nodes)  )
+   iset = IntSet()
+   for n in minv:maxv
+      (n in ipath.nodes) && push!( iset, 1 )
+      for i in 1:length(egraph.nodes)
+         (n in egraph.nodes[i]) && push!( iset, i+1 )
+      end
+      exists = false
+      for am in ambig
+         if iset == am
+            am.multiplier += sgquant.node[n]
+            exists = true
+         end
+      end
+      if !exists
+         push!( ambig, AmbigCounts( collect(iset), 
+                                    zeros( length(iset) ), 
+                                    0.0, UInt(1) ) )
+      end
+      empty!( iset ) # clean up
+   end
+end
+
+function _process_spliced_pg( sg::SpliceGraph, 
+                              sgquant::SpliceGraphQuant, 
+                              node::NodeInt, 
+                              motif::EdgeMotif, 
+                              eff_len::Int )
+
    inc_path   = Nullable{PsiPath}()
    exc_graph  = Nullable{PsiGraph}()
    ambig_edge = Nullable{Vector{IntervalValue}}()
-   ambig_cnt  = Nullable{Vector{AmbigPath}}()
+   ambig_cnt  = Nullable{Vector{AmbigCounts}}()
 
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
@@ -185,23 +228,18 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
       end
    end
 
-   if !isnull( exc_graph )
-      ambig_cnt = Nullable( Vector{AmbigPath}() )
+   if !isnull( exc_graph ) && !isnull( inc_path )
+      ambig_cnt = Nullable( Vector{AmbigCounts}() )
       # if the min or max of any exclusion set is different than the min/max
       # of the inclusion set we have a disjoint graph module and we can go
       # ahead and try to bridge nodes by extending with potentially ambiguous edges
       if !isnull( inc_path ) && ( get(exc_graph).min == first(inc_path.nodes) ||
                                   get(exc_graph).max == last(inc_path.nodes) )
          ambig_edge = extend_edges!( sgquant.edge, get(exc_graph), get(inc_path), ambig_edge, node )
+         add_edge_counts!( get(ambig_cnt), get(inc_path), get(exc_graph), ambig_edge )
       end
-      # here we add ambig_cnt based on nodes
+      add_node_counts!( get(ambig_cnt), get(inc_path), get(exc_graph), sgquant )
    end # end expanding module
-
-   if !isnull( ambig_edge )
-      for i in get(ambig_edge)
-         # add ambig counts.
-      end
-   end
 
 
   # lets finish up now.
