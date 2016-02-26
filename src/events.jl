@@ -70,8 +70,8 @@ function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
    end
 end
 
-isspanning{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first < node < edge.last ? true : false
-isconnecting{I <: AbstractInterval}( edge::I, node::Coordint ) = edge.first == node || edge.last == node ? true : false
+isspanning{I <: AbstractInterval}( edge::I, node::NodeInt ) = edge.first < node < edge.last ? true : false
+isconnecting{I <: AbstractInterval}( edge::I, node::NodeInt ) = edge.first == node || edge.last == node ? true : false
 
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
@@ -95,8 +95,8 @@ type PsiGraph
    count::Vector{Float64}
    length::Vector{Float64}
    nodes::Vector{IntSet}
-   min::Coordint
-   max::Coordint
+   min::NodeInt
+   max::NodeInt
 end
 
 function hasintersect( a::IntSet, b::IntSet )
@@ -161,7 +161,7 @@ end
 
 ==( a::AmbigPath, b::AmbigPath ) = a.paths == b.paths
 
-function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
+function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::NodeInt, motif::EdgeMotif, eff_len::Int )
    inc_path   = Nullable{PsiPath}()
    exc_graph  = Nullable{PsiGraph}()
    ambig_edge = Nullable{Vector{IntervalValue}}()
@@ -184,22 +184,23 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
       end
    end
 
+
+
    if !isnull( exc_graph )
       ambig_cnt = Nullable( Vector{AmbigPath}() )
       # if the min or max of any exclusion set is different than the min/max
       # of the inclusion set we have a disjoint graph module and we can go
       # ahead and try to bridge nodes by extending with potentially ambiguous edges
-      if ( get(exc_graph).min == first(inc_set) ||
-           get(exc_graph).max == last(inc_set) )
+      if !isnull( inc_path ) && ( get(exc_graph).min == first(inc_path.nodes) ||
+                                  get(exc_graph).max == last(inc_path.nodes) )
          ambig_edge = extend_edges!( sgquant.edge, get(exc_graph), get(inc_path), ambig_edge, node )
       end
       # here we add ambig_cnt based on nodes
    end # end expanding module
 
-   # now we need to make ambiguous counts, add eff_lens, and then do EM
    if !isnull( ambig_edge )
       for i in get(ambig_edge)
-         
+         # add ambig counts.
       end
    end
 
@@ -212,10 +213,17 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
       else
          # NA is ignored.
       end
-   else # do EM
-      psi = rec_spliced_em!(  )
+   else # there is skipping
+      if isnull( inc_path )
+         if sum( get(exc_graph).count ) >= 1
+            # psi = 0.0 && likelihood_ci( psi, exc_graph.count, z=1.64 )
+         else
+            # NA
+         end
+      else
+         psi = rec_spliced_em!(  )
+      end
    end
-   
 end
 
 function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, ipath::PsiPath,
@@ -302,6 +310,6 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::In
 end
 
 function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F,
-                                         nodes::Vector{Coordint}, node::Coordint )
+                                         nodes::Vector{NodeInt}, node::NodeInt )
 
 end
