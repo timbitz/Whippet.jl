@@ -1,4 +1,6 @@
 
+import Base.==, Base.+ 
+
 bitstype 8 EdgeMotif
 
 Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = box(EdgeMotif, unbox(UInt8, motif ))
@@ -121,9 +123,9 @@ function reduce_graph!( pgraph::PsiGraph )
          pgraph.nodes[i+1]   = union( pgraph.nodes[i], pgraph.nodes[i+1] )
          pgraph.count[i+1]  += pgraph.count[i]
          pgraph.length[i+1] += pgraph.length[i]
-         shift!( pgraph.nodes  )
-         shift!( pgraph.count  )
-         shift!( pgraph.length )
+         splice!( pgraph.nodes, i )
+         splice!( pgraph.count, i )
+         splice!( pgraph.length, i )
          i -= 1
       end
       i += 1
@@ -149,6 +151,15 @@ function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; value_bool=t
    push!( ppath.nodes, edg.first )
    push!( ppath.nodes, edg.last  )
 end
+
+type AmbigPath
+   paths::Vector{NodeInt}
+   prop::Vector{Float64}
+   prop_sum::Float64
+   multiplier::Int
+end
+
+==( a::AmbigPath, b::AmbigPath ) = a.paths == b.paths
 
 function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
    inc_path  = Nullable{PsiPath}()
@@ -183,7 +194,7 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
 
    # now we need to make ambiguous counts, and then do EM
    if !isnull( ambig_edge )
-
+      
    end
 
   # lets finish up now.
