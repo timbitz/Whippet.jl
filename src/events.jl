@@ -80,6 +80,12 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
+type PsiPath
+   count::Float64
+   length::Float64
+   nodes::IntSet
+end
+
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
 # We also store the min and max node of all sets
@@ -137,19 +143,24 @@ function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; value_bool
    end
 end
 
+function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; value_bool=true, length=1.0 )
+   value_bool && (ppath.count += edg.value)
+   ppath.length += length
+   push!( ppath.nodes, edg.first )
+   push!( ppath.nodes, edg.last  )
+end
+
 function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
-   inc_cnt = 0.0
-   inc_len = 0.0
-   inc_set = IntSet()
+   inc_path  = Nullable{PsiPath}()
    exc_graph  = Nullable{PsiGraph}()
    ambig_edge = Nullable{Vector{IntervalValue}}()
 
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
-         inc_cnt += edg.value
-         inc_len += 1
-         push!( inc_set, edg.first )
-         push!( inc_set, edg.last  )
+         if isnull( inc_path )
+            inc_path = Nullable(PsiPath( 0.0, 0.0, IntSet() ))
+         end   
+         push!( get(inc_path), edg )
       elseif isspanning( edg, node )
          if isnull( exc_graph ) #don't allocate unless there is alt splicing
             exc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(), 
@@ -167,8 +178,7 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
    if !isnull( exc_graph ) && ( get(exc_graph).min == first(inc_set) ||
                                 get(exc_graph).max == last(inc_set) )
 
-      ambig_edge,inc_len = extend_edges!( sgquant.edge, get(exc_graph),
-                                          inc_set, inc_len, ambig_edge )
+      ambig_edge = extend_edges!( sgquant.edge, get(exc_graph), get(inc_path), ambig_edge, node )
    end # end expanding module
 
    # now we need to make ambiguous counts, and then do EM
@@ -190,12 +200,11 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
    
 end
 
-function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, 
-                        inc_set::IntSet, inc_len::Float64,
-                        ambig_edge::Nullable{Vector{IntervalValue}} )
+function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, ipath::PsiPath,
+                        ambig_edge::Nullable{Vector{IntervalValue}}, node::NodeInt )
 
-   min = min( pgraph.min, first(inc_set) )
-   max = max( pgraph.max, last(inc_set)  )
+   min = min( pgraph.min, first(ipath.nodes) )
+   max = max( pgraph.max, last(ipath.nodes)  )
    idx = node - 1
    shouldpush = false
    while idx > min # <----- node iter left
@@ -208,9 +217,9 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph,
                push!( pgraph, edg, value_bool=false )
                shouldpush = true
             end
-            if edg.last in inc_set
-               push!( inc_set, edg.first )
-               inc_len += 1
+            if edg.last in ipath.nodes
+               push!( ipath.nodes, edg.first )
+               ipath.length += 1
                shouldpush = true
             end
             if shouldpush
@@ -235,9 +244,9 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph,
                push!( pgraph, edg, value_bool=false )
                shouldpush = true
             end
-            if edg.last in inc_set
-               push!( inc_set, edg.first )
-               inc_len += 1
+            if edg.last in ipath.nodes
+               push!( ipath.nodes, edg.first )
+               ipath.length += 1
                shouldpush = true
             end
             if shouldpush
@@ -251,7 +260,7 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph,
       idx += 1
    end
 
-   ambig_edge, inc_len
+   ambig_edge
 end
 
 
