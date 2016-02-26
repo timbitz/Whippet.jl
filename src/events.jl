@@ -152,6 +152,11 @@ function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I;
    push!( ppath.nodes, edg.last  )
 end
 
+function Base.push!{T <: Integer}( ppath::PsiPath, n::T, sgquant::SpliceGraphQuant )
+   ppath.count += sgquant.node[n]
+   ppath.length += sgquant.leng[n]
+end 
+
 type AmbigCounts
    paths::Vector{NodeInt}
    prop::Vector{Float64}
@@ -180,16 +185,23 @@ function add_node_counts!( ambig::Vector{AmbigCounts},
    maxv = max( egraph.max, last(ipath.nodes)  )
    iset = IntSet()
    for n in minv:maxv # lets go through all possible nodes
-      (n in ipath.nodes) && push!( iset, 1 )
+      if n in ipath.nodes
+         push!( iset, 1 )
+         ipath.length += sgquant.leng[n]
+      end
       for i in 1:length(egraph.nodes)
-         (n in egraph.nodes[i]) && push!( iset, i+1 )
+         if n in egraph.nodes[i]
+            push!( iset, i+1 )
+            egraph.length[i] += sgquant.leng[n]
+         end
       end
       length( iset ) == 0 && continue # unspliced node
       if length( iset ) == 1 # non-ambiguous node
          if first( iset ) == 1 # belongs to inclusion
-            
+            ipath.count += sgquant.node[n]
          else # belongs to exclusion
-
+            idx = first( iset ) - 1
+            egraph.count[idx] += sgquant.node[n]
          end
       else
          #check if there is already an entry for this set of paths
