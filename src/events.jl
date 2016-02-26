@@ -162,9 +162,10 @@ end
 ==( a::AmbigPath, b::AmbigPath ) = a.paths == b.paths
 
 function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::Coordint, motif::EdgeMotif, eff_len::Int )
-   inc_path  = Nullable{PsiPath}()
+   inc_path   = Nullable{PsiPath}()
    exc_graph  = Nullable{PsiGraph}()
    ambig_edge = Nullable{Vector{IntervalValue}}()
+   ambig_cnt  = Nullable{Vector{AmbigPath}}()
 
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
@@ -183,19 +184,25 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
       end
    end
 
-   # if the min or max of any exclusion set is different than the min/max
-   # of the inclusion set we have a disjoint graph module and we can go
-   # ahead and try to bridge nodes by extending with potentially ambiguous edges
-   if !isnull( exc_graph ) && ( get(exc_graph).min == first(inc_set) ||
-                                get(exc_graph).max == last(inc_set) )
-
-      ambig_edge = extend_edges!( sgquant.edge, get(exc_graph), get(inc_path), ambig_edge, node )
+   if !isnull( exc_graph )
+      ambig_cnt = Nullable( Vector{AmbigPath}() )
+      # if the min or max of any exclusion set is different than the min/max
+      # of the inclusion set we have a disjoint graph module and we can go
+      # ahead and try to bridge nodes by extending with potentially ambiguous edges
+      if ( get(exc_graph).min == first(inc_set) ||
+           get(exc_graph).max == last(inc_set) )
+         ambig_edge = extend_edges!( sgquant.edge, get(exc_graph), get(inc_path), ambig_edge, node )
+      end
+      # here we add ambig_cnt based on nodes
    end # end expanding module
 
-   # now we need to make ambiguous counts, and then do EM
+   # now we need to make ambiguous counts, add eff_lens, and then do EM
    if !isnull( ambig_edge )
-      
+      for i in get(ambig_edge)
+         
+      end
    end
+
 
   # lets finish up now.
    if isnull( exc_graph ) # no spanning edge
