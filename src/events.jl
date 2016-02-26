@@ -152,11 +152,6 @@ function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I;
    push!( ppath.nodes, edg.last  )
 end
 
-function Base.push!{T <: Integer}( ppath::PsiPath, n::T, sgquant::SpliceGraphQuant )
-   ppath.count += sgquant.node[n]
-   ppath.length += sgquant.leng[n]
-end 
-
 type AmbigCounts
    paths::Vector{NodeInt}
    prop::Vector{Float64}
@@ -264,7 +259,6 @@ function _process_spliced_pg( sg::SpliceGraph,
       end
       add_node_counts!( get(ambig_cnt), get(inc_path), get(exc_graph), sgquant )
    end # end expanding module
-
 
   # lets finish up now.
    if isnull( exc_graph ) # no spanning edge
