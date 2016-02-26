@@ -179,22 +179,34 @@ function add_node_counts!( ambig::Vector{AmbigCounts},
    minv = min( egraph.min, first(ipath.nodes) )
    maxv = max( egraph.max, last(ipath.nodes)  )
    iset = IntSet()
-   for n in minv:maxv
+   for n in minv:maxv # lets go through all possible nodes
       (n in ipath.nodes) && push!( iset, 1 )
       for i in 1:length(egraph.nodes)
          (n in egraph.nodes[i]) && push!( iset, i+1 )
       end
-      exists = false
-      for am in ambig
-         if iset == am
-            am.multiplier += sgquant.node[n]
-            exists = true
+      length( iset ) == 0 && continue # unspliced node
+      if length( iset ) == 1 # non-ambiguous node
+         if first( iset ) == 1 # belongs to inclusion
+            
+         else # belongs to exclusion
+
          end
-      end
-      if !exists
-         push!( ambig, AmbigCounts( collect(iset), 
-                                    zeros( length(iset) ), 
-                                    0.0, UInt(1) ) )
+      else
+         #check if there is already an entry for this set of paths
+         # if so, just increment multiplier, if not, make new one
+         exists = false 
+         for am in ambig
+            if iset == am
+               am.multiplier += sgquant.node[n]
+               exists = true
+               break
+            end
+         end
+         if !exists
+            push!( ambig, AmbigCounts( collect(iset), 
+                                       zeros( length(iset) ), 
+                                       0.0, UInt( sgquant.node[n] ) ) )
+         end
       end
       empty!( iset ) # clean up
    end
