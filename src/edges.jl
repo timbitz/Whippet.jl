@@ -1,6 +1,4 @@
 
-import Base.<,Base.>,Base.<=,Base.>=
-
 typealias NodeInt UInt32
 
 immutable SGNode
@@ -15,10 +13,10 @@ immutable Edges{K}
    right::Vector{SGNodeSet}
 end
 
-<( a::SGNode, b::SGNode ) = <( a.gene, b.gene )
->( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
-<=( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
->=( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
+Base.(:<)( a::SGNode, b::SGNode ) = <( a.gene, b.gene )
+Base.(:>)( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
+Base.(:(<=))( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
+Base.(:(>=))( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
 
 Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 

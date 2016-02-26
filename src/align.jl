@@ -3,8 +3,6 @@
 # include("graph.jl")
 # include("index.jl")
 
-import Base.<,Base.>,Base.<=,Base.>=
-
 import Bio.Seq.SeqRecord
 
 immutable AlignParam
@@ -43,10 +41,10 @@ const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
 score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
 
->( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
-<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
->=( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
-<=( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
+Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
+Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
+Base.(:(>=))( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
+Base.(:(<=))( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 
 # add prob of being accurate base to mismatch, rather than integer.
 phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)

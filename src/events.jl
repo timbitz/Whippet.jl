@@ -159,7 +159,8 @@ type AmbigPath
    multiplier::Int
 end
 
-==( a::AmbigPath, b::AmbigPath ) = a.paths == b.paths
+Base.(:(==))( a::AmbigPath, b::AmbigPath ) = a.paths == b.paths
+
 
 function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::NodeInt, motif::EdgeMotif, eff_len::Int )
    inc_path   = Nullable{PsiPath}()
@@ -183,8 +184,6 @@ function _process_spliced_pg( sg::SpliceGraph, sgquant::SpliceGraphQuant, node::
          error("Edge has to be connecting or spanning!!!!" )
       end
    end
-
-
 
    if !isnull( exc_graph )
       ambig_cnt = Nullable( Vector{AmbigPath}() )
