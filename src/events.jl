@@ -29,7 +29,7 @@ const MOTIF_STRING = fill( "", 9 )
       MOTIF_STRING[ ALTF_MOTIF + 1 ] = "AF"
       MOTIF_STRING[ ALTL_MOTIF + 1 ] = "AL"
       MOTIF_STRING[ RETI_MOTIF + 1 ] = "RI"
-      MOTIF_STRING[ SKIP_MOTIF + 1 ] = "SK"
+      MOTIF_STRING[ SKIP_MOTIF + 1 ] = "SE"
       MOTIF_STRING[ ALTD_MOTIF + 1 ] = "AD"
       MOTIF_STRING[ ALTA_MOTIF + 1 ] = "AA"
       MOTIF_STRING[ NONE_MOTIF + 1 ] = "na"
@@ -447,13 +447,28 @@ end
 
 function output_psi( io, psi::Float64, inc::Nullable{PsiPath}, exc::Nullable{PsiGraph}, 
                      ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, info::GeneMeta )
-    
+   
    write( io, outstring * "\n" )
 end
 
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}, indx_shift=0 )
    for i in 1:length(src)
       dest[i+indx_shift] = src[i]
+   end
+end
+
+function calculate_psi!( ipath::PsiPath, egraph::PsiGraph, counts::Vector{Float64}, sig=0 )
+   cnt_sum = sum( counts )
+   if sig > 0
+      @fastmath ipath.psi = signif( counts[1] / cnt_sum, sig )
+      for i in 1:length( egraph.psi )
+         @fastmath egraph.psi[i] = signif( counts[i+1] / cnt_sum, sig )
+      end 
+   else
+      @fastmath ipath.psi = counts[1] / cnt_sum
+      for i in 1:length( egraph.psi )
+         @fastmath egraph.psi[i] = counts[i+1] / cnt_sum
+      end
    end
 end
 
