@@ -23,6 +23,17 @@ const ALTA_MOTIF = convert(EdgeMotif, 0b111)
 # NO MOTIF
 const NONE_MOTIF = convert(EdgeMotif, 0b1000)
 
+const MOTIF_STRING = fill( "", 9 )
+      MOTIF_STRING[ TXST_MOTIF + 1 ] = "TS"
+      MOTIF_STRING[ TXEN_MOTIF + 1 ] = "TE"
+      MOTIF_STRING[ ALTF_MOTIF + 1 ] = "AF"
+      MOTIF_STRING[ ALTL_MOTIF + 1 ] = "AL"
+      MOTIF_STRING[ RETI_MOTIF + 1 ] = "RI"
+      MOTIF_STRING[ SKIP_MOTIF + 1 ] = "SK"
+      MOTIF_STRING[ ALTD_MOTIF + 1 ] = "AD"
+      MOTIF_STRING[ ALTA_MOTIF + 1 ] = "AA"
+      MOTIF_STRING[ NONE_MOTIF + 1 ] = "na"
+
 const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       # Alt TxStart  SL SL
       MOTIF_TABLE[ 0b000000 + 1 ] = TXST_MOTIF
@@ -59,14 +70,10 @@ const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
 Base.convert(::Type{EdgeMotif}, tup::Tuple{EdgeType,EdgeType}) = Base.convert(EdgeMotif, tup... )
 Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE[ (UInt8(current) << 3) | UInt8(next) + 1 ]
 
+Base.convert{S <: AbstractString}(::Type{S}, edg::EdgeMotif ) = MOTIF_STRING[ UInt8(edg) + 1 ]
+
 isobligate(  motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
-
-function process_sgquant( lib::GraphLib, graphq::GraphLibQuant )
-   for g in 1:length(lib.graphs)
-      process_events!( lib.graphs[g], graphq.quant[g] )
-   end
-end
 
 isspanning{I <: AbstractInterval}( edge::I, node::NodeInt ) = edge.first < node < edge.last ? true : false
 isconnecting{I <: AbstractInterval}( edge::I, node::NodeInt ) = edge.first == node || edge.last == node ? true : false
@@ -81,6 +88,7 @@ function unique_push!{T}( arr::Vector{T}, el::T )
 end
 
 type PsiPath
+   psi::Float64
    count::Float64
    length::Float64
    nodes::IntSet
@@ -94,6 +102,7 @@ end
 # but the current implementation was choosen for 
 # faster memory access w.r.t. stride.
 type PsiGraph
+   psi::Vector{Float64}
    count::Vector{Float64}
    length::Vector{Float64}
    nodes::Vector{IntSet}
@@ -175,6 +184,14 @@ function Base.(:(==)){I <: Integer}( a::IntSet, b::Vector{I} )
       !(intv in iset) && return false
    end
    true
+end
+
+function Base.sum( vec::Vector{AmbigCounts} )
+   sum = 0.0
+   for i in 1:length(vec)
+      sum += vec[i].multiplier
+   end
+   sum
 end
 
 function add_node_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath, 
@@ -277,13 +294,14 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
          if isnull( inc_path )
-            inc_path = Nullable(PsiPath( 0.0, 0.0, IntSet() ))
+            inc_path = Nullable(PsiPath( 0.0, 0.0, 0.0, IntSet() ))
          end   
          push!( get(inc_path), edg )
       elseif isspanning( edg, node )
          if isnull( exc_graph ) #don't allocate unless there is alt splicing
-            exc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(), 
-                                           Vector{IntSet}(), edg.first, edg.last ))
+            exc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
+                                           Vector{Float64}(), Vector{IntSet}(),
+                                           edg.first, edg.last ))
          end
          push!( get(exc_graph), edg )
       else
@@ -305,24 +323,28 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    end # end expanding module
 
   # lets finish up now.
+   psi = Nullable{Float64}()
    if isnull( exc_graph ) # no spanning edge
       # check if we have both inclusion edges represented, or one if alt 5'/3'
       if (inc_len >= 2 && inc_cnt >= 1) || (inc_len >= 1 && inc_cnt >= 1  && isaltsplice(motif)) 
-         # psi = 0.99 && likelihood_ci( psi, inc_cnt, z=1.64 )
+          psi = Nullable( 0.99 ) #&& likelihood_ci( psi, inc_cnt, z=1.64 )
       else
          # NA is ignored.
       end
    else # there is skipping
       if isnull( inc_path )
          if sum( get(exc_graph).count ) >= 1
-            # psi = 0.0 && likelihood_ci( psi, exc_graph.count, z=1.64 )
+             psi = Nullable( 0.0 ) #&& likelihood_ci( psi, exc_graph.count, z=1.64 )
          else
             # NA
          end
       else
-         psi = rec_spliced_em!( get(inc_path), get(exc_graph), get(ambig_edge) )
+         get(exc_graph).psi = zeros( length( get(exc_graph).count ) )
+         it = rec_spliced_em!( get(inc_path), get(exc_graph), get(ambig_edge), sig=4 )
+         psi = Nullable( get(inc_path).psi )
       end
    end
+   psi,inc_path,exc_graph,ambig_edge
 end
 
 function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, ipath::PsiPath,
@@ -386,8 +408,21 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, ipath::PsiPath,
    ambig_edge
 end
 
+function process_events( outfile, lib::GraphLib, anno::Refset, graphq::GraphLibQuant )
+   io = open( outfile, "w" )
+   stream = ZlibDeflateOutputStream(io)
+   for g in 1:length(lib.graphs)
+      name = lib.names[g]
+      chr,strand = anno.geneset[ name ].info
+      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand) )
+   end
+   close(stream)
+   close(io)
+end
 
-function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int )
+typealias GeneMeta Tuple{Genename, Seqname, Char}
+
+function _process_events( io, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -401,18 +436,65 @@ function process_events( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::In
       if isobligate( motif ) # is utr event
           
       else  # is a spliced node
-         _process_spliced( sg, sgquant, sg.edges[i], motif, eff_len )
+         psi,inc,exc,ambig = _process_spliced( sg, sgquant, sg.edges[i], motif, eff_len )
+         if !isnull( psi )
+            ambig_cnt = isnull( ambig ) ? 0.0 : sum( get(ambig) )
+            output_psi( io, get(psi), inc, exc, ambig_cnt, motif, sg, info )
+         end
       end  
    end
 end
 
-function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F,
-                                         nodes::Vector{NodeInt}, node::NodeInt )
+function output_psi( io, psi::Float64, inc::Nullable{PsiPath}, exc::Nullable{PsiGraph}, 
+                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, info::GeneMeta )
+    
+   write( io, outstring * "\n" )
+end
 
+function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}, indx_shift=0 )
+   for i in 1:length(src)
+      dest[i+indx_shift] = src[i]
+   end
 end
 
 function rec_spliced_em!( ipath::PsiPath, egraph::PsiGraph, 
                           ambig::AmbiguousCounts;
-                          it=1, max=1000, sig=0, readlen=50 )
+                          inc_temp::Float64=0.0,
+                          exc_temp::Vector{Float64}=zeros(1+length(egraph.count)),
+                          count_temp::Vector{Float64}=ones(1+length(egraph.count)),
+                          it=1, max=1000, sig=0 )
+
+   count_temp[1] = ipath.count
+   unsafe_copy!( count_temp, egraph.count, indx_shift=1 )
+   inc_temp = ipath.psi
+   unsafe_copy!( exc_temp, egraph.psi )
    
+   for ac in ambig
+      idx = 1
+      if it > 1 # maximization
+         ac.prop_sum = 0.0
+         for p in ac.paths
+            prev_psi = p == 1 ? ipath.psi : egraph.psi[p-1]
+            ac.prop[idx] = prev_psi
+            ac.prop_sum += prev_psi
+            idx += 1
+         end
+      end
+
+      idx = 1    
+      for p in ac.paths
+         @fastmath prop = ac.prop[idx] / ac.prop_sum
+         ac.prop[idx] = prop
+         @fastmath count_tmp[p] += prop * ac.multiplier
+         idx += 1
+      end
+   end
+
+   calculate_psi!( ipath, egraph, count_temp, sig=sig ) # expectation
+
+   if (inc_temp != ipath.psi || egraph.psi != exc_temp) && it < max
+      it = rec_spliced_em!( ipath, egraph, ambig, inc_temp, exc_temp, count_temp,
+                            it=it+1, max=max, sig=sig )
+   end
+   it
 end
