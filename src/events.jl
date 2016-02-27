@@ -122,7 +122,9 @@ function reduce_graph!( pgraph::PsiGraph )
    i = 1
    while i < length(pgraph.nodes)
       if hasintersect( pgraph.nodes[i], pgraph.nodes[i+1] )
-         pgraph.nodes[i+1]   = union( pgraph.nodes[i], pgraph.nodes[i+1] )
+         for n in pgraph.nodes[i]
+            push!( pgraph.nodes[i+1], n )
+         end
          pgraph.count[i+1]  += pgraph.count[i]
          pgraph.length[i+1] += pgraph.length[i]
          splice!( pgraph.nodes, i )
@@ -318,7 +320,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
             # NA
          end
       else
-         psi = rec_spliced_em!(  )
+         psi = rec_spliced_em!( get(inc_path), get(exc_graph), get(ambig_edge) )
       end
    end
 end
@@ -407,4 +409,10 @@ end
 function output_psi{F <: AbstractFloat}( icnt::F, ecnt::F, ilen::F, elen::F,
                                          nodes::Vector{NodeInt}, node::NodeInt )
 
+end
+
+function rec_spliced_em!( ipath::PsiPath, egraph::PsiGraph, 
+                          ambig::AmbiguousCounts;
+                          it=1, max=1000, sig=0, readlen=50 )
+   
 end
