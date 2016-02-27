@@ -89,6 +89,10 @@ end
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
 # We also store the min and max node of all sets
+# Note: It did occur to me that a cleaner solution
+# is PsiGraph holding paths::Vector{PsiPath}
+# but the current implementation was choosen for 
+# faster memory access w.r.t. stride.
 type PsiGraph
    count::Vector{Float64}
    length::Vector{Float64}
@@ -171,10 +175,8 @@ function Base.(:(==)){I <: Integer}( a::IntSet, b::Vector{I} )
    true
 end
 
-function add_node_counts!( ambig::Vector{AmbigCounts}, 
-                           ipath::PsiPath, 
-                           egraph::PsiGraph, 
-                           sgquant::SpliceGraphQuant )
+function add_node_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath, 
+                           egraph::PsiGraph, sgquant::SpliceGraphQuant )
 
    minv = min( egraph.min, first(ipath.nodes) )
    maxv = max( egraph.max, last(ipath.nodes)  )
@@ -190,6 +192,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts},
             egraph.length[i] += sgquant.leng[n]
          end
       end
+      #=                                            =#
       length( iset ) == 0 && continue # unspliced node
       if length( iset ) == 1 # non-ambiguous node
          if first( iset ) == 1 # belongs to inclusion
@@ -219,11 +222,50 @@ function add_node_counts!( ambig::Vector{AmbigCounts},
    end
 end
 
-function _process_spliced_pg( sg::SpliceGraph, 
-                              sgquant::SpliceGraphQuant, 
-                              node::NodeInt, 
-                              motif::EdgeMotif, 
-                              eff_len::Int )
+function add_edge_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath,
+                           egraph::PsiGraph, edges::Vector{IntervalValue} )
+   iset = IntSet()
+   for edg in edges
+      if edg.first in ipath && edg.last in ipath
+         push!(iset, 1)
+         ipath.length += 1
+      end
+      for i in 1:length(egraph.nodes)
+         if edg.first in egraph.nodes[i] && edg.last in egraph.nodes[i]
+            push!( iset, i+1 )
+            egraph.length[i] += 1
+         end
+      end
+      #=                                             =#
+      length( iset ) == 0 && continue
+      if length( iset ) == 1
+         if first( iset ) == 1 
+            ipath.count += edg.value
+         else
+            idx = first( iset ) - 1
+            egraph.count[idx] += edg.value
+         end
+      else
+         exists = false
+         for am in ambig
+            if iset == am
+               am.multiplier += edg.value
+               exists = true
+               break
+            end
+         end 
+         if !exists
+            push!( ambig, AmbigCounts( collect(iset),
+                                       zeros( length(iset) ),
+                                       0.0, UInt( edg.value ) ) )
+         end
+      end
+      empty!( iset )
+   end
+end
+
+function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
+                           node::NodeInt, motif::EdgeMotif, eff_len::Int )
 
    inc_path   = Nullable{PsiPath}()
    exc_graph  = Nullable{PsiGraph}()
@@ -255,7 +297,7 @@ function _process_spliced_pg( sg::SpliceGraph,
       if !isnull( inc_path ) && ( get(exc_graph).min == first(inc_path.nodes) ||
                                   get(exc_graph).max == last(inc_path.nodes) )
          ambig_edge = extend_edges!( sgquant.edge, get(exc_graph), get(inc_path), ambig_edge, node )
-         add_edge_counts!( get(ambig_cnt), get(inc_path), get(exc_graph), ambig_edge )
+         add_edge_counts!( get(ambig_cnt), get(inc_path), get(exc_graph), get(ambig_edge) )
       end
       add_node_counts!( get(ambig_cnt), get(inc_path), get(exc_graph), sgquant )
    end # end expanding module
@@ -300,7 +342,6 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, ipath::PsiPath,
             end
             if edg.last in ipath.nodes
                push!( ipath.nodes, edg.first )
-               ipath.length += 1
                shouldpush = true
             end
             if shouldpush
@@ -327,7 +368,6 @@ function extend_edges!( edges::IntervalMap, pgraph::PsiGraph, ipath::PsiPath,
             end
             if edg.last in ipath.nodes
                push!( ipath.nodes, edg.first )
-               ipath.length += 1
                shouldpush = true
             end
             if shouldpush
