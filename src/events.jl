@@ -393,12 +393,12 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, ipath::P
          # if this is a new edge and connects to our idx from the left
          if isconnecting( edg, idx ) && edg.first == idx && edg.last <= maxv
             shouldpush = false
-            if edg.last in pgraph
+            if edg.first in pgraph
                push!( pgraph, edg, value_bool=false )
                shouldpush = true
             end
-            if edg.last in ipath.nodes
-               push!( ipath.nodes, edg.first )
+            if edg.first in ipath.nodes
+               push!( ipath.nodes, edg.last )
                shouldpush = true
             end
             if shouldpush
@@ -421,7 +421,7 @@ function process_events( outfile, lib::GraphLib, anno::Refset, graphq::GraphLibQ
    for g in 1:length(lib.graphs)
       name = lib.names[g]
       chr,strand = anno.geneset[ name ].info
-      println(STDERR, "$g, $name, $chr, $strand" )
+      #println(STDERR, "$g, $name, $chr, $strand" )
       _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand) )
    end
    close(stream)
