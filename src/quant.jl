@@ -6,7 +6,7 @@ const SCALING_FACTOR = 1_000_000
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
 # as junction counts, which should always be at a lower level, e.g. bias < 1
-immutable SpliceGraphQuant
+type SpliceGraphQuant
    node::Vector{Float64}
    edge::IntervalMap{Exonmax,Float64}
    circ::Dict{Tuple{Exonmax,Exonmax},Float64}
@@ -86,7 +86,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
    align.isvalid == true || return
    init_gene = align.path[1].gene
    sgquant   = graphq.quant[ init_gene ]
-   
+
    graphq.count[ init_gene ] += 1
    
    if length(align.path) == 1
@@ -97,6 +97,9 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
       
       # Otherwise, lets step through pairs of nodes and add val to those edges
       for n in 1:(length(align.path)-1)
+         # trans-spicing off->
+         align.path[n].gene != init_gene && continue
+         align.path[n+1].gene != init_gene && continue
          lnode = align.path[n].node
          rnode = align.path[n+1].node
          if lnode < rnode

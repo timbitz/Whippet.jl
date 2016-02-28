@@ -57,6 +57,6 @@ module SpliceGraphs
           assign_ambig!,
           fixpath,
           effective_lengths!,
-          global_bias 
- 
+          global_bias,
+          process_events 
 end

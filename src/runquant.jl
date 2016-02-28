@@ -96,8 +96,7 @@ function main()
    @time effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
    @time bias_ave,bias_var = global_bias( quant )
    println("Calculating global bias to $bias_ave +/- $bias_var ")
-   # Iterate through Events and do PSI_EM 
-   #calculate_psi( quant )
+   @time process_events( "tmp.gz", lib, anno, quant )
 end
 
 main()
