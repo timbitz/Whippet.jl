@@ -48,6 +48,10 @@ function parse_cmd()
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = ASCIIString
       default = "$(dir)/../index/graph"
+    "--out", "-o"
+      help = "Where should the gzipped output go?"
+      arg_type = ASCIIString
+      default  = "$(dir)/../output.psi.gz"
   end
   return parse_args(s)
 end
@@ -98,7 +102,7 @@ function main()
    @time effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
    @time bias_ave,bias_var = global_bias( quant )
    println("Calculating global bias to $bias_ave +/- $bias_var ")
-   @time process_events( "tmp.gz", lib, anno, quant )
+   @time process_events( args["out"], lib, anno, quant )
 end
 
 main()
