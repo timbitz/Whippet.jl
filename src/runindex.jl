@@ -3,6 +3,7 @@
 
 using ArgParse
 using BufferedStreams
+using Libz
 
 const dir = splitdir(@__FILE__)[1]
 
