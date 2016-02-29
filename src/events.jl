@@ -346,9 +346,9 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       else
          get(exc_graph).psi = zeros( length( get(exc_graph).count ) )
          calculate_psi!( inc_path.value, exc_graph.value, [get(inc_path).count; get(exc_graph).count] )
-         println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
+         #println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
          it = rec_spliced_em!( inc_path.value, exc_graph.value, ambig_cnt.value, sig=4 )
-         println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
+         #println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
          psi = Nullable( get(inc_path).psi )
       end
    end
@@ -483,8 +483,9 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiPath}, exc::Null
    # gene
    tab_write( io, info[1] )
    # coordinate
-   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, info[3] )
+   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1 )
    write( io, '\t' )
+   tab_write( io, info[3] )
    # event_type
    tab_write( io, convert(ASCIIString, motif) )
    # psi
