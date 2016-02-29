@@ -143,8 +143,9 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
       gc() # free
 
       haskey(seqdic, r.name) || continue
+      println(STDERR, "Building Splice Graphs for $( r.name ).." )
       for g in seqdic[r.name]
-         println( STDERR, "Building $g Splice Graph..." )
+         #println( STDERR, "Building $g Splice Graph..." )
          curgraph = SpliceGraph( ref.geneset[g], sg )
          xcript  *= curgraph.seq
          push!(xgraph, curgraph)
