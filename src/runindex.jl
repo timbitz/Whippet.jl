@@ -1,15 +1,27 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-using ArgParse
-using BufferedStreams
+using DataStructures
+using IntervalTrees
+using Bio.Seq
+using FMIndexes
+using IntArrays
 using Libz
+
+using ArgParse
+
+include("types.jl")
+include("bio_nuc_safepatch.jl")
+include("refflat.jl")
+include("graph.jl")
+include("edges.jl")
+include("index.jl")
 
 const dir = splitdir(@__FILE__)[1]
 
-push!( LOAD_PATH, dir )
-import SpliceGraphs
-@everywhere using SpliceGraphs
+#push!( LOAD_PATH, dir )
+#import SpliceGraphs
+#@everywhere using SpliceGraphs
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -48,7 +60,7 @@ function main()
    @time ref = load_refflat(fh)
 
    println(STDERR, "Indexing transcriptome...")
-   @time graphome = fasta_to_index( fixpath( args["fasta"] ) , ref ) #, args["kmer"] )
+   @time graphome = fasta_to_index( fixpath( args["fasta"] ) , ref, kmer=args["kmer"] )
 
    println(STDERR, "Saving Annotations...")
    open("$(args["index"])_anno.jls", "w+") do fh

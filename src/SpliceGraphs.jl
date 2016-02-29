@@ -16,8 +16,8 @@ module SpliceGraphs
    using Bio.Seq
    using FMIndexes
    using IntArrays
-   using Libz
    using IntervalTrees
+   using Libz
 
    include("types.jl")
    include("bio_nuc_safepatch.jl")

@@ -176,14 +176,14 @@ end
 
 function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
    if isgzipped( filename )
-      println(STDERR, "Decompressing and Indexing $mainname...")
+      println(STDERR, "Decompressing and Indexing $filename...")
       to_open = open( filename ) |> ZlibInflateInputStream
    else
       println(STDERR, "Indexing $filename...")
       to_open = filename
    end
    # iterate through fasta entries
-   index = @time trans_index!(open( to_open, FASTA ), ref, kmer=kmer)
+   index = @time trans_index!(Bio.Seq.FASTAParser( to_open ), ref, kmer=kmer)
    index
 end
 
