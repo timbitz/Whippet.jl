@@ -223,4 +223,15 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
    it
 end
 
-
+function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
+   io = open( file, "w" )
+   stream = ZlibDeflateOutputStream( io )
+   for i in 1:length(lib.names)
+      write( stream, lib.names[i] )
+      write( stream, '\t' )
+      write( stream, string(gquant.tpm[i]) )
+      write( stream, '\n' )
+   end
+   close( stream )
+   close( io )
+end

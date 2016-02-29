@@ -32,7 +32,7 @@ function parse_cmd()
       arg_type = Int
       default  = 9
     "--fasta"
-      help = "Directory or file containg the genome files in fasta"
+      help = "File containg the genome in fasta, one entry per chromosome [.gz]"
       arg_type = ASCIIString
       required = true
     "--flat"

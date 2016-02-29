@@ -33,8 +33,8 @@ function parse_cmd()
     "paired_mate.fastq[.gz]"
       arg_type = ASCIIString
       required = false
-    "--tpm"
-      help     = "Should tpm file be sent to STDOUT? (default off)"
+    "--no-tpm"
+      help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
     "--seed_len", "-K"
       help = "Seed length (default 18)"
@@ -49,9 +49,9 @@ function parse_cmd()
       arg_type = ASCIIString
       default = "$(dir)/../index/graph"
     "--out", "-o"
-      help = "Where should the gzipped output go?"
+      help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
-      default  = "$(dir)/../output.psi.gz"
+      default  = "$(dir)/../output"
   end
   return parse_args(s)
 end
@@ -90,19 +90,21 @@ function main()
    @time iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen )
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
-   if args["tpm"]
-      for i in 1:length(lib.names)
-         println(lib.names[i] * "\t" * string(quant.tpm[i]) ) 
-      end
+   if !args["no-tpm"]
+      output_tpm( args["out"] * ".tpm.gz", lib, quant )
    end
 
+   println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
-   assign_ambig!( quant, multi )
+   @time assign_ambig!( quant, multi )
 
+   println(STDERR, "Calculating effective lengths...")
    @time effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
    @time bias_ave,bias_var = global_bias( quant )
-   println("Calculating global bias to $bias_ave +/- $bias_var ")
+   println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
+   println(STDERR, "Calculating maximum likelihood estimate of events..." )
    @time process_events( args["out"], lib, anno, quant )
+   println(STDERR, "Whippet done." )
 end
 
 main()
