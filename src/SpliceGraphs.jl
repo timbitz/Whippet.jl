@@ -50,6 +50,8 @@ module SpliceGraphs
           AlignParam,
           ungapped_align,
           make_fqparser,
+          isgzipped,
+          load_refflat,
           fasta_to_index,
           process_reads!,
           calculate_tpm!,

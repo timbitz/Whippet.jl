@@ -2,6 +2,7 @@
 # Tim Sterne-Weiler 2015
 
 using ArgParse
+using BufferedStreams
 
 const dir = splitdir(@__FILE__)[1]
 
