@@ -7,6 +7,7 @@ module SpliceGraphs
    import Bio
    import Bio.Seq
    import FMIndexes
+   import IntArrays
    import IntervalTrees
    import Libz
 
@@ -14,6 +15,7 @@ module SpliceGraphs
    using BufferedStreams
    using Bio.Seq
    using FMIndexes
+   using IntArrays
    using Libz
    using IntervalTrees
 

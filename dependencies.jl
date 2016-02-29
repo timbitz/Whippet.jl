@@ -17,6 +17,7 @@ pkgs = [ "DataStructures",
          "Bio", 
          "SuffixArrays", 
          "FMIndexes", 
+         "IntArrays",
          "IntervalTrees",
          "BufferedStreams", 
          "Libz" ]

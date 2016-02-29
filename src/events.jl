@@ -463,6 +463,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
 end
 
 tab_write{S <: AbstractString}( io::BufOut, str::S ) = (write( io, str ); write( io, '\t'  ))
+tab_write( io::BufOut, str::Char ) = (write( io, str ); write( io, '\t'  ))
 function coord_write( io::BufOut, chr, first, last )
    write( io, chr   )
    write( io, ':'   )
@@ -485,7 +486,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiPath}, exc::Null
    # coordinate
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1 )
    write( io, '\t' )
-   tab_write( io, convert(ASCIIString, info[3]) )
+   tab_write( io, info[3] )
    # event_type
    tab_write( io, convert(ASCIIString, motif) )
    # psi
