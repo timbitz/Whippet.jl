@@ -1,21 +1,13 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-using Bio.Seq
-using FMIndexes
-using IntArrays
-using Libz
-using BufferedStreams
-
 using ArgParse
- 
-include("types.jl")
-include("bio_nuc_safepatch.jl")
-include("refflat.jl")
-include("graph.jl")
-include("edges.jl")
-include("index.jl")
-#include("align.jl")
+
+const dir = splitdir(@__FILE__)[1]
+
+push!( LOAD_PATH, dir )
+import SpliceGraphs
+@everywhere using SpliceGraphs
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -36,7 +28,7 @@ function parse_cmd()
     "--index"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = ASCIIString
-      default = "$(pwd())/../index/graph"
+      default = "$dir/../index/graph"
   end
   return parse_args(s)
 end
