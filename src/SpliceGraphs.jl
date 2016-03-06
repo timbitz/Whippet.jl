@@ -1,11 +1,10 @@
-__precompile__()
+#__precompile__()
 
 module SpliceGraphs
 
    import DataStructures
    import BufferedStreams
    import Bio
-   import Bio.Seq
    import FMIndexes
    import IntArrays
    import IntervalTrees

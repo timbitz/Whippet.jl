@@ -104,11 +104,11 @@ function build_edges( graphs::Vector{SpliceGraph}, k::Integer )
    for (i,g) in enumerate(graphs)
       for (j,n) in enumerate(g.nodeoffset)
 
-         if is_edge( g.edgetype[j], true ) # left edge
+         if is_edge( g.edgetype[j], true ) && isvalid( g.seq, (n-k-2):(n-3) ) # left edge
             lkmer = add_kmer_edge!( left, g.seq, n-k-2, n-3, true,  SGNode(i,j) )
             g.edgeleft[j] = SGKmer{k}(lkmer)
          end
-         if is_edge( g.edgetype[j], false ) # right edge
+         if is_edge( g.edgetype[j], false ) && isvalid( g.seq, n:(n+k-1) )# right edge
             rkmer = add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNode(i,j) )
             g.edgeright[j] = SGKmer{k}(rkmer)
          end

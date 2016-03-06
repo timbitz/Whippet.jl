@@ -73,6 +73,7 @@ Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE
 Base.convert{S <: AbstractString}(::Type{S}, edg::EdgeMotif ) = MOTIF_STRING[ UInt8(edg) + 1 ]
 
 isobligate(  motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
+#isobligate( motif::EdgeMotif ) = (0 <= UInt8(motif) <= 1)
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
 
 isspanning{I <: AbstractInterval, T <: Integer}( edge::I, node::T ) = edge.first < node < edge.last ? true : false
@@ -366,7 +367,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, ipath::P
       #iterate through local edges to the left
       for edg in intersect( edges, (idx,idx) )
          # if this is a new edge and connects to our idx from the left
-         if isconnecting( edg, idx ) && edg.last == idx && edg.first >= minv
+         if isconnecting( edg, idx ) && edg.last == idx #&& edg.first >= minv
             shouldpush = false
             if edg.last in pgraph
                push!( pgraph, edg, value_bool=false )
@@ -395,7 +396,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, ipath::P
       # iterate through local edges to the right
       for edg in intersect( edges, (idx,idx) )
          # if this is a new edge and connects to our idx from the left
-         if isconnecting( edg, idx ) && edg.first == idx && edg.last <= maxv
+         if isconnecting( edg, idx ) && edg.first == idx #&& edg.last <= maxv
             shouldpush = false
             if edg.first in pgraph
                push!( pgraph, edg, value_bool=false )

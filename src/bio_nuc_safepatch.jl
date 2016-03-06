@@ -667,6 +667,14 @@ function iskmersafe{T <: Bio.Seq.NucleotideSequence}( seq::T )
    return true
 end
 
+function isvalid{T <: SGNucleotide}( seq::NucleotideSequence{T}, r::UnitRange )
+   if r.start < 1 || (length(r) + r.start - 1) > length(seq)
+      return false
+   else
+      return true
+   end
+end
+
 function Base.getindex{T}(seq::NucleotideSequence{T}, i::Integer)
     if i > length(seq) || i < 1
         throw(BoundsError())

@@ -154,14 +154,15 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
          runoffset += length(curgraph.seq) 
       end
    end
+   println( STDERR, "Building full sg-index.." )
    @time fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true) 
-   println( STDERR, "Finished building index..." )
 
    # clean up
    xcript = sg""
    gc()
 
-   edges = build_edges( xgraph, kmer ) # TODO make variable kmer
+   println( STDERR, "Building edges.." ) 
+   @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
    GraphLib( xoffset, xgenes, xgraph, edges, fm, true)
 end
