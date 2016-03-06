@@ -323,7 +323,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
    passed_extend = 0
-   passed_mismat = 0
+   passed_mismat = 0.0
 
    if align.path[1] != SGNode( geneind, nodeidx )
       unshift!( align.path, SGNode( geneind, nodeidx ) ) # starting node if not already there
