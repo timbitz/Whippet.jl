@@ -10,18 +10,14 @@ using Libz
 
 using ArgParse
 
-include("types.jl")
-include("bio_nuc_safepatch.jl")
-include("refflat.jl")
-include("graph.jl")
-include("edges.jl")
-include("index.jl")
+const dir = splitdir(@__FILE__)[1] * "/../src"
 
-const dir = splitdir(@__FILE__)[1]
-
-#push!( LOAD_PATH, dir )
-#import SpliceGraphs
-#@everywhere using SpliceGraphs
+include("$dir/types.jl")
+include("$dir/bio_nuc_safepatch.jl")
+include("$dir/refflat.jl")
+include("$dir/graph.jl")
+include("$dir/edges.jl")
+include("$dir/index.jl")
 
 function parse_cmd()
   s = ArgParseSettings()

@@ -19,7 +19,7 @@ using ArgParse
 
 dir = splitdir(@__FILE__)[1]
 
-push!( LOAD_PATH, dir )
+push!( LOAD_PATH, dir * "/../src" )
 import SpliceGraphs
 @everywhere using SpliceGraphs
 
