@@ -20,7 +20,7 @@ include("$dir/edges.jl")
 include("$dir/index.jl")
 
 function parse_cmd()
-  s = ArgParseSettings()
+  s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
 
   @add_arg_table s begin
     "--kmer", "-k"
