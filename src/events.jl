@@ -502,6 +502,9 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiPath}, exc::Null
          write( io, "," )
       end
       write( io, string( get(exc).nodes[end] ) )
+   else
+      tab_write( io, "NA" )
+      write( io, "NA" )
    end
 
    write( io, '\n' )

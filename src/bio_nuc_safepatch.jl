@@ -667,7 +667,7 @@ function iskmersafe{T <: Bio.Seq.NucleotideSequence}( seq::T )
    return true
 end
 
-function isvalid{T <: SGNucleotide}( seq::NucleotideSequence{T}, r::UnitRange )
+function Base.isvalid{T <: SGNucleotide}( seq::NucleotideSequence{T}, r::UnitRange )
    if (1 <= r.start <= length(seq)) && (1 <= r.stop <= length(seq))
       return true
    else

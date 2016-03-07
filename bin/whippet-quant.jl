@@ -24,7 +24,7 @@ import SpliceGraphs
 @everywhere using SpliceGraphs
 
 function parse_cmd()
-  s = ArgParseSettings(version="0.0.1", add_version=true)
+  s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
   # TODO finish options...
   @add_arg_table s begin
     "filename.fastq[.gz]"
