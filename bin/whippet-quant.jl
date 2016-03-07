@@ -1,22 +1,8 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-#using Bio.Seq
-#using FMIndexes
-#using Libz
 using ArgParse
-#using BufferedStreams
  
-#include("types.jl")
-#include("bio_nuc_safepatch.jl")
-#include("refflat.jl")
-#include("graph.jl")
-#include("edges.jl")
-#include("index.jl")
-#include("align.jl")
-#include("quant.jl")
-#include("reads.jl")
-
 dir = splitdir(@__FILE__)[1]
 
 push!( LOAD_PATH, dir * "/../src" )

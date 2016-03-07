@@ -51,7 +51,6 @@ function simulate_psi( sg::SpliceGraph, gene::ASCIIString, comp::Int )
    max_comp = min( comp, length(sg.nodelen) - 2, 0 )
    for n in 1:length(sg.nodelen)
      
-
    end
 end
 
