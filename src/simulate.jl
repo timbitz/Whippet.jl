@@ -10,7 +10,7 @@ import SpliceGraphs
 @everywhere using SpliceGraphs
 
 function parse_cmd()
-  s = ArgParseSettings(version="0.0.1", add_version=true)
+  s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
   # TODO finish options...
   @add_arg_table s begin
     "--index", "-x"
@@ -41,6 +41,25 @@ function main()
 
 end
 
+type SimulTranscript
+   seq::NucleotideSequence
+   nodes::Vector{UInt}
+end
+
+type SimulGene
+   trans::Vector{SimulTranscript}
+   gene::ASCIIString
+   complexity::Int
+end
+
+function collect_nodes( st::SimulTranscript, sg::SpliceGraph, r::UnitRange )
+   for n in r
+      noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
+      st.seq *= sg.seq[ noderange ]
+      push!( st.nodes, n )
+   end
+end
+
 function simulate_genes( lib, anno, max_comp )
    for g in 1:length(lib.graphs)
       simulate_psi( lib.graphs[g], lib.names[g], max_comp )
@@ -49,8 +68,12 @@ end
 
 function simulate_psi( sg::SpliceGraph, gene::ASCIIString, comp::Int )
    max_comp = min( comp, length(sg.nodelen) - 2, 0 )
+   
+   if length(sg.nodelen) <= 2
+      
+   end
    for n in 1:length(sg.nodelen)
-     
+      
    end
 end
 
