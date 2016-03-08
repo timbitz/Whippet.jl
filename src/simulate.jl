@@ -7,7 +7,7 @@ dir = splitdir(@__FILE__)[1]
 
 push!( LOAD_PATH, dir * "/../src" )
 import SpliceGraphs
-@everywhere using SpliceGraphs
+using SpliceGraphs
 
 function parse_cmd()
   s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
@@ -42,7 +42,7 @@ function main()
 end
 
 type SimulTranscript
-   seq::NucleotideSequence
+   seq::SGSequence
    nodes::Vector{UInt}
 end
 
@@ -52,7 +52,7 @@ type SimulGene
    complexity::Int
 end
 
-function collect_nodes( st::SimulTranscript, sg::SpliceGraph, r::UnitRange )
+function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange )
    for n in r
       noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
       st.seq *= sg.seq[ noderange ]
@@ -62,18 +62,23 @@ end
 
 function simulate_genes( lib, anno, max_comp )
    for g in 1:length(lib.graphs)
-      simulate_psi( lib.graphs[g], lib.names[g], max_comp )
+      comp = min( max_comp, length(lib.graphs[g].nodelen) - 2 )
+      sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g], rand(1:comp) )
+      simulate_transcript!( sgene, lib.graphs[g] )
    end
 end
 
-function simulate_psi( sg::SpliceGraph, gene::ASCIIString, comp::Int )
-   max_comp = min( comp, length(sg.nodelen) - 2, 0 )
-   
+function simulate_transcript!( simul::SimulGene, sg::SpliceGraph )
    if length(sg.nodelen) <= 2
-      
-   end
-   for n in 1:length(sg.nodelen)
-      
+      trans = SimulTranscript( sg"", Vector{UInt}() )
+      collect_nodes!( trans, sg, 1:length(sg.nodelen) )
+   else
+      mod_start = rand( 2:(length(sg.nodelen) - simul.complexity) )
+      prefix = SimulTranscript( sg"", Vector{UInt}() )
+      collect_nodes!( prefix, sg, 1:(mod_start-1) )            
+      for n in mod_start:(mod_start+simul.complexity)
+         
+      end
    end
 end
 
