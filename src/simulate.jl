@@ -52,11 +52,22 @@ type SimulGene
    complexity::Int
 end
 
-function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange )
-   for n in r
-      noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
-      st.seq *= sg.seq[ noderange ]
-      push!( st.nodes, n )
+istxstart_left( edge::EdgeType ) = edge == EDGETYPE_SL || edge == EDGETYPE_LS ? true : false
+istxstop_left(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true : false
+
+function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; skip=Vector{Int}, fromsplice=false )
+   n = r.start
+   while n <= r.stop
+      if     fromsplice && n in skip
+      elseif fromsplice && (istxstart( sg.edgetype[n] ) || istxstop( sg.edgetype[n+1] ))
+      elseif fromsplice &&  sg.edgetype[n] == EDGETYPE_LL
+      else
+         noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
+         st.seq *= sg.seq[ noderange ]
+         push!( st.nodes, n )
+         fromsplice = sg.edgetype[n+1] in (EDGETYPE_LS, EDGETYPE_LR, EDGETYPE_LL) ? true : false
+      end
+      n += 1
    end
 end
 
@@ -69,15 +80,18 @@ function simulate_genes( lib, anno, max_comp )
 end
 
 function simulate_transcript!( simul::SimulGene, sg::SpliceGraph )
-   if length(sg.nodelen) <= 2
-      trans = SimulTranscript( sg"", Vector{UInt}() )
-      collect_nodes!( trans, sg, 1:length(sg.nodelen) )
-   else
-      mod_start = rand( 2:(length(sg.nodelen) - simul.complexity) )
-      prefix = SimulTranscript( sg"", Vector{UInt}() )
-      collect_nodes!( prefix, sg, 1:(mod_start-1) )            
-      for n in mod_start:(mod_start+simul.complexity)
-         
+   trans = SimulTranscript( sg"", Vector{UInt}() )
+   collect_nodes!( trans, sg, 1:length(sg.nodelen) )
+   push!( simul.trans, trans )
+   if length(sg.nodelen) > 2
+      mod_start = rand( 1:(length(sg.nodelen) - simul.complexity) )
+      for i in 1:simul.complexity
+         combset = collect( combinations( mod_start:(mod_start+simul.complexity), i ) )
+         for s in combset
+            trans = SimulTranscript( sg"", Vector{UInt}() )
+            collect_nodes!( trans, sg, 1:length(sg.nodelen), skip=s )
+            push!( simul.trans, trans )
+         end
       end
    end
 end
