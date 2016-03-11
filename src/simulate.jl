@@ -21,7 +21,7 @@ function parse_cmd()
     "--out", "-o"
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
-      default  = fixpath( "$(dir)/../output" )
+      default  = fixpath( "$(dir)/../simul" )
     "--max-complexity", "-c"
       help = "What is the maximum complexity we should allow?"
       arg_type = Int64
@@ -41,7 +41,7 @@ function main()
    @time const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
    println(STDERR, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
-   @time simulate_genes( lib, anno, args["max-complexity"] )
+   @time simulate_genes( lib, anno, args["max-complexity"], output=args["out"] )
 
 end
 
