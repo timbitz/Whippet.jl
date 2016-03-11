@@ -1,6 +1,7 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+using Libz
 using ArgParse
 
 dir = splitdir(@__FILE__)[1]
@@ -45,7 +46,7 @@ function main()
 end
 
 type SimulTranscript
-   seq::SGSequence
+   seq::SpliceGraphs.SGSequence
    nodes::Vector{UInt}
 end
 
@@ -55,15 +56,17 @@ immutable SimulGene
    complexity::Int
 end
 
-istxstart_left( edge::EdgeType ) = edge == EDGETYPE_SL || edge == EDGETYPE_LS ? true : false
-istxstop_left(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true : false
+istxstart( edge::EdgeType ) = edge == EDGETYPE_SL || edge == EDGETYPE_LS ? true : false
+istxstop(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true : false
 
-function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; skip=Vector{Int}, fromdonor=false, isdependent=false )
+function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; skip=Vector{Int}(), fromdonor=false, isdependent=false )
    n = r.start
    while n <= r.stop
       if     fromdonor && n in skip
          isdependent = true
-      elseif fromdonor && (istxstart( sg.edgetype[n] ) || istxstop( sg.edgetype[n+1] ))
+      elseif fromdonor && istxstart( sg.edgetype[n] )
+         isdependent = true
+      elseif fromdonor && istxstop( sg.edgetype[n+1] ) && n != length(sg.nodelen)
          isdependent = true
       elseif isdependent && !( sg.edgetype[n] in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_SR) )
       else
@@ -78,16 +81,25 @@ function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; ski
 end
 
 function simulate_genes( lib, anno, max_comp, output="simul_genes" )
+   fastaout = open( output * ".fa.gz", "w" ) 
+   nodesout = open( output * ".node.gz", "w" )
+   fastastr = ZlibDeflateOutputStream( fastaout )
+   nodesstr = ZlibDeflateOutputStream( nodesout )
+   
    for g in 1:length(lib.graphs)
       comp = min( max_comp, length(lib.graphs[g].nodelen) - 2 )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g], rand(1:comp) )
       simulate_transcripts!( sgene, lib.graphs[g] )
-      output_transcripts( fastaout, sgene, lib.graphs[g] )
-      output_nodes( nodesout, lib.graphs[g] )
+      output_transcripts( fastastr, sgene, lib.graphs[g] )
+      output_nodes( nodesstr, lib.names[g], anno.geneset[lib.names[g]].info, lib.graphs[g] )
    end
+   close( fastastr )
+   close( fastaout )
+   close( nodesstr )
+   close( nodesout )
 end
 
-function simulate_transcripst!( simul::SimulGene, sg::SpliceGraph )
+function simulate_transcripts!( simul::SimulGene, sg::SpliceGraph )
    trans = SimulTranscript( sg"", Vector{UInt}() )
    collect_nodes!( trans, sg, 1:length(sg.nodelen) )
    push!( simul.trans, trans )
@@ -104,9 +116,25 @@ function simulate_transcripst!( simul::SimulGene, sg::SpliceGraph )
    end
 end
 
-function output_transcripts( simul::SimulGene, sg::SpliceGraph )
+function output_transcripts( stream, simul::SimulGene, sg::SpliceGraph )
+   prefix = simul.gene * "_C" * string(simul.complexity) * "_"
+   used = Set()
    for t in simul.trans
-      
+      name = prefix * join( t.nodes, "-" )
+      (name in used) && continue
+      write( stream, ">$name\n" )
+      for i in t.seq
+         write( stream, Char(i) )
+      end
+      write( stream, "\n" )
+      push!( used, name )
+   end
+end
+
+function output_nodes( stream, gname::ASCIIString, info, sg::SpliceGraph)
+   for n in 1:length(sg.nodelen)
+      coord = "$(info[1]):$(sg.nodecoord[n])-$(sg.nodecoord[n] + sg.nodelen[n] - 1)"
+      write( stream, "$gname\t$n\t$coord\t$(info[2])\n" )
    end
 end
 
