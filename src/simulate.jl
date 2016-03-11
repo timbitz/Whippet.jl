@@ -15,7 +15,7 @@ function parse_cmd()
   # TODO finish options...
   @add_arg_table s begin
     "--index", "-x"
-      help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
+      help = "Prefix for index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../index/graph" )
     "--out", "-o"
@@ -23,7 +23,7 @@ function parse_cmd()
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../simul" )
     "--max-complexity", "-c"
-      help = "What is the maximum complexity we should allow?"
+      help = "Max complexity CMax allowed per gene (random C for each gene between C1:CMax)?"
       arg_type = Int64
       default  = 8
   end
