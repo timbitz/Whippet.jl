@@ -39,6 +39,9 @@ function main()
    println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
    @time const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
+   println(STDERR, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
+   @time simulate_genes( lib, anno, args["max-complexity"] )
+
 end
 
 type SimulTranscript
@@ -46,7 +49,7 @@ type SimulTranscript
    nodes::Vector{UInt}
 end
 
-type SimulGene
+immutable SimulGene
    trans::Vector{SimulTranscript}
    gene::ASCIIString
    complexity::Int
@@ -55,31 +58,36 @@ end
 istxstart_left( edge::EdgeType ) = edge == EDGETYPE_SL || edge == EDGETYPE_LS ? true : false
 istxstop_left(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true : false
 
-function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; skip=Vector{Int}, fromsplice=false )
+function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; skip=Vector{Int}, fromdonor=false, isdependent=false )
    n = r.start
    while n <= r.stop
-      if     fromsplice && n in skip
-      elseif fromsplice && (istxstart( sg.edgetype[n] ) || istxstop( sg.edgetype[n+1] ))
-      elseif fromsplice &&  sg.edgetype[n] == EDGETYPE_LL
+      if     fromdonor && n in skip
+         isdependent = true
+      elseif fromdonor && (istxstart( sg.edgetype[n] ) || istxstop( sg.edgetype[n+1] ))
+         isdependent = true
+      elseif isdependent && !( sg.edgetype[n] in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_SR) )
       else
          noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
          st.seq *= sg.seq[ noderange ]
          push!( st.nodes, n )
-         fromsplice = sg.edgetype[n+1] in (EDGETYPE_LS, EDGETYPE_LR, EDGETYPE_LL) ? true : false
+         fromdonor = sg.edgetype[n+1] in (EDGETYPE_LS, EDGETYPE_LR, EDGETYPE_LL) ? true : false
+         isdependent = false
       end
       n += 1
    end
 end
 
-function simulate_genes( lib, anno, max_comp )
+function simulate_genes( lib, anno, max_comp, output="simul_genes" )
    for g in 1:length(lib.graphs)
       comp = min( max_comp, length(lib.graphs[g].nodelen) - 2 )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g], rand(1:comp) )
-      simulate_transcript!( sgene, lib.graphs[g] )
+      simulate_transcripts!( sgene, lib.graphs[g] )
+      output_transcripts( fastaout, sgene, lib.graphs[g] )
+      output_nodes( nodesout, lib.graphs[g] )
    end
 end
 
-function simulate_transcript!( simul::SimulGene, sg::SpliceGraph )
+function simulate_transcripst!( simul::SimulGene, sg::SpliceGraph )
    trans = SimulTranscript( sg"", Vector{UInt}() )
    collect_nodes!( trans, sg, 1:length(sg.nodelen) )
    push!( simul.trans, trans )
@@ -93,6 +101,12 @@ function simulate_transcript!( simul::SimulGene, sg::SpliceGraph )
             push!( simul.trans, trans )
          end
       end
+   end
+end
+
+function output_transcripts( simul::SimulGene, sg::SpliceGraph )
+   for t in simul.trans
+      
    end
 end
 
