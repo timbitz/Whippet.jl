@@ -80,7 +80,7 @@ function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; ski
    end
 end
 
-function simulate_genes( lib, anno, max_comp, output="simul_genes" )
+function simulate_genes( lib, anno, max_comp; output="simul_genes" )
    fastaout = open( output * ".fa.gz", "w" ) 
    nodesout = open( output * ".node.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
