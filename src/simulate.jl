@@ -66,7 +66,7 @@ function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; ski
          isdependent = true
       elseif fromdonor && istxstart( sg.edgetype[n] )
          isdependent = true
-      elseif fromdonor && istxstop( sg.edgetype[n+1] ) && n != length(sg.nodelen)
+      elseif fromdonor && istxstop( sg.edgetype[n+1] ) && n < length(sg.nodelen)
          isdependent = true
       elseif isdependent && !( sg.edgetype[n] in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_SR) )
       else

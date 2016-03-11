@@ -76,7 +76,7 @@ lnucleotide{N <: Nucleotide}(::Type{N}) = SG_L
 rnucleotide{N <: Nucleotide}(::Type{N}) = SG_R
 snucleotide{N <: Nucleotide}(::Type{N}) = SG_S
 
-function isvalid(nt::SGNucleotide)
+function Base.isvalid(nt::SGNucleotide)
     return convert(UInt8, nt) ≤ convert(UInt8, SG_S)
 end
 
