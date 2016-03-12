@@ -20,7 +20,8 @@ pkgs = [ "DataStructures",
          "IntArrays",
          "IntervalTrees",
          "BufferedStreams", 
-         "Libz" ]
+         "Libz",
+         "StatsBase" ]
 Pkg.update()
 map( check_and_install, pkgs )
 
