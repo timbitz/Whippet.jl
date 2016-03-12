@@ -3,6 +3,7 @@
 
 using Libz
 using ArgParse
+using StatsBase
 
 dir = splitdir(@__FILE__)[1]
 
@@ -26,6 +27,10 @@ function parse_cmd()
       help = "Max complexity CMax allowed per gene (random C for each gene between C1:CMax)?"
       arg_type = Int64
       default  = 8
+    "--num-genes", "-n"
+      help = "Randomly sample at most -n number of genes from the index to simulate."
+      arg_type = Int64
+      default  = 5000
   end
   return parse_args(s)
 end
@@ -41,7 +46,7 @@ function main()
    @time const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
    println(STDERR, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
-   @time simulate_genes( lib, anno, args["max-complexity"], output=args["out"] )
+   @time simulate_genes( lib, anno, args["max-complexity"], output=args["out"], gene_num=args["num-genes"] )
 
 end
 
@@ -80,13 +85,13 @@ function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; ski
    end
 end
 
-function simulate_genes( lib, anno, max_comp; output="simul_genes" )
+function simulate_genes( lib, anno, max_comp; output="simul_genes", gene_num=length(lib.graphs) )
    fastaout = open( output * ".fa.gz", "w" ) 
    nodesout = open( output * ".node.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
    nodesstr = ZlibDeflateOutputStream( nodesout )
    
-   for g in 1:length(lib.graphs)
+   for g in sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       comp = min( max_comp, length(lib.graphs[g].nodelen) - 2 )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g], rand(1:comp) )
       simulate_transcripts!( sgene, lib.graphs[g] )
