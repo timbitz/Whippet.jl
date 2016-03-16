@@ -38,6 +38,9 @@ function parse_cmd()
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../output" )
+    "--junc-only", "-j"
+      help     = "Only use junction reads, no internal exon reads will be considered."
+      action   = :store_true
   end
   return parse_args(s)
 end
@@ -89,7 +92,7 @@ function main()
    @time bias_ave,bias_var = global_bias( quant )
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @time process_events( args["out"] * ".psi.gz" , lib, anno, quant )
+   @time process_events( args["out"] * ".psi.gz" , lib, anno, quant, isnodeok=!args["junc-only"] )
    println(STDERR, "Whippet done." )
 end
 

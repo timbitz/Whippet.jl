@@ -150,7 +150,7 @@ end
 function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; 
                                             value_bool=true, length=1.0 )
    push!( pgraph.count, value_bool ? edg.value : 0.0 )
-   push!( pgraph.length, 1.0 )
+   push!( pgraph.length, length )
    push!( pgraph.nodes, IntSet([edg.first, edg.last]) )
    reduce_graph!( pgraph )
    if edg.first < pgraph.min
@@ -206,22 +206,22 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath,
    for n in minv:maxv # lets go through all possible nodes
       if n in ipath.nodes
          push!( iset, 1 )
-         ipath.length += 1 # sgquant.leng[n]
+         ipath.length += sgquant.leng[n] # 1
       end
       for i in 1:length(egraph.nodes)
          if n in egraph.nodes[i]
             push!( iset, i+1 )
-            egraph.length[i] += 1 #sgquant.leng[n]
+            egraph.length[i] += sgquant.leng[n] # 1
          end
       end
       #=                                            =#
       length( iset ) == 0 && continue # unspliced node
       if length( iset ) == 1 # non-ambiguous node
          if first( iset ) == 1 # belongs to inclusion
-            @fastmath ipath.count += sgquant.node[n] * bias / sgquant.leng[n]
+            @fastmath ipath.count += sgquant.node[n] #* bias #/ sgquant.leng[n]
          else # belongs to exclusion
             idx = first( iset ) - 1
-            @fastmath egraph.count[idx] += sgquant.node[n] * bias / sgquant.leng[n]
+            @fastmath egraph.count[idx] += sgquant.node[n] #* bias #/ sgquant.leng[n]
          end
       else
          #check if there is already an entry for this set of paths
@@ -229,7 +229,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath,
          exists = false 
          for am in ambig
             if iset == am
-               @fastmath am.multiplier += sgquant.node[n] * bias / sgquant.leng[n]
+               @fastmath am.multiplier += sgquant.node[n] #* bias #/ sgquant.leng[n]
                exists = true
                break
             end
@@ -237,7 +237,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath,
          if !exists
             push!( ambig, AmbigCounts( collect(iset), 
                                        ones( length(iset) ) / length(iset), 
-                                       1.0, sgquant.node[n] * bias / sgquant.leng[n] ) )
+                                       1.0, sgquant.node[n] )) #/ sgquant.leng[n] ) )
          end
       end
       empty!( iset ) # clean up
@@ -287,7 +287,7 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, ipath::PsiPath,
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
-                           node::NodeInt, motif::EdgeMotif, bias::Float64 )
+                           node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool )
 
    inc_path   = Nullable{PsiPath}()
    exc_graph  = Nullable{PsiGraph}()
@@ -317,13 +317,13 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       # if the min or max of any exclusion set is different than the min/max
       # of the inclusion set we have a disjoint graph module and we can go
       # ahead and try to bridge nodes by extending with potentially ambiguous edges
-      if ( get(exc_graph).min != first(get(inc_path).nodes) ||
-           get(exc_graph).max != last(get(inc_path).nodes) )
+#      if ( get(exc_graph).min != first(get(inc_path).nodes) ||
+#           get(exc_graph).max != last(get(inc_path).nodes) )
          ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_path.value, ambig_edge, node )
          !isnull( ambig_edge ) && add_edge_counts!( ambig_cnt.value, inc_path.value, 
                                                     exc_graph.value, get(ambig_edge) )
-      end
-      add_node_counts!( ambig_cnt.value, inc_path.value, exc_graph.value, sgquant, bias )
+#      end
+      isnodeok && add_node_counts!( ambig_cnt.value, inc_path.value, exc_graph.value, sgquant, bias )
    end # end expanding module
 
   # lets finish up now.
@@ -367,7 +367,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, ipath::P
       #iterate through local edges to the left
       for edg in intersect( edges, (idx,idx) )
          # if this is a new edge and connects to our idx from the left
-         if isconnecting( edg, idx ) && edg.last == idx #&& edg.first >= minv
+         if isconnecting( edg, idx ) && edg.last == idx && edg.first >= minv
             shouldpush = false
             if edg.last in pgraph
                push!( pgraph, edg, value_bool=false )
@@ -396,7 +396,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, ipath::P
       # iterate through local edges to the right
       for edg in intersect( edges, (idx,idx) )
          # if this is a new edge and connects to our idx from the left
-         if isconnecting( edg, idx ) && edg.first == idx #&& edg.last <= maxv
+         if isconnecting( edg, idx ) && edg.first == idx && edg.last <= maxv
             shouldpush = false
             if edg.first in pgraph
                push!( pgraph, edg, value_bool=false )
@@ -423,14 +423,14 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, ipath::P
    ambig_edge
 end
 
-function process_events( outfile, lib::GraphLib, anno::Refset, graphq::GraphLibQuant )
+function process_events( outfile, lib::GraphLib, anno::Refset, graphq::GraphLibQuant; isnodeok=true )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream(io)
    for g in 1:length(lib.graphs)
       name = lib.names[g]
       chr,strand = anno.geneset[ name ].info
       #println(STDERR, "$g, $name, $chr, $strand" )
-      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand) )
+      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), isnodeok=isnodeok )
    end
    close(stream)
    close(io)
@@ -439,7 +439,7 @@ end
 typealias GeneMeta Tuple{Genename, Seqname, Char}
 typealias BufOut BufferedStreams.BufferedOutputStream
 
-function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta )
+function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; isnodeok=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -454,7 +454,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
           
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
-         psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias )
+         psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          if !isnull( psi )
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
             output_psi( io, get(psi), inc, exc, ambig_cnt, motif, sg, i, info, bias  ) # TODO bias
