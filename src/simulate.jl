@@ -111,7 +111,7 @@ function simulate_transcripts!( simul::SimulGene, sg::SpliceGraph )
    if length(sg.nodelen) > 2
       mod_start = rand( 1:(length(sg.nodelen) - simul.complexity) )
       for i in 1:simul.complexity
-         combset = collect( combinations( mod_start:(mod_start+simul.complexity), i ) )
+         combset = collect( combinations( mod_start:(mod_start+simul.complexity-1), i ) )
          for s in combset
             trans = SimulTranscript( sg"", Vector{UInt}() )
             collect_nodes!( trans, sg, 1:length(sg.nodelen), skip=s )
