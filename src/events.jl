@@ -150,7 +150,7 @@ end
 function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; 
                                             value_bool=true, length=1.0 )
    push!( pgraph.count, value_bool ? edg.value : 0.0 )
-   push!( pgraph.length, length )
+   push!( pgraph.length, value_bool ? length : 0.0 )
    push!( pgraph.nodes, IntSet([edg.first, edg.last]) )
    reduce_graph!( pgraph )
    if edg.first < pgraph.min
