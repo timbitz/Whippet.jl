@@ -19,17 +19,6 @@ function parse_cmd()
     "paired_mate.fastq[.gz]"
       arg_type = ASCIIString
       required = false
-    "--no-tpm"
-      help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
-      action   = :store_true
-    "--seed_len", "-K"
-      help = "Seed length (default 18)"
-      arg_type = Int
-      default  = 18
-    "--seed_try", "-M"
-      help = "Number of failed seeds to try before giving up (default 3)"
-      arg_type = Int
-      default  = 3
     "--index", "-x"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = ASCIIString
@@ -38,8 +27,19 @@ function parse_cmd()
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../output" )
+    "--seed_len", "-K"
+      help = "Seed length"
+      arg_type = Int
+      default  = 18
+    "--seed_try", "-M"
+      help = "Number of failed seeds to try before giving up"
+      arg_type = Int
+      default  = 3
     "--junc-only", "-j"
       help     = "Only use junction reads, no internal exon reads will be considered."
+      action   = :store_true
+    "--no-tpm"
+      help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
   end
   return parse_args(s)
