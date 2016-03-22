@@ -40,14 +40,14 @@ const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       # Alt PolyA    RS RS
       MOTIF_TABLE[ 0b011011 + 1 ] = TXEN_MOTIF
 
-      # Alt FirstEx  SL LS
-      MOTIF_TABLE[ 0b000010 + 1 ] = ALTF_MOTIF
-#      # Alt FirstEx  LR LS
-#      MOTIF_TABLE[ 0b000010 + 1 ] = ALTF_MOTIF
-      # Alt LastEx   SR RS
-      MOTIF_TABLE[ 0b001011 + 1 ] = ALTL_MOTIF
-#      # Alt LastEx   LR RS
-#      MOTIF_TABLE[ 0b100011 + 1 ] = ALTL_MOTIF
+      # Alt FirstEx  LS LL
+      MOTIF_TABLE[ 0b010101 + 1 ] = ALTF_MOTIF
+      # Alt FirstEx  LS LR
+      MOTIF_TABLE[ 0b010100 + 1 ] = ALTF_MOTIF
+      # Alt LastEx   RR SR
+      MOTIF_TABLE[ 0b110001 + 1 ] = ALTL_MOTIF
+      # Alt LastEx   LR SR
+      MOTIF_TABLE[ 0b100001 + 1 ] = ALTL_MOTIF
 
       # RetainedInt  LL RR
       MOTIF_TABLE[ 0b101110 + 1 ] = RETI_MOTIF
@@ -76,8 +76,8 @@ Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE
 
 Base.convert{S <: AbstractString}(::Type{S}, edg::EdgeMotif ) = MOTIF_STRING[ UInt8(edg) + 1 ]
 
-isobligate(  motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
-#isobligate( motif::EdgeMotif ) = (0 <= UInt8(motif) <= 1)
+#isobligate(  motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
+isobligate( motif::EdgeMotif ) = (0 <= UInt8(motif) <= 1)
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
 
 isspanning{I <: AbstractInterval, T <: Integer}( edge::I, node::T ) = edge.first < node < edge.last ? true : false
@@ -355,6 +355,15 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
    end
 end
 
+function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
+                              node::NodeInt, motif::EdgeMotif )
+   
+   utr_graph  = Nullable{PsiGraph}()
+   ambig_cnt  = Nullable{Vector{AmbigCounts}}()
+
+   
+end
+
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
                            node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool )
 
@@ -362,6 +371,9 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    exc_graph  = Nullable{PsiGraph}()
    ambig_edge = Nullable{Vector{IntervalValue}}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
+
+   connecting_val = 0.0 
+   spanning_val   = 0.0
 
    for edg in intersect( sgquant.edge, (node, node) )
       if   isconnecting( edg, node )
@@ -375,6 +387,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
          end
          push!( inc_graph.value, edg, value_bool=false )
          push!( ambig_edge.value, edg )
+         connecting_val += edg.value
       elseif isspanning( edg, node )
          if isnull( exc_graph ) #don't allocate unless there is alt splicing
             exc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
@@ -386,6 +399,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
          end
          push!( exc_graph.value, edg, value_bool=false )
          push!( ambig_edge.value, edg )
+         spanning_val += edg.value
       else
          error("Edge has to be connecting or spanning!!!!" )
       end
@@ -413,8 +427,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    psi = Nullable{Float64}()
    if isnull( exc_graph ) # no spanning edge
       # check if we have both inclusion edges represented, or one if alt 5'/3'
-      if !isnull( inc_graph ) && ((sum( get(inc_graph).length ) >= 2) || 
-                                  (sum( get(inc_graph).length ) >= 1  && 
+      if !isnull( inc_graph ) && ((connecting_val >= 4) || 
+                                  (connecting_val >= 2  && 
                                    isaltsplice(motif)))
           psi = Nullable( 0.99 ) #&& likelihood_ci( psi, inc_cnt, z=1.64 )
       else
@@ -422,7 +436,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       end
    else # there is skipping
       if isnull( inc_graph )
-         if sum( get(exc_graph).count ) >= 1
+         if spanning_val >= 2
              psi = Nullable( 0.0 ) #&& likelihood_ci( psi, exc_graph.count, z=1.64 )
          else
             # NA
@@ -535,7 +549,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       motif == NONE_MOTIF && continue
       if isobligate( motif ) # is utr event
-          
+         
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
