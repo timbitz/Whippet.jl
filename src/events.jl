@@ -427,8 +427,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    psi = Nullable{Float64}()
    if isnull( exc_graph ) # no spanning edge
       # check if we have both inclusion edges represented, or one if alt 5'/3'
-      if !isnull( inc_graph ) && ((connecting_val >= 4) || 
-                                  (connecting_val >= 2  && 
+      if !isnull( inc_graph ) && ((connecting_val >= 2) || 
+                                  (connecting_val >= 1  && 
                                    isaltsplice(motif)))
           psi = Nullable( 0.99 ) #&& likelihood_ci( psi, inc_cnt, z=1.64 )
       else
@@ -436,7 +436,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       end
    else # there is skipping
       if isnull( inc_graph )
-         if spanning_val >= 2
+         if spanning_val >= 1
              psi = Nullable( 0.0 ) #&& likelihood_ci( psi, exc_graph.count, z=1.64 )
          else
             # NA
