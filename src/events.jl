@@ -361,7 +361,11 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    utr_graph  = Nullable{PsiGraph}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
 
-   
+   if motif == TXST_MOTIF
+      
+   elseif motif == TXEN_MOTIF
+
+   end 
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
