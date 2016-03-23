@@ -55,30 +55,29 @@ end
 
 process_reads!( parser, param::AlignParam, lib::GraphLib,
                 quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=100) = _process_reads!( parser, param, lib, quant,
-                                                                                               multi, bufsize=bufsize )
+                                                                                               multi )
 
 function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=100 )
-   mapped = 0
-   reads  = allocate_chunk( parser, bufsize )
-   mean_readlen = 0.0
-   total = 0
-   while length(reads) > 0
-      read_chunk!( reads, parser )
-      for i in 1:length(reads)
-         align = ungapped_align( param, lib, reads[i] )
-         if !isnull( align )
-            if length( get(align) ) > 1
-               push!( multi, Multimap( get(align) ) )
-            else
-               count!( quant, get(align)[1] )
-            end
-            mapped += 1
+                         multi::Vector{Multimap} )
+
+   const curread  = eltype(parser)() 
+   const curalign = SGAlignment()
+   mean_readlen   = 0.0
+   mapped         = 0
+   total          = 0
+   while read!( parser, curread )
+      align = ungapped_align( param, lib, curread )
+      if !isnull( align )
+         if length( align.value ) > 1
+            push!( multi, Multimap( align.value ) )
+         else
+            count!( quant, align.value[1] )
          end
-      
-         total += 1
-         @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / total
+         mapped += 1
       end
+      
+      total += 1
+      @fastmath mean_readlen += (length(curread.seq) - mean_readlen) / total
    end # end while
    mapped,total,mean_readlen
 end

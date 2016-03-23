@@ -35,9 +35,20 @@ type SGAlignment <: UngappedAlignment
    isvalid::Bool
 end
 
+SGAlignment() = SGAlignment(0, 0, 0, SGNode[], true, false)
+
 typealias SGAlignVec Nullable{Vector{SGAlignment}}
 
 const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
+
+function Base.empty!( align::SGAlignment )
+   align.matches = 0
+   align.mistmatches = 0
+   align.offset = 0
+   empty!( align.path )
+   align.strand = true
+   align.isvalid = false
+end
 
 score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
 
