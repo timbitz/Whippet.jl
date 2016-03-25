@@ -54,11 +54,11 @@ end
 
 
 process_reads!( parser, param::AlignParam, lib::GraphLib,
-                quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=500) = _process_reads!( parser, param, lib, quant,
+                quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=50) = _process_reads!( parser, param, lib, quant,
                                                                                                multi, bufsize=bufsize )
 
 function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=100 )
+                         multi::Vector{Multimap}; bufsize=50 )
   
    const reads  = allocate_chunk( parser, size=bufsize )
    mean_readlen = 0.0
@@ -79,6 +79,7 @@ function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::Graph
             @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / mapped
          end
       end
+      
    end # end while
    mapped,total,mean_readlen
 end
