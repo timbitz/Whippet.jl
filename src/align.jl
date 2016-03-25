@@ -75,10 +75,22 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_lef
    def_sa,curpos
 end
 
+function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
+   i = 1
+   while i <= length( arr )
+      if threshold - score( arr[i] ) > buffer
+         splice!( arr, i )
+         i -= 1
+      end
+      i += 1
+   end
+end
+
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
    const seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
    #@bp
-   res   = Nullable{Vector{SGAlignment}}()
+   res      = Nullable{Vector{SGAlignment}}()
+   maxscore = 0.0
    for s in FMIndexes.LocationIterator( seed, lib.index )
       const geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
@@ -95,9 +107,23 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
          if isnull( res )
             res = Nullable(SGAlignment[ align ])
          else
-            push!(get(res), align)
-         end
-      end
+            # new best score
+            if score(align) > maxscore
+               # better than threshold for all of the previous scores
+               if score(align) - maxscore > p.score_range
+                  length( res.value ) >= 1 && empty!( res.value )
+               else # keep at least one previous score
+                  splice_by_score!( res.value, score(align), p.score_range ) 
+               end
+               maxscore = score( align )
+               push!( res.value, align )
+            else # new score is lower than previously seen
+               if maxscore - score(align) <= p.score_range # but tolerable
+                  push!( res.value, align )
+               end
+            end # end score vs maxscore
+         end # end isnull
+      end # end isvalid
    end
    # if !stranded and no valid alignments, run reverse complement
    if ispos && !p.is_stranded && isnull( res )
@@ -108,32 +134,6 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    res
 end
 
-function ungapped_align_safe( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
-   seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
-   locit = FMIndexes.LocationIterator( seed, lib.index )
-   res   = Nullable{Vector{SGAlignment}}()
-   for s in locit
-      geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true )
-      align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] + p.seed_length,
-                                   read, readloc + p.seed_length, ispos=ispos )
-      align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), s - lib.offset[geneind] - 1,
-                                   read, readloc - 1, ispos=ispos, align=align, nodeidx=align.path[1].node )
-      if align.isvalid
-         if isnull( res )
-            res = Nullable(Vector{SGAlignment}())
-         end
-         push!(get(res), align)
-      end
-   end
-   # if !stranded and no valid alignments, run reverse complement
-   if ispos && !p.is_stranded && isnull( res )
-      rc = copy( read )
-      rc.seq = Bio.Seq.reverse_complement( read.seq )
-      reverse!( rc.metadata.quality )
-      res = ungapped_align( p, lib,   rc, ispos=false, anchor_left=!anchor_left )
-   end
-   res
-end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
