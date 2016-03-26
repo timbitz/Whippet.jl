@@ -571,16 +571,13 @@ function count_write( io::BufOut, nodestr, countstr, lengstr )
    write( io, string(lengstr) )
    write( io, ")" )
 end
-function count_write( io::BufOut, inc::PsiPath )
-   count_write( io, inc.nodes, inc.count, inc.length )
-   write( io, "\t" )
-end
-function count_write( io::BufOut, exc::PsiGraph )
-   for i in 1:length(exc.nodes)
-      count_write( io, exc.nodes[i], exc.count[i], exc.length[i] )
-      (i < length(exc.nodes)) && write( io, "," )
+
+function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
+   for i in 1:length(pgraph.nodes)
+      count_write( io, pgraph.nodes[i], pgraph.count[i], pgraph.length[i] )
+      (i < length(pgraph.nodes)) && write( io, "," )
    end
-   #write( io, "\t" )
+   tab && write( io, '\t' )
 end
 
 
@@ -591,8 +588,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
    # gene
      tab_write( io, info[1] )
    # coordinate
-   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1 )
-         write( io, '\t' )
+   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
      tab_write( io, info[3] )
    # event_type
      tab_write( io, convert(ASCIIString, motif) )
@@ -608,8 +604,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
       #   write( io, "," )
       #end
       #write( io, string( get(exc).nodes[end] ) )
-      count_write( io, get(inc) )
-            write( io, '\t' )
+      count_write( io, get(inc), tab=true )
       count_write( io, get(exc) )
    else
         tab_write( io, "NA" )
