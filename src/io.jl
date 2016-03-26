@@ -80,11 +80,13 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
    cigar = ""
    curpos = align.offset
    leftover = 0
+   total = 0
    for idx in 1:length( align.path )
       const i = align.path[idx].node
       i <= length(sg.nodeoffset) || return cigar
       if matchleft + curpos <= sg.nodeoffset[i] + sg.nodelen[i] 
          cigar *= string( matchleft + leftover ) * "M"
+         total += matchleft + leftover
          matchleft = 0
          leftover = 0
       else
@@ -97,6 +99,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
             const intron = sg.nodecoord[nexti] - (sg.nodecoord[i] + sg.nodelen[i] - 1)
             if intron > 0
                cigar *= string( curspace ) * "M" * string( intron ) * "N"
+               total += curspace
             else
                leftover += curspace
             end
@@ -105,9 +108,10 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
    end
    if (leftover > 0 || matchleft > 0) && matchleft + leftover > 0
       cigar *= string( matchleft + leftover ) * "M"
+      total += matchleft + leftover
    end
-   if align.matches < readlen
-      soft = readlen - align.matches
+   if total < readlen
+      soft = readlen - total
       cigar *= string( soft ) * "S"
    end
    cigar
