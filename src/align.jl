@@ -85,7 +85,7 @@ end
    def_sa,curpos
 end
 
-@inline function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
+function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
    i = 1
    while i <= length( arr )
       if threshold - score( arr[i] ) > buffer
@@ -293,7 +293,7 @@ end
 
 
 
-@inline function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::UInt32, 
+function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::UInt32, 
                                   read::SeqRecord, ridx::Int, rkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
@@ -456,7 +456,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    align
 end
 
-@inline function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
+function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
                                   read::SeqRecord, ridx::Int, lkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
