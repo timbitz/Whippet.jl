@@ -41,15 +41,6 @@ typealias SGAlignVec Nullable{Vector{SGAlignment}}
 
 const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
-function Base.empty!( align::SGAlignment )
-   align.matches = 0
-   align.mistmatches = 0
-   align.offset = 0
-   empty!( align.path )
-   align.strand = true
-   align.isvalid = false
-end
-
 score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
 
 Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
@@ -59,6 +50,15 @@ Base.(:(<=))( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 
 # add prob of being accurate base to mismatch, rather than integer.
 phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
+
+function Base.empty!( align::SGAlignment ) 
+   align.matches = 0 
+   align.mistmatches = 0 
+   align.offset = 0 
+   empty!( align.path ) 
+   align.strand = true 
+   align.isvalid = false 
+end
 
 function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
    const def_sa = 2:1
@@ -102,7 +102,9 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    #@bp
    res      = Nullable{Vector{SGAlignment}}()
    maxscore = 0.0
-   for s in FMIndexes.LocationIterator( seed, lib.index )
+#   for s in FMIndexes.LocationIterator( seed, lib.index ) # rm extra malloc
+   for sidx in 1:length(seed)
+      const s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
       const geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
       #@bp
@@ -113,7 +115,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), 
                                    s - lib.offset[geneind] - 1,
                                    read, readloc - 1, ispos=ispos, align=align, 
-                                   nodeidx=align.path[1].node )
+                                   nodeidx=align.path[1].node ) 
       if align.isvalid
          if isnull( res )
             res = Nullable(SGAlignment[ align ])
@@ -133,8 +135,8 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
                   push!( res.value, align )
                end
             end # end score vs maxscore
-         end # end isnull
-      end # end isvalid
+         end # end isnull 
+      end # end isvalid 
    end
    # if !stranded and no valid alignments, run reverse complement
    if ispos && !p.is_stranded && isnull( res )

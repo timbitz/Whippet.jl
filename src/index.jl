@@ -22,16 +22,15 @@ immutable GraphLib <: SeqLibrary
 end
 
 # Binary search.
-function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1; lower=false )
+@inbounds function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1; lower=false )
    low == high && return(lower ? low - 1 : 0)
-   mid = ((high - low) >> 1) + low
+   const mid = ((high - low) >> 1) + low
    arr[mid] == elem && return(mid)
    if arr[mid] > elem
-      ret = search_sorted(arr, elem, low, mid, lower=lower)
+      return search_sorted(arr, elem, low, mid, lower=lower)
    else
-      ret = search_sorted(arr, elem, mid+1, high, lower=lower)
+      return search_sorted(arr, elem, mid+1, high, lower=lower)
    end
-   ret
 end
 
 offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, Coordint(offset), lower=true) )
