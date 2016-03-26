@@ -136,9 +136,9 @@ function write_sam_header( io::BufOut, lib::GraphLib )
          refs[name] = len + 10000
       end
    end
-   write( io, "\@HD\tVN:1.0\tSO:unsorted\n" )
+   write( io, "@HD\tVN:1.0\tSO:unsorted\n" )
    for k in keys(refs)
-      write( io, "\@SQ\tSN:" )
+      write( io, "@SQ\tSN:" )
       tab_write( io, k )
       write( io, "LN:" * string( refs[k] ) )
       write( io, '\n' )
