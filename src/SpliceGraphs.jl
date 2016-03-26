@@ -2,75 +2,75 @@
 
 module SpliceGraphs
 
-   import DataStructures
-   import BufferedStreams
-   import Bio
-   import FMIndexes
-   import IntArrays
-   import IntervalTrees
-   import Libz
+import DataStructures
+import BufferedStreams
+import Bio
+import FMIndexes
+import IntArrays
+import IntervalTrees
+import Libz
 
-   using DataStructures
-   using BufferedStreams
-   using Bio.Seq
-   using FMIndexes
-   using IntArrays
-   using IntervalTrees
-   using Libz
+using DataStructures
+using BufferedStreams
+using Bio.Seq
+using FMIndexes
+using IntArrays
+using IntervalTrees
+using Libz
 
-   include("types.jl")
-   include("bio_nuc_safepatch.jl")
-   include("refflat.jl")
-   include("graph.jl")
-   include("edges.jl") 
-   include("index.jl")
-   include("align.jl")
-   include("quant.jl")
-   include("reads.jl")
-   include("io.jl")
-   include("events.jl")
+include("types.jl")
+include("bio_nuc_safepatch.jl")
+include("refflat.jl")
+include("graph.jl")
+include("edges.jl") 
+include("index.jl")
+include("align.jl")
+include("quant.jl")
+include("reads.jl")
+include("io.jl")
+include("events.jl")
 
-   if VERSION >= v"0.5.0-dev"
-      using Base.Threads
-      include("threaded.jl")
-   end
+if VERSION >= v"0.5.0-dev"
+   using Base.Threads
+   include("threaded.jl")
+end
 
-   export SpliceGraph,
-          SpliceGraphQuant,
-          GraphLib,
-          GraphLibQuant,
-          GeneInfo,
-          SGNode,
-          Edges,
-          EdgeType,
-          EDGETYPE_LS,
-          EDGETYPE_SL,
-          EDGETYPE_RS,
-          EDGETYPE_SR,
-          EDGETYPE_LR,
-          EDGETYPE_LL,
-          EDGETYPE_RR,
-          Kmer,
-          SGKmer,
-          SGNucleotide,
-          SGNucleotideSequence,
-          @sg_str,
-          NucleotideSequence,
-          Refset, Reftx, Refgene,
-          Multimap,
-          AlignParam,
-          ungapped_align,
-          make_fqparser,
-          isgzipped,
-          load_refflat,
-          fasta_to_index,
-          process_reads!,
-          calculate_tpm!,
-          rec_gene_em!,
-          output_tpm,
-          assign_ambig!,
-          fixpath,
-          effective_lengths!,
-          global_bias,
-          process_events 
+export SpliceGraph,
+       SpliceGraphQuant,
+       GraphLib,
+       GraphLibQuant,
+       GeneInfo,
+       SGNode,
+       Edges,
+       EdgeType,
+       EDGETYPE_LS,
+       EDGETYPE_SL,
+       EDGETYPE_RS,
+       EDGETYPE_SR,
+       EDGETYPE_LR,
+       EDGETYPE_LL,
+       EDGETYPE_RR,
+       Kmer,
+       SGKmer,
+       SGNucleotide,
+       SGNucleotideSequence,
+       @sg_str,
+       NucleotideSequence,
+       Refset, Reftx, Refgene,
+       Multimap,
+       AlignParam,
+       ungapped_align,
+       make_fqparser,
+       isgzipped,
+       load_refflat,
+       fasta_to_index,
+       process_reads!,
+       calculate_tpm!,
+       rec_gene_em!,
+       output_tpm,
+       assign_ambig!,
+       fixpath,
+       effective_lengths!,
+       global_bias,
+       process_events 
 end
