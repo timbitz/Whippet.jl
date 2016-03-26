@@ -29,7 +29,7 @@ function timerr_print(elapsedtime, bytes, gctime, allocs)
         if gctime > 0
             @printf(STDERR, ", %.2f%% gc time", 100*gctime/elapsedtime)
         end
-        print(")")
+        print(STDERR, ")")
     elseif gctime > 0
         @printf(STDERR, ", %.2f%% gc time", 100*gctime/elapsedtime)
     end
