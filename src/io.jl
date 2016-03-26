@@ -18,7 +18,7 @@ end
 
 function sam_flag( align::SGAlignment, lib::GraphLib, ind )
    flag = UInt16(0)
-   lib.info[ ind ].strand || flag &= 0x10
+   lib.info[ ind ].strand || (flag &= 0x10)
    
 end
 
