@@ -75,7 +75,7 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind )
    flag   
 end
 
-function cigar_string( align::SGAlignment, sg::SpliceGraph )
+function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matches )
    matchleft = align.matches
    cigar = ""
    curpos = align.offset
@@ -83,7 +83,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph )
    for idx in 1:length( align.path )
       const i = align.path[idx].node
       i <= length(sg.nodeoffset) || return cigar
-      if matchleft + curpos <= sg.nodeoffset[i] + sg.nodelen[i] - 1
+      if matchleft + curpos <= sg.nodeoffset[i] + sg.nodelen[i] 
          cigar *= string( matchleft + leftover ) * "M"
          matchleft = 0
          leftover = 0
@@ -103,8 +103,12 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph )
          end
       end
    end
-   if leftover > 0 || matchleft > 0
+   if (leftover > 0 || matchleft > 0) && matchleft + leftover > 0
       cigar *= string( matchleft + leftover ) * "M"
+   end
+   if align.matches < readlen
+      soft = readlen - align.matches
+      cigar *= string( soft ) * "S"
    end
    cigar
 end
@@ -118,7 +122,7 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) )
    tab_write( io, string(mapq) )
-   tab_write( io, cigar_string( align, sg ) )
+   tab_write( io, cigar_string( align, sg, length(read.seq) ) )
    tab_write( io, '*' )
    tab_write( io, '0' )
    tab_write( io, '0' )

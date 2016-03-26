@@ -110,11 +110,11 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), 
                                    s - lib.offset[geneind] + p.seed_length, 
                                    read, readloc + p.seed_length, ispos=ispos )
-      #println("$ispos $align") 
+
       align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), 
                                    s - lib.offset[geneind] - 1,
                                    read, readloc - 1, ispos=ispos, align=align, 
-                                   nodeidx=align.path[1].node ) 
+                                   nodeidx=align.path[1].node )
       if align.isvalid
          if isnull( res )
             res = Nullable(SGAlignment[ align ])
