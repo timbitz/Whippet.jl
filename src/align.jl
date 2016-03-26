@@ -41,7 +41,7 @@ typealias SGAlignVec Nullable{Vector{SGAlignment}}
 
 const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
-score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
+@inline score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
 
 Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -49,7 +49,7 @@ Base.(:(>=))( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
 Base.(:(<=))( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 
 # add prob of being accurate base to mismatch, rather than integer.
-phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
+@inline phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
 
 function Base.empty!( align::SGAlignment ) 
    align.matches = 0 
@@ -60,9 +60,8 @@ function Base.empty!( align::SGAlignment )
    align.isvalid = false 
 end
 
-function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
+@inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
    const def_sa = 2:1
-   cnt = 1000
    ctry = 1
    if offset_left
       const increment = p.seed_inc
@@ -73,8 +72,8 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_lef
    end
    const maxright = length(read.seq) - p.seed_length - p.seed_buffer
    while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
-      sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
-      cnt = length(sa)
+      const sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
+      const cnt = length(sa)
       ctry += 1
       #println("$sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
       if cnt == 0 || cnt > p.seed_tolerate
@@ -86,7 +85,7 @@ function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_lef
    def_sa,curpos
 end
 
-function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
+@inline function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
    i = 1
    while i <= length( arr )
       if threshold - score( arr[i] ) > buffer
@@ -293,7 +292,7 @@ end
 
 
 
-function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::UInt32, 
+@inline function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::UInt32, 
                                   read::SeqRecord, ridx::Int, rkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
@@ -317,7 +316,7 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
 end
 
 # Function Cumulative Array
-function rev_cumarray!{T<:Vector}( array::T )
+@inline function rev_cumarray!{T<:Vector}( array::T )
    for i in (length(array)-1):-1:1
       array[i] += array[i+1]
    end 
@@ -456,7 +455,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    align
 end
 
-function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
+@inline function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
                                   read::SeqRecord, ridx::Int, lkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
