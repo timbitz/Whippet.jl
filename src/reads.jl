@@ -67,6 +67,7 @@ function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::Graph
    mapped       = 0
    if sam
       stdbuf = BufferedOutputStream( STDOUT )
+      write_sam_header( stdbuf, lib )
    end
    while length(reads) > 0
       read_chunk!( reads, parser )

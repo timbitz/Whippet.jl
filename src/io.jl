@@ -127,3 +127,20 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    write( io, '\n' )
 end
 
+function write_sam_header( io::BufOut, lib::GraphLib )
+   refs = Dict{ASCIIString,Int}()
+   for gind in 1:length(lib.graphs)
+      name = lib.info[gind].name
+      len  = max( lib.graphs[gind].nodecoord... )
+      if !haskey( refs, name ) || refs[name] < len
+         refs[name] = len + 10000
+      end
+   end
+   write( io, "\@HD\tVN:1.0\tSO:unsorted\n" )
+   for k in keys(refs)
+      write( io, "\@SQ\tSN:" )
+      tab_write( io, k )
+      write( io, "LN:" * string( refs[k] ) )
+      write( io, '\n' )
+   end
+end
