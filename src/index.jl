@@ -8,6 +8,7 @@ immutable SeqLib <: SeqLibrary
    seq::NucleotideSequence
    offset::Vector{Coordint}
    names::Vector{Genename}
+   info::Vector{GeneInfo}
    index::FMIndex
    sorted::Bool
 end
@@ -15,6 +16,7 @@ end
 immutable GraphLib <: SeqLibrary
    offset::Vector{Coordint}
    names::Vector{Genename}
+   info::Vector{GeneInfo}
    graphs::Vector{SpliceGraph}
    edges::Edges
    index::FMIndex
@@ -131,6 +133,7 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    xcript  = sg""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{Genename}()
+   xinfo   = Vector{GeneInfo}()
    xgraph  = Vector{SpliceGraph}()
    # set up splice graphs
    runoffset = 0
@@ -149,6 +152,7 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
          xcript  *= curgraph.seq
          push!(xgraph, curgraph)
          push!(xgenes, g)
+         push!(xinfo, GeneInfo( ref.geneset[g].info... ))
          push!(xoffset, runoffset)
          runoffset += length(curgraph.seq) 
       end
@@ -163,7 +167,7 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    println( STDERR, "Building edges.." ) 
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
-   GraphLib( xoffset, xgenes, xgraph, edges, fm, true)
+   GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true)
 end
 
 fixpath( str::ASCIIString ) = abspath( expanduser( str ) )

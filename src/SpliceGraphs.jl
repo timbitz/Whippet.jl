@@ -38,6 +38,7 @@ module SpliceGraphs
           SpliceGraphQuant,
           GraphLib,
           GraphLibQuant,
+          GeneInfo,
           SGNode,
           Edges,
           EdgeType,

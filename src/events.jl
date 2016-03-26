@@ -525,21 +525,19 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, igraph::
    ambig_edge
 end
 
-function process_events( outfile, lib::GraphLib, anno::Refset, graphq::GraphLibQuant; isnodeok=true )
+function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=true )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream(io)
    for g in 1:length(lib.graphs)
       name = lib.names[g]
-      chr,strand = anno.geneset[ name ].info
+      chr  = lib.info[g].name
+      strand = lib.info[g].strand ? '+' : '-'
       #println(STDERR, "$g, $name, $chr, $strand" )
       _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), isnodeok=isnodeok )
    end
    close(stream)
    close(io)
 end
-
-typealias GeneMeta Tuple{Genename, Seqname, Char}
-typealias BufOut BufferedStreams.BufferedOutputStream
 
 function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; isnodeok=false )
    # Heres the plan:
