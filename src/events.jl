@@ -563,20 +563,6 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    end
 end
 
-tab_write{S <: AbstractString}( io::BufOut, str::S ) = (write( io, str ); write( io, '\t'  ))
-tab_write( io::BufOut, str::Char ) = (write( io, str ); write( io, '\t'  ))
-function coord_write( io::BufOut, chr, first, last )
-   write( io, chr   )
-   write( io, ':'   )
-   write( io, string(first) )
-   write( io, '-'   )
-   write( io, string(last)  )
-end
-function coord_write( io::BufOut, chr, first, last, strand )
-   coord_write( io, chr, first, last )
-   write( io, ':'    )
-   write( io, strand )
-end
 function count_write( io::BufOut, nodestr, countstr, lengstr )
    write( io, string(nodestr) )
    write( io, "-" )

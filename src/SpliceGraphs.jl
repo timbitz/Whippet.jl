@@ -27,6 +27,7 @@ module SpliceGraphs
    include("align.jl")
    include("quant.jl")
    include("reads.jl")
+   include("io.jl")
    include("events.jl")
 
    if VERSION >= v"0.5.0-dev"
