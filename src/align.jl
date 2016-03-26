@@ -230,7 +230,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                sgidx += 1
                ridx  -= 1 # offset the lower ridx += 1
                nodeidx += 1
-               push!( align.path, SGNode( geneind, nodeidx ) )  
+               nodeidx <= length(sg.nodelen) && push!( align.path, SGNode( geneind, nodeidx ) )  
                #@bp
          end
          # ignore 'N'
@@ -399,7 +399,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
                sgidx -= 1
                ridx  += 1 # offset the lower ridx += 1
                nodeidx -= 1
-               unshift!( align.path, SGNode( geneind, nodeidx ) )  
+               nodeidx > 0 && unshift!( align.path, SGNode( geneind, nodeidx ) )  
          end
          # ignore 'N'
       else 
@@ -452,6 +452,9 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    # as junction spanning reads.  Currently they would not be.
    if score(align) >= p.score_min && length(align.path) == 1  
       align.isvalid = true 
+   end
+   if sgidx < align.offset
+      align.offset = sgidx
    end
    align
 end

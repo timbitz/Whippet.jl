@@ -7,7 +7,7 @@ dir = splitdir(@__FILE__)[1]
 
 push!( LOAD_PATH, dir * "/../src" )
 import SpliceGraphs
-@everywhere using SpliceGraphs
+using SpliceGraphs
 
 function parse_cmd()
   s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
@@ -20,19 +20,22 @@ function parse_cmd()
       arg_type = ASCIIString
       required = false
     "--index", "-x"
-      help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
+      help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../index/graph" )
     "--out", "-o"
-      help = "Where should the gzipped output go 'dir/prefix'?"
+      help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../output" )
+    "--sam", "-s"
+      help     = "Should SAM format be sent to stdout?"
+      action   = :store_true
     "--seed_len", "-K"
-      help = "Seed length"
+      help     = "Seed length"
       arg_type = Int
       default  = 18
     "--seed_try", "-M"
-      help = "Number of failed seeds to try before giving up"
+      help     = "Number of failed seeds to try before giving up"
       arg_type = Int
       default  = 3
     "--junc-only", "-j"
@@ -68,7 +71,7 @@ function main()
       return #TODO
    else
       println(STDERR, "Processing reads...")
-      @time mapped,total,readlen = process_reads!( parser, param, lib, quant, multi )
+      @time mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
       readlen = round(Int, readlen)
       println(STDERR, "Finished $mapped mapped reads of length $readlen out of a total $total reads...")
    end

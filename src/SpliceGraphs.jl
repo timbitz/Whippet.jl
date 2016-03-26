@@ -69,8 +69,8 @@ export SpliceGraph,
        rec_gene_em!,
        output_tpm,
        assign_ambig!,
-       fixpath,
        effective_lengths!,
        global_bias,
-       process_events 
+       process_events, 
+       fixpath
 end

@@ -54,16 +54,20 @@ end
 
 
 process_reads!( parser, param::AlignParam, lib::GraphLib,
-                quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=50) = _process_reads!( parser, param, lib, quant,
-                                                                                               multi, bufsize=bufsize )
+                quant::GraphLibQuant, multi::Vector{Multimap}; 
+                bufsize=50, sam=false) = _process_reads!( parser, param, lib, quant,
+                                                          multi, bufsize=bufsize, sam=sam )
 
 function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=50 )
+                         multi::Vector{Multimap}; bufsize=50, sam=false )
   
    const reads  = allocate_chunk( parser, size=bufsize )
    mean_readlen = 0.0
    total        = 0
    mapped       = 0
+   if sam
+      stdbuf = BufferedOutputStream( STDOUT )
+   end
    while length(reads) > 0
       read_chunk!( reads, parser )
       total += length(reads)
@@ -74,13 +78,16 @@ function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::Graph
                push!( multi, Multimap( align.value ) )
             else
                count!( quant, align.value[1] )
+               sam && write_sam( stdbuf, reads[i], align.value[1], lib )
             end
             mapped += 1
             @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / mapped
          end
       end
-      
    end # end while
+   if sam
+      close(stdbuf)
+   end
    mapped,total,mean_readlen
 end
 
