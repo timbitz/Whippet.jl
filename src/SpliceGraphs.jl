@@ -72,5 +72,7 @@ export SpliceGraph,
        effective_lengths!,
        global_bias,
        process_events, 
-       fixpath
+       fixpath,
+       @timerr,
+       timerr_print
 end
