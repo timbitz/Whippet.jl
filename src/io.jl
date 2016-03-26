@@ -92,6 +92,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
       else
          curspace = (sg.nodeoffset[i] + sg.nodelen[i] - 1) - curpos
          matchleft -= curspace
+         curpos += curspace
          if idx < length( align.path )
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar
