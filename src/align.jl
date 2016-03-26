@@ -41,7 +41,7 @@ typealias SGAlignVec Nullable{Vector{SGAlignment}}
 
 const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
 
-@inline score{A <: UngappedAlignment}( align::A ) = align.matches - align.mismatches 
+@inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.matches - align.mismatches 
 
 Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -120,17 +120,18 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
             res = Nullable(SGAlignment[ align ])
          else
             # new best score
-            if score(align) > maxscore
+            const scvar = score(align)
+            if scvar > maxscore
                # better than threshold for all of the previous scores
-               if score(align) - maxscore > p.score_range
+               if scvar - maxscore > p.score_range
                   length( res.value ) >= 1 && empty!( res.value )
                else # keep at least one previous score
-                  splice_by_score!( res.value, score(align), p.score_range ) 
+                  splice_by_score!( res.value, scvar, p.score_range ) 
                end
-               maxscore = score( align )
+               maxscore = scvar
                push!( res.value, align )
             else # new score is lower than previously seen
-               if maxscore - score(align) <= p.score_range # but tolerable
+               if maxscore - scvar <= p.score_range # but tolerable
                   push!( res.value, align )
                end
             end # end score vs maxscore
