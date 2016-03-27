@@ -73,6 +73,6 @@ export SpliceGraph,
        global_bias,
        process_events, 
        fixpath,
-       @timerr,
-       timerr_print
+       @timer,
+       timer_print
 end
