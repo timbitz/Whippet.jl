@@ -19,6 +19,7 @@ using IntervalTrees
 using Libz
 
 include("types.jl")
+include("timer.jl")
 include("bio_nuc_safepatch.jl")
 include("refflat.jl")
 include("graph.jl")
