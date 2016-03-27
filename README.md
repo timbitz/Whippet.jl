@@ -26,10 +26,10 @@ julia dependencies.jl
 
 3) Build an index.  You need your genome sequence in fasta, and a gene annotation file in refflat.
 ```
-whippet-index --fasta /path/to/genome.fa.gz --flat /path/to/gene_model.flat.gz
+whippet-index --fasta genome.fa.gz --flat gene_model.flat.gz
 ```
 
 4) Quantify FASTQ files.
 ```
-whippet-quant /path/to/my-file.fastq.gz
+whippet-quant my-file.fastq.gz
 ```
