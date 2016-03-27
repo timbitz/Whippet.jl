@@ -18,6 +18,7 @@ include("$dir/refflat.jl")
 include("$dir/graph.jl")
 include("$dir/edges.jl")
 include("$dir/index.jl")
+include("$dir/io.jl")
 
 function parse_cmd()
   s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
@@ -53,19 +54,19 @@ function main()
    if isgzipped( flat )
       fh = fh |> ZlibInflateInputStream
    end
-   @time ref = load_refflat(fh)
+   @timer ref = load_refflat(fh)
 
    println(STDERR, "Indexing transcriptome...")
-   @time graphome = fasta_to_index( fixpath( args["fasta"] ) , ref, kmer=args["kmer"] )
+   @timer graphome = fasta_to_index( fixpath( args["fasta"] ) , ref, kmer=args["kmer"] )
 
    println(STDERR, "Saving Annotations...")
    open("$(args["index"])_anno.jls", "w+") do fh
-      @time serialize(fh, ref)
+      @timer serialize(fh, ref)
    end
 
    println(STDERR, "Saving splice graph index...")
    open("$(args["index"]).jls", "w+") do io
-      @time serialize( io, graphome )
+      @timer serialize( io, graphome )
    end
 
 end

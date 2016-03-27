@@ -1,4 +1,4 @@
-macro timerr(ex)
+macro timer(ex)
     quote
         local stats = Base.gc_num()
         local elapsedtime = time_ns()
@@ -11,7 +11,7 @@ macro timerr(ex)
     end
 end
 
-function timerr_print(elapsedtime, bytes, gctime, allocs)
+function timer_print(elapsedtime, bytes, gctime, allocs)
     @printf(STDERR, "%10.6f seconds", elapsedtime/1e9)
     if bytes != 0 || allocs != 0
         bytes, mb = Base.prettyprint_getunits(bytes, length(Base._mem_units), Int64(1024))

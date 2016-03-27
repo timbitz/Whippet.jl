@@ -53,10 +53,10 @@ function main()
    args = parse_cmd()
 
    println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
-   @timerr const lib = open(deserialize, "$( args["index"] ).jls")
+   @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
    println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
-   @timerr const anno = open(deserialize, "$( args["index"] )_anno.jls")
+   @timer const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
    const param = AlignParam() # defaults for now
    const quant = GraphLibQuant( lib, anno )
@@ -71,7 +71,7 @@ function main()
       return #TODO
    else
       println(STDERR, "Processing reads...")
-      @timerr mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
+      @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
       readlen = round(Int, readlen)
       println(STDERR, "Finished $mapped mapped reads of length $readlen out of a total $total reads...")
    end
@@ -79,7 +79,7 @@ function main()
    # TPM_EM
    println(STDERR, "Calculating expression values and MLE for $( length(multi) ) repetitive reads with EM...")
    calculate_tpm!( quant, readlen=readlen )
-   @timerr iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen, max=1000 ) 
+   @timer iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen, max=1000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    if !args["no-tpm"]
@@ -88,14 +88,14 @@ function main()
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
-   @timerr assign_ambig!( quant, multi )
+   @timer assign_ambig!( quant, multi )
 
    println(STDERR, "Calculating effective lengths...")
-   @timerr effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
-   @timerr bias_ave,bias_var = global_bias( quant )
+   @timer effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
+   @timer bias_ave,bias_var = global_bias( quant )
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @timerr process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"] )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"] )
    println(STDERR, "Whippet done." )
 end
 
