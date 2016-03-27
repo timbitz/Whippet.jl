@@ -4,7 +4,7 @@
 ### Why use Whippet?
 
 ### Features
-- High performance
+- High performance (~40sec per 1M reads on a single core of a macbook pro laptop)
 - Robust quantification in any species
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
