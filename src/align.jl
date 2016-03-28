@@ -6,23 +6,24 @@
 import Bio.Seq.SeqRecord
 
 immutable AlignParam
-   mismatches::Int    # Allowable mismatches
-   kmer_size::Int     # Minimum number of matches to extend past an edge
-   seed_try::Int      # Starting number of seeds
-   seed_tolerate::Int # Allow at most _ hits for a valid seed
-   seed_length::Int   # Seed Size
-   seed_buffer::Int   # Ignore first and last _ bases
-   seed_inc::Int      # Incrementation for subsequent seed searches
-   score_range::Int   # Scoring range to be considered repetitive
-   score_min::Int     # Minimum score for a valid alignment
-   is_stranded::Bool  # Is input data + strand only?
-   is_paired::Bool    # Paired end data?
-   is_pair_rc::Bool   # Is mate 2 the reverse complement of mate 1
-   is_trans_ok::Bool  # Do we allow edges from one gene to another
-   is_circ_ok::Bool   # Do we allow back edges
+   mismatches::Int      # Allowable mismatches
+   kmer_size::Int       # Minimum number of matches to extend past an edge
+   seed_try::Int        # Starting number of seeds
+   seed_tolerate::Int   # Allow at most _ hits for a valid seed
+   seed_length::Int     # Seed Size
+   seed_buffer::Int     # Ignore first and last _ bases
+   seed_inc::Int        # Incrementation for subsequent seed searches
+   seed_pair_range::Int # Seeds for paired-end reads must match within _ nt of each other
+   score_range::Int     # Scoring range to be considered repetitive
+   score_min::Int       # Minimum score for a valid alignment
+   is_stranded::Bool    # Is input data + strand only?
+   is_paired::Bool      # Paired end data?
+   is_pair_rc::Bool     # Is mate 2 the reverse complement of mate 1
+   is_trans_ok::Bool    # Do we allow edges from one gene to another
+   is_circ_ok::Bool     # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 2, 4, 18, 5, 18, 10, 45, false, false, true, false, true )
+AlignParam() = AlignParam( 2, 9, 2, 4, 18, 5, 18, 1000, 10, 45, false, false, true, false, true )
 
 abstract UngappedAlignment
 
@@ -61,6 +62,32 @@ function Base.empty!( align::SGAlignment )
 end
 
 @inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
+   const def_sa = 2:1
+   ctry = 1
+   if offset_left
+      const increment = p.seed_inc
+      curpos = p.seed_buffer
+   else
+      const increment = -p.seed_inc
+      curpos = length(read.seq) - p.seed_length - p.seed_buffer
+   end
+   const maxright = length(read.seq) - p.seed_length - p.seed_buffer
+   while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
+      const sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
+      const cnt = length(sa)
+      ctry += 1
+      #println("$sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
+      if cnt == 0 || cnt > p.seed_tolerate
+         curpos += increment
+      else
+         return sa,curpos
+      end
+   end
+   def_sa,curpos
+end
+
+# paired-end seed_locate
+function seed_locate( p::AlignParam, index::FMIndex, left::SeqRecord, right::SeqRecord; offset_left=true )
    const def_sa = 2:1
    ctry = 1
    if offset_left
