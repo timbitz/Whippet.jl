@@ -1,7 +1,8 @@
 
 function make_fqparser( filename )
    if isgzipped( filename )
-      to_open = open( filename, "r" ) |> ZlibInflateInputStream
+      fopen = open( filename, "r" ) 
+      to_open = ZlibInflateInputStream( fopen, reset_on_end=true )
    else
       to_open = filename
    end 
