@@ -5,7 +5,7 @@ macro timer(ex)
         local val = $(esc(ex))
         elapsedtime = time_ns() - elapsedtime
         local diff = Base.GC_Diff(Base.gc_num(), stats)
-        timerr_print(elapsedtime, diff.allocd, diff.total_time,
+        timer_print(elapsedtime, diff.allocd, diff.total_time,
                    Base.gc_alloc_count(diff))
         val
     end
