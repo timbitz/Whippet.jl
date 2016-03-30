@@ -15,7 +15,7 @@
 
 ### How to use Whippet
 
-1) Install most recent julia release [here](http://julialang.org/downloads/), must be >= v0.4
+1) Install most recent [julia release here](http://julialang.org/downloads/), which must be >= v0.4.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 2) Clone whippet and make sure dependencies are satisfied. Executables are in bin/
 ```
