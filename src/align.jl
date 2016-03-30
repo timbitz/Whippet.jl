@@ -167,7 +167,8 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    end
    # if !stranded and no valid alignments, run reverse complement
    if ispos && !p.is_stranded && isnull( res )
-      read.seq = Bio.Seq.unsafe_complement!(Bio.Seq.reverse( read.seq ))
+#      read.seq = Bio.Seq.unsafe_complement!(Bio.Seq.reverse( read.seq ))
+      reverse_complement!( read.seq )
       reverse!( read.metadata.quality )
       res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
    end

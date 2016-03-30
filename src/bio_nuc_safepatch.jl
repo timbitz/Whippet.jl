@@ -908,6 +908,33 @@ Reversed complement of the nucleotide sequence `seq`
 """
 reverse_complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(reverse(copy(seq)))
 
+reverse_complement!{T<:Bio.Seq.DNANucleotide}(seq::Bio.Seq.NucleotideSequence{T}) = Bio.Seq.unsafe_complement!(reverse!(seq))
+function Base.reverse!{T<:Bio.Seq.DNANucleotide}(seq::Bio.Seq.NucleotideSequence{T})
+    if isempty(seq)
+       return seq
+    end
+
+    Bio.Seq.orphan!(seq)
+
+    k = (2 * length(seq) + 63) % 64 + 1
+    h = 64 - k
+
+    data = zeros(UInt64, length(seq.data))
+    j = length(data)
+    i = 1
+    @inbounds while true
+       x = Bio.Seq.nucrev(seq.data[i])
+       data[j] |= x >>> h
+       if (j -= 1) == 0
+           break
+       end
+       data[j] |= x << k;
+       i += 1
+    end
+    seq.data = data
+    reverse!(seq.ns)
+    return seq
+end
 
 # SequenceNIterator
 # -----------------
