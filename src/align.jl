@@ -86,32 +86,6 @@ end
    def_sa,curpos
 end
 
-# paired-end seed_locate
-function seed_locate( p::AlignParam, index::FMIndex, left::SeqRecord, right::SeqRecord; offset_left=true )
-   const def_sa = 2:1
-   ctry = 1
-   if offset_left
-      const increment = p.seed_inc
-      curpos = p.seed_buffer
-   else
-      const increment = -p.seed_inc
-      curpos = length(read.seq) - p.seed_length - p.seed_buffer
-   end
-   const maxright = length(read.seq) - p.seed_length - p.seed_buffer
-   while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
-      const sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
-      const cnt = length(sa)
-      ctry += 1
-      #println("$sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
-      if cnt == 0 || cnt > p.seed_tolerate
-         curpos += increment
-      else
-         return sa,curpos
-      end
-   end
-   def_sa,curpos
-end
-
 function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
    i = 1
    while i <= length( arr )
