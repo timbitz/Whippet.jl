@@ -1,6 +1,9 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+tic()
+println( STDERR, "Whippet v0.0.1-dev loading and compiling... " )
+
 using DataStructures
 using IntervalTrees
 using Bio.Seq
@@ -21,7 +24,7 @@ include("$dir/index.jl")
 include("$dir/timer.jl")
 
 function parse_cmd()
-  s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
+  s = ArgParseSettings()
 
   @add_arg_table s begin
     "--kmer", "-k"
@@ -47,6 +50,8 @@ end
 function main()
 
    args = parse_cmd()
+   
+   println(STDERR, " $( round( toq(), 6 ) ) seconds." )
 
    println(STDERR, "Loading Refflat file...")
    flat = fixpath( args["flat"] )
