@@ -1,6 +1,9 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+tic()
+println( STDERR, "Whippet v0.0.1-dev loading and compiling... " )
+
 using ArgParse
  
 dir = splitdir(@__FILE__)[1]
@@ -10,7 +13,7 @@ import SpliceGraphs
 using SpliceGraphs
 
 function parse_cmd()
-  s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
+  s = ArgParseSettings()
   # TODO finish options...
   @add_arg_table s begin
     "filename.fastq[.gz]"
@@ -51,6 +54,8 @@ end
 function main()
 
    args = parse_cmd()
+
+   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
 
    println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
    @timer const lib = open(deserialize, "$( args["index"] ).jls")

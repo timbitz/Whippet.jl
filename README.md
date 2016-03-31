@@ -15,7 +15,7 @@
 
 ### How to use Whippet
 
-1) Install most recent julia release [here](http://julialang.org/downloads/), must be >= v0.4
+1) Install most recent [julia release here](http://julialang.org/downloads/), which must be >= v0.4.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 2) Clone whippet and make sure dependencies are satisfied. Executables are in bin/
 ```
@@ -26,10 +26,10 @@ julia dependencies.jl
 
 3) Build an index.  You need your genome sequence in fasta, and a gene annotation file in refflat.
 ```
-whippet-index --fasta genome.fa.gz --flat gene_model.flat.gz
+julia whippet-index --fasta genome.fa.gz --flat gene_model.flat.gz
 ```
 
 4) Quantify FASTQ files.
 ```
-whippet-quant my-file.fastq.gz
+julia whippet-quant my-file.fastq.gz
 ```
