@@ -60,7 +60,9 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    fwd_res,rev_res
 end
 
-@inline function _ungapped_align( p::AlignParam, lib::GraphLib, res::Nullable{Vector{SGAlignment}}, read::SeqRecord, indx::Int )
+@inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int,
+                                     main_res::Nullable{Vector{SGAlignment}}, 
+                                  partner_res::Nullable{Vector{SGAlignment}}, maxscore::Int; test_vals=true )
 
    const geneind = search_sorted( lib.offset, convert(Coordint, indx), lower=true )
    align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind),
@@ -73,15 +75,15 @@ end
                                 nodeidx=align.path[1].node )
 
    if align.isvalid
-      if isnull( res )
-         res = Nullable(SGAlignment[ align ])
+      if isnull( main_res )
+         main_res = Nullable(SGAlignment[ align ])
       else
             # new best score
          const scvar = score(align)
          if scvar > maxscore
             # better than threshold for all of the previous scores
             if scvar - maxscore > p.score_range
-               length( res.value ) >= 1 && empty!( res.value )
+               length( main_res.value ) >= 1 && empty!( main_res.value )
             else # keep at least one previous score
                splice_by_score!( res.value, scvar, p.score_range )
             end
@@ -94,5 +96,5 @@ end
          end # end score vs maxscore
       end # end isnull 
    end # end isvalid 
-   res
+   main_res,partner_res
 end
