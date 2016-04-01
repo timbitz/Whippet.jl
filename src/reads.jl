@@ -93,3 +93,46 @@ function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::Graph
    mapped,total,mean_readlen
 end
 
+# paired end version
+process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib,
+                quant::GraphLibQuant, multi::Vector{Multimap}; 
+                bufsize=50, sam=false) = _process_paired_reads!( fwd_parser, rev_parser, param, lib, quant,
+                                                                 multi, bufsize=bufsize, sam=sam )
+
+function _process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
+                                 multi::Vector{Multimap}; bufsize=50, sam=false )
+
+   const fwd_reads  = allocate_chunk( fwd_parser, size=bufsize )
+   const rev_reads  = allocate_chunk( rev_parser, size=bufsize )
+   mean_readlen = 0.0
+   total        = 0
+   mapped       = 0
+   if sam
+      stdbuf = BufferedOutputStream( STDOUT )
+      write_sam_header( stdbuf, lib )
+   end
+   while length(fwd_reads) > 0 && length(rev_reads) > 0
+      read_chunk!( fwd_reads, fwd_parser )
+      read_chunk!( rev_reads, rev_parser )
+      total += length(fwd_reads)
+      for i in 1:length(fwd_reads)
+         fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
+         if !isnull( fwd_aln ) && !isnull( rev_aln )
+            if length( fwd_aln.value ) > 1
+               push!( multi, Multimap( fwd_aln.value ) )
+               push!( multi, Multimap( rev_aln.value ) )
+            else
+               count!( quant, fwd_aln.value[1], rev_aln.value[1] )
+               sam && write_sam( stdbuf, fwd_reads[i], fwd_aln.value[1], lib, paired=true, fwd_mate=true )
+               sam && write_sam( stdbuf, rev_reads[i], rev_aln.value[1], lib, paired=true, fwd_mate=false )
+            end
+            mapped += 1
+            @fastmath mean_readlen += (length(fwd_reads[i].seq) - mean_readlen) / mapped
+         end
+      end
+   end # end while
+   if sam
+      close(stdbuf)
+   end
+   mapped,total,mean_readlen
+end

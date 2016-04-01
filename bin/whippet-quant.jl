@@ -1,8 +1,10 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+const ver = "v0.0.1-dev"
+
 tic()
-println( STDERR, "Whippet v0.0.1-dev loading and compiling... " )
+println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
  
@@ -63,22 +65,34 @@ function main()
    println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
    @timer const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
-   const param = AlignParam() # defaults for now
+   const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
+
+   const param = AlignParam( ispaired ) # defaults for now
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]) )
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]) )
+   if ispaired
+      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]) )
+   end
 
    if nprocs() > 1
       #include("align_parallel.jl")
       # Load Fastq files in chunks
-      # Parallel reduction loop through fastq chunks 
+      # Parallel reduction loop through fastq chunks
+      println(STDERR, "Whippet does not currrently support nprocs() > 1")
       return #TODO
    else
       println(STDERR, "Processing reads...")
-      @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
-      readlen = round(Int, readlen)
-      println(STDERR, "Finished $mapped mapped reads of length $readlen out of a total $total reads...")
+      if ispaired
+         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, sam=args["sam"] )
+         readlen = round(Int, readlen)
+         println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
+      else
+         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
+         readlen = round(Int, readlen)
+         println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
+      end
    end
 
    # TPM_EM
@@ -93,7 +107,7 @@ function main()
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
-   @timer assign_ambig!( quant, multi )
+   @timer assign_ambig!( quant, multi, ispaired=ispaired )
 
    println(STDERR, "Calculating effective lengths...")
    @timer effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
@@ -101,7 +115,7 @@ function main()
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
    @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"] )
-   println(STDERR, "Whippet done." )
+   println(STDERR, "Whippet $ver done." )
 end
 
 main()

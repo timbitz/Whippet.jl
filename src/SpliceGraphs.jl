@@ -28,6 +28,7 @@ include("index.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
+include("paired.jl")
 include("io.jl")
 include("events.jl")
 
@@ -66,6 +67,7 @@ export SpliceGraph,
        load_refflat,
        fasta_to_index,
        process_reads!,
+       process_paired_reads!,
        calculate_tpm!,
        rec_gene_em!,
        output_tpm,

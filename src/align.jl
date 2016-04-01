@@ -23,7 +23,8 @@ immutable AlignParam
    is_circ_ok::Bool     # Do we allow back edges
 end
 
-AlignParam() = AlignParam( 2, 9, 2, 4, 18, 5, 18, 1000, 10, 45, false, false, true, false, true )
+AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 18, 5, 18, 1000, 16, 60, false, true,  true, false, true ) :
+                                            AlignParam( 2, 9, 2, 4, 18, 5, 18, 1000, 10, 45, false, false, true, false, true )
 
 abstract UngappedAlignment
 
