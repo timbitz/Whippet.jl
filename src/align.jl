@@ -10,6 +10,7 @@ immutable AlignParam
    kmer_size::Int       # Minimum number of matches to extend past an edge
    seed_try::Int        # Starting number of seeds
    seed_tolerate::Int   # Allow at most _ hits for a valid seed
+   seed_min_qual::Int   # Absolute lowest quality score to allow for worst base in seed
    seed_length::Int     # Seed Size
    seed_buffer::Int     # Ignore first and last _ bases
    seed_inc::Int        # Incrementation for subsequent seed searches
@@ -23,8 +24,8 @@ immutable AlignParam
    is_circ_ok::Bool     # Do we allow back edges
 end
 
-AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 18, 10, 18, 2500, 25, 45, false, true, true, false, true ) :
-                                            AlignParam( 2, 9, 2, 4, 18, 10, 18, 1000, 10, 45, false, false, true, false, true )
+AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 2500, 25, 45, false, true, true, false, true ) :
+                                            AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 1000, 10, 45, false, false, true, false, true )
 
 abstract UngappedAlignment
 
@@ -62,29 +63,46 @@ function Base.empty!( align::SGAlignment )
    align.isvalid = false 
 end
 
-@inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true )
+@inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true, both_strands=true )
    const def_sa = 2:1
    ctry = 1
+   ispos = true
    if offset_left
       const increment = p.seed_inc
+      const increment_sm = 1
       curpos = p.seed_buffer
    else
       const increment = -p.seed_inc
+      const increment_sm = -1
       curpos = length(read.seq) - p.seed_length - p.seed_buffer
    end
    const maxright = length(read.seq) - p.seed_length - p.seed_buffer
    while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
-      const sa = FMIndexes.sa_range( read.seq[curpos:(curpos+p.seed_length-1)], index )
+      if minimum( read.metadata.quality[curpos:(curpos+p.seed_length-1)] ) <= p.seed_min_qual
+         curpos += increment_sm
+         continue
+      end
+      const curseq = read.seq[curpos:(curpos+p.seed_length-1)]
+      const sa = FMIndexes.sa_range( curseq, index )
       const cnt = length(sa)
       ctry += 1
       #println("$sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
       if cnt == 0 || cnt > p.seed_tolerate
-         curpos += increment
+         if both_strands
+            reverse_complement!(curseq)
+            const rev_sa = FMIndexes.sa_range( curseq, index )
+            const rev_cnt = length(rev_sa)
+            if 0 < rev_cnt <= p.seed_tolerate
+               const rev_pos = length(read.seq)-(curpos+p.seed_length-1)+1
+               return rev_sa,rev_pos,false
+            end
+         end
       else
-         return sa,curpos
+         return sa,curpos,true
       end
+      curpos += increment
    end
-   def_sa,curpos
+   def_sa,curpos,true
 end
 
 function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
@@ -114,8 +132,14 @@ end
 end
 
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
-   const seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
+   const seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
    #@bp
+   if !pos
+      reverse_complement!( read.seq )
+      reverse!( read.metadata.quality )
+      ispos = false
+   end
+
    res      = Nullable{Vector{SGAlignment}}()
    maxscore = 0.0
 #   for s in FMIndexes.LocationIterator( seed, lib.index ) # rm extra malloc
@@ -150,12 +174,12 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       end # end isvalid 
    end
    # if !stranded and no valid alignments, run reverse complement
-   if ispos && !p.is_stranded && isnull( res )
+   #=if ispos && !p.is_stranded && isnull( res )
 #      read.seq = Bio.Seq.unsafe_complement!(Bio.Seq.reverse( read.seq ))
       reverse_complement!( read.seq )
       reverse!( read.metadata.quality )
       res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
-   end
+   end =#
    res
 end
 

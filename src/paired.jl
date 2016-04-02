@@ -27,14 +27,20 @@ end
 # Paired ungapped_align
 function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqRecord; ispos=true, anchor_left=true )
 
-   const fwd_seed,fwd_readloc = seed_locate( p, lib.index, fwd, offset_left=anchor_left )
+   const fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
    
-   if p.is_pair_rc
+   if p.is_pair_rc && strand
       reverse_complement!(rev.seq)
       reverse!(rev.metadata.quality)
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left )
    else
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left )
+   end
+
+   if !strand
+      reverse_complement!(fwd.seq)
+      reverse!(fwd.metadata.quality)
+      ispos = false
    end
 
    fwd_res      = Nullable{Vector{SGAlignment}}()
@@ -49,18 +55,11 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    while fidx <= length(fwd_sorted) && ridx <= length(rev_sorted)
 
       const dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
-      if dist > p.seed_pair_range # outside allowable pair distance
-         if fwd_sorted[fidx] > rev_sorted[ridx]
-            ridx += 1
-         else
-            fidx += 1
-         end
-         continue
-      else
+      if dist < p.seed_pair_range # inside allowable pair distance
          fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos )
          rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos )
 
-         if fwd_aln.isvalid && rev_aln.isvalid
+         if fwd_aln.isvalid || rev_aln.isvalid
             if isnull( fwd_res ) || isnull( rev_res )
                fwd_res = Nullable(SGAlignment[ fwd_aln ])
                rev_res = Nullable(SGAlignment[ rev_aln ])
@@ -90,17 +89,23 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
          end # end isvalid 
          ridx += 1
          fidx += 1
+      else
+         if fwd_sorted[fidx] > rev_sorted[ridx]
+            ridx += 1
+         else
+            fidx += 1
+         end
       end # end dist vs. seed_pair_range
    end #end while
 
    # if !stranded and no valid alignments, run reverse complement
-   if ispos && !p.is_stranded && (isnull( fwd_res ) || isnull( rev_res ))
+#=   if ispos && !p.is_stranded && (isnull( fwd_res ) && isnull( rev_res ))
       reverse_complement!( fwd.seq )
       reverse_complement!( rev.seq )
       reverse!( fwd.metadata.quality )
       reverse!( rev.metadata.quality )
       fwd_res,rev_res = ungapped_align( p, lib, fwd, rev, ispos=false, anchor_left=!anchor_left )
-   end
+   end=#
 
    fwd_res,rev_res
 end
