@@ -23,8 +23,8 @@ immutable AlignParam
    is_circ_ok::Bool     # Do we allow back edges
 end
 
-AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 18, 5, 18, 1000, 16, 60, false, true,  true, false, true ) :
-                                            AlignParam( 2, 9, 2, 4, 18, 5, 18, 1000, 10, 45, false, false, true, false, true )
+AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 18, 10, 18, 2500, 25, 45, false, true, true, false, true ) :
+                                            AlignParam( 2, 9, 2, 4, 18, 10, 18, 1000, 10, 45, false, false, true, false, true )
 
 abstract UngappedAlignment
 
@@ -98,6 +98,21 @@ function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, bu
    end
 end
 
+@inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int; ispos=true )
+
+   const geneind = search_sorted( lib.offset, convert(Coordint, indx), lower=true )
+   align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind),
+                                indx - lib.offset[geneind] + p.seed_length,
+                                read, readloc + p.seed_length, ispos=ispos )
+
+   align = ungapped_rev_extend( p, lib, convert(Coordint, geneind),
+                                indx - lib.offset[geneind] - 1,
+                                read, readloc - 1, ispos=ispos, align=align,
+                                nodeidx=align.path[1].node )
+
+   align
+end
+
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
    const seed,readloc = seed_locate( p, lib.index, read, offset_left=anchor_left )
    #@bp
@@ -106,17 +121,11 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
 #   for s in FMIndexes.LocationIterator( seed, lib.index ) # rm extra malloc
    for sidx in 1:length(seed)
       const s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
-      const geneind = search_sorted( lib.offset, convert(Coordint, s), lower=true ) 
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
       #@bp
-      align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind), 
-                                   s - lib.offset[geneind] + p.seed_length, 
-                                   read, readloc + p.seed_length, ispos=ispos )
 
-      align = ungapped_rev_extend( p, lib, convert(Coordint, geneind), 
-                                   s - lib.offset[geneind] - 1,
-                                   read, readloc - 1, ispos=ispos, align=align, 
-                                   nodeidx=align.path[1].node )
+      const align = _ungapped_align( p, lib, read, s, readloc, ispos=ispos )
+
       if align.isvalid
          if isnull( res )
             res = Nullable(SGAlignment[ align ])

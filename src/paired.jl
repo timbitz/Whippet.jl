@@ -58,7 +58,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
          continue
       else
          fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos )
-         rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=ispos )
+         rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos )
 
          if fwd_aln.isvalid && rev_aln.isvalid
             if isnull( fwd_res ) || isnull( rev_res )
@@ -105,20 +105,6 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    fwd_res,rev_res
 end
 
-@inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int; ispos=true )
-
-   const geneind = search_sorted( lib.offset, convert(Coordint, indx), lower=true )
-   align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind),
-                                indx - lib.offset[geneind] + p.seed_length,
-                                read, readloc + p.seed_length, ispos=ispos )
-
-   align = ungapped_rev_extend( p, lib, convert(Coordint, geneind),
-                                indx - lib.offset[geneind] - 1,
-                                read, readloc - 1, ispos=ispos, align=align,
-                                nodeidx=align.path[1].node )
-
-   align
-end
 
 ## Extension of count! for paired end counting from quant.jl
 function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=1.0, used=IntSet() )
