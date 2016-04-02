@@ -118,7 +118,7 @@ end
 
 @inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int; ispos=true )
 
-   const geneind = search_sorted( lib.offset, convert(Coordint, indx), lower=true )
+   const geneind = searchsortedlast( lib.offset, convert(Coordint, indx) )
    align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind),
                                 indx - lib.offset[geneind] + p.seed_length,
                                 read, readloc + p.seed_length, ispos=ispos )
@@ -189,7 +189,7 @@ end
 function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
-                                nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
+                                nodeidx=searchsortedlast(lib.graphs[geneind].nodeoffset,Coordint(sgidx)) )
    const sg       = lib.graphs[geneind]
    const readlen  = length(read.seq)
 
@@ -364,7 +364,7 @@ end
 function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
-                                nodeidx=search_sorted(lib.graphs[geneind].nodeoffset,Coordint(sgidx),lower=true) )
+                                nodeidx=searchsortedlast(lib.graphs[geneind].nodeoffset,Coordint(sgidx)) )
    const sg       = lib.graphs[geneind]
    const readlen  = length(read.seq)
 
