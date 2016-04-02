@@ -23,7 +23,7 @@ immutable GraphLib <: SeqLibrary
    sorted::Bool
 end
 
-# Binary search.
+# Binary search.  -- deprecated for more efficient Base.searchsortedlast !!
 @inline function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1; lower=false )
    low == high && return(lower ? low - 1 : 0)
    const mid = ((high - low) >> 1) + low

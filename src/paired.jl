@@ -32,9 +32,9 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    if p.is_pair_rc && strand
       reverse_complement!(rev.seq)
       reverse!(rev.metadata.quality)
-      const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left )
+      const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
    else
-      const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left )
+      const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left, both_strands=false)
    end
 
    if !strand
@@ -173,6 +173,6 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          end
       end
    end
-   empty!( used )
+   #empty!( used )
 
 end
