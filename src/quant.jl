@@ -74,10 +74,18 @@ Multimap( aligns::Vector{SGAlignment} ) = length(aligns) >= 1 ?
                                     Multimap( aligns, Float64[], 0.0 )
 
 
-function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap} )
+function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap}; ispaired=false )
    for mm in ambig
-      for i in 1:length(mm.prop)
-         count!( graphq, mm.align[i], val=mm.prop[i] )
+      i = 1
+      while i <= length(mm.prop)
+         if ispaired
+            (i == length(mm.prop)) && break
+            count!( graphq, mm.align[i], mm.align[i+1], val=mm.prop[i] )
+            i += 1
+         else
+            count!( graphq, mm.align[i], val=mm.prop[i] )
+         end
+         i += 1
       end
    end
 end

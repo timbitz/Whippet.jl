@@ -1,8 +1,10 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+const ver = "v0.0.1-dev"
+
 tic()
-println( STDERR, "Whippet v0.0.1-dev loading and compiling... " )
+println( STDERR, "Whippet $ver loading and compiling... " )
 
 using DataStructures
 using IntervalTrees
@@ -74,6 +76,7 @@ function main()
       @timer serialize( io, graphome )
    end
 
+   println(STDERR, "Whippet $ver done.")
 end
 
 main()
