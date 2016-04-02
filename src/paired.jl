@@ -56,46 +56,52 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
 
       const dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
       if dist < p.seed_pair_range # inside allowable pair distance
-         fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos )
-         rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos )
 
-         if fwd_aln.isvalid || rev_aln.isvalid
-            if isnull( fwd_res ) || isnull( rev_res )
-               fwd_res = Nullable(SGAlignment[ fwd_aln ])
-               rev_res = Nullable(SGAlignment[ rev_aln ])
-            else
+         const geneind = convert( Coordint, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
+         const inc = geneind < length(lib.offset) ? 1 : 0
+         if lib.offset[geneind] <= rev_sorted[ridx] < lib.offset[geneind+inc]
+
+            fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
+            rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )
+
+            if fwd_aln.isvalid || rev_aln.isvalid
+               if isnull( fwd_res ) || isnull( rev_res )
+                  fwd_res = Nullable(SGAlignment[ fwd_aln ])
+                  rev_res = Nullable(SGAlignment[ rev_aln ])
+               else
                # new best score
-               @fastmath const scvar = score(fwd_aln) + score(rev_aln)
-               if scvar > maxscore
-                  # better than threshold for all of the previous scores
-                  if scvar - maxscore > p.score_range
-                     if length( fwd_res.value ) >= 1
-                        empty!( fwd_res.value )
-                        empty!( rev_res.value )
+                  @fastmath const scvar = score(fwd_aln) + score(rev_aln)
+                  if scvar > maxscore
+                     # better than threshold for all of the previous scores
+                     if scvar - maxscore > p.score_range
+                        if length( fwd_res.value ) >= 1
+                           empty!( fwd_res.value )
+                           empty!( rev_res.value )
+                        end
+                     else # keep at least one previous score
+                        splice_by_score!( fwd_res.value, rev_res.value, scvar, p.score_range )
                      end
-                  else # keep at least one previous score
-                     splice_by_score!( fwd_res.value, rev_res.value, scvar, p.score_range )
-                  end
-                  maxscore = scvar
-                  push!( fwd_res.value, fwd_aln )
-                  push!( rev_res.value, rev_aln )
-               else # new score is lower than previously seen
-                  if maxscore - scvar <= p.score_range # but tolerable
+                     maxscore = scvar
                      push!( fwd_res.value, fwd_aln )
                      push!( rev_res.value, rev_aln )
-                  end
-               end # end score vs maxscore
-            end # end isnull 
-         end # end isvalid 
-         ridx += 1
-         fidx += 1
-      else
-         if fwd_sorted[fidx] > rev_sorted[ridx]
+                  else # new score is lower than previously seen
+                     if maxscore - scvar <= p.score_range # but tolerable
+                        push!( fwd_res.value, fwd_aln )
+                        push!( rev_res.value, rev_aln )
+                     end
+                  end # end score vs maxscore
+               end # end isnull 
+            end # end isvalid 
             ridx += 1
-         else
             fidx += 1
-         end
+            continue
+         end # is reverse in same gene as fwd
       end # end dist vs. seed_pair_range
+      if fwd_sorted[fidx] > rev_sorted[ridx]
+          ridx += 1
+      else
+         fidx += 1
+      end
    end #end while
 
    # if !stranded and no valid alignments, run reverse complement

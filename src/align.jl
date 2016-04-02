@@ -116,14 +116,14 @@ function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, bu
    end
 end
 
-@inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int; ispos=true )
+@inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int;
+                                  ispos=true, geneind=convert(Coordint, searchsortedlast( lib.offset, indx )) )
 
-   const geneind = searchsortedlast( lib.offset, convert(Coordint, indx) )
-   align = ungapped_fwd_extend( p, lib, convert(Coordint, geneind),
+   align = ungapped_fwd_extend( p, lib, geneind,
                                 indx - lib.offset[geneind] + p.seed_length,
                                 read, readloc + p.seed_length, ispos=ispos )
 
-   align = ungapped_rev_extend( p, lib, convert(Coordint, geneind),
+   align = ungapped_rev_extend( p, lib, geneind,
                                 indx - lib.offset[geneind] - 1,
                                 read, readloc - 1, ispos=ispos, align=align,
                                 nodeidx=align.path[1].node )
