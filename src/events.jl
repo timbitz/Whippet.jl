@@ -92,13 +92,14 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-# Deprecated
+# Deprecated 
 type PsiPath
    psi::Float64
    count::Float64
    length::Float64
    nodes::IntSet
-end
+end # TODO: Delete PsiPath.
+
 
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
@@ -355,17 +356,64 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
    end
 end
 
+function build_utr_graph( nodes::IntSet, motif::EdgeMotif, sgquant::SpliceGraphQuant )
+
+   utr_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
+                                  Vector{Float64}(), Vector{IntSet}(),
+                                  first(nodes), last(nodes) ))
+   curset = IntSet()
+
+   while length(nodes) > 0
+      if motif == TXST_MOTIF
+         curval = pop!(nodes)
+      else
+         curval = shift!(nodes)
+      end
+      push!( curset, curval )
+      push!( get(utr_graph).nodes, copy(curset) )
+      push!( get(utr_graph).psi, 0.0 )
+      push!( get(utr_graph).length, 0.0 )
+      push!( get(utr_graph).count, 0.0 )
+   end
+
+   utr_graph
+end
+
 function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
                               node::NodeInt, motif::EdgeMotif )
    
    utr_graph  = Nullable{PsiGraph}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
 
-   if motif == TXST_MOTIF
-      
-   elseif motif == TXEN_MOTIF
+   used_node  = IntSet()
+   total_cnt  = 0.0
 
-   end 
+   if motif == TXEN_MOTIF
+      # add node directly upstream (CE next to tandemUTR)
+      push!( used_node, node-1 )
+      total_cnt += sgquant.node[node-1]
+   end
+
+   i = node
+   curmotif = motif
+   while curmotif == motif
+      push!( used_node, i )
+      total_cnt += sgquant.node[i]
+      total_cnt += sgquant.edge[(i-1,i)]
+      i += 1
+      curmotif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
+   end
+
+   if motif == TXST_MOTIF
+      # add node directly downstream (CE next to tandemUTR)
+      push!( used_node, i+1 )
+      total_cnt += sgquant.node[i+1]
+      total_cnt += sgquant.edge[(i,i+1)]
+   end
+
+   if total_cnt > 2
+      utr_graph = build_utr_graph( used_node, motif, sgquant )
+   end
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
