@@ -31,9 +31,9 @@ julia whippet-index --fasta genome.fa.gz --flat gene_model.flat.gz
 
 4) Quantify FASTQ files.
 ```
-julia whippet-quant my-file.fastq.gz
+julia whippet-quant file.fastq.gz
 ```
 or if you have paired-end RNA-seq data...
 ```
-julia whippet-quant my-fwd-file.fastq.gz my-rev-file.fastq.gz
+julia whippet-quant fwd_file.fastq.gz rev_file.fastq.gz
 ```
