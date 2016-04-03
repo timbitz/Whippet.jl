@@ -399,7 +399,9 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    while curmotif == motif
       push!( used_node, i )
       total_cnt += sgquant.node[i]
-      total_cnt += sgquant.edge[(i-1,i)]
+      if i > 1
+         total_cnt += sgquant.edge[(i-1,i)]
+      end
       i += 1
       curmotif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
    end
@@ -411,9 +413,14 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       total_cnt += sgquant.edge[(i,i+1)]
    end
 
+   psi = Nullable{Float64}()
    if total_cnt > 2
+      ambig_cnt = Nullable( Vector{AmbigCounts}() )
       utr_graph = build_utr_graph( used_node, motif, sgquant )
+      it = rec_utr_em!( utr_graph.value, ambig_cnt.value, sig=4 )
    end
+
+   psi
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
