@@ -12,17 +12,17 @@ function chunk_ranges( datasize, num=nworkers() )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib,
-                         quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=100)
+                         quant::GraphLibQuant, multi::Vector{Multimap}; bufsize=100, sam=false)
    if VERSION >= v"0.5.0-dev" && nthreads() > 1
-      return _process_reads_faster!( parser, param, lib, quant, multi, bufsize=bufsize)
+      return _process_reads_faster!( parser, param, lib, quant, multi, bufsize=bufsize, sam=sam)
    else
-      return _process_reads!( parser, param, lib, quant, multi, bufsize=bufsize)
+      return _process_reads!( parser, param, lib, quant, multi, bufsize=bufsize, sam=sam)
    end
 end
 
 function _process_reads_faster!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                                 multi::Vector{Multimap}; bufsize=100 )
-   reads  = allocate_chunk( parser, bufsize )
+                                 multi::Vector{Multimap}; bufsize=100, sam=false )
+   reads  = allocate_chunk( parser, size=bufsize )
    align  = Vector{SGAlignVec}( length(reads) )
    #ranges = chunk_ranges( bufsize, nthreads() )
    mean_readlen = 0.0
