@@ -156,6 +156,14 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    false
 end
 
+# Build minimal set of paths to explain graph
+# Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3
+# We have to create 2 paths, 1-2-3, and 1-3, since 1-3 can't
+# possibly contain the second node.
+# This function will do this with any number of edges or complex
+# paths through a graph and is the essence of how Whippet quantification
+# works.. these graph paths are then assigned unambiguous counts, while
+# ambiguous counts are then assigned to each graph path using the EM algorithm
 function reduce_graph( pgraph::PsiGraph )
    newgraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
                         Vector{Float64}(), Vector{IntSet}(),
