@@ -260,6 +260,48 @@ function Base.sum( vec::Vector{AmbigCounts} )
    sum
 end
 
+# add_node_counts! for single pgraph (used in tandem_utrs)
+function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
+                           sgquant::SpliceGraphQuant, bias::Float64 )
+
+   iset = IntSet()
+   for n in pgraph.min:pgraph.max # lets go through all possible nodes
+      for i in 1:length(pgraph.nodes)
+         if n in pgraph.nodes[i]
+            push!( iset, i )
+            pgraph.length[i] += 1 # sgquant.leng[n]
+         end
+      end
+
+      #=                                            =#
+      length( iset ) == 0 && continue # unspliced node
+      if length( iset ) == 1 # non-ambiguous node
+         if first( iset ) <= length(pgraph.nodes) # belongs to inclusion
+            idx = first( iset )
+            @fastmath pgraph.count[idx] += sgquant.node[n] * bias / sgquant.leng[n]
+         end
+      else
+         #check if there is already an entry for this set of paths
+         # if so, just increment multiplier, if not, make new one
+         exists = false
+         for am in ambig
+            if iset == am
+               @fastmath am.multiplier += sgquant.node[n] * bias / sgquant.leng[n]
+               exists = true
+               break
+            end
+         end
+         if !exists
+            push!( ambig, AmbigCounts( collect(iset),
+                                       ones( length(iset) ) / length(iset),
+                                       1.0, sgquant.node[n] * bias / sgquant.leng[n] ) )
+         end
+      end
+      empty!( iset ) # clean up
+   end
+end
+
+# add_node_counts! for two graphs, inc_graph and exc_graph (used in spliced events)
 function add_node_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph, 
                            egraph::PsiGraph, sgquant::SpliceGraphQuant, 
                            bias::Float64 )
@@ -311,6 +353,42 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
    end
 end
 
+# add_edge_counts! for one psigraph, (used in tandem utr)
+function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
+                           edges::Vector{IntervalValue} )
+   iset = IntSet()
+   for edg in edges
+      for i in 1:length(pgraph.nodes)
+         if edg in pgraph.nodes[i]
+            push!(iset, i)
+            pgraph.length[i] += 1
+         end
+      end
+      #=                                             =#
+      length( iset ) == 0 && continue
+      if length( iset ) == 1
+         idx = first( iset )
+         igraph.count[idx] += edg.value
+      else
+         exists = false
+         for am in ambig
+            if iset == am
+               am.multiplier += edg.value
+               exists = true
+               break
+            end
+         end
+         if !exists
+            push!( ambig, AmbigCounts( collect(iset),
+                                       ones( length(iset) ) / length(iset),
+                                       1.0, edg.value ) )
+         end
+      end
+      empty!( iset )
+   end
+end
+
+# add_edge_counts! for two graphs, inc_graph and exc_graph! (used in spliced events)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
                            egraph::PsiGraph, edges::Vector{IntervalValue} )
    iset = IntSet()
@@ -417,10 +495,13 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    if total_cnt > 2
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
       utr_graph = build_utr_graph( used_node, motif, sgquant )
+      add_node_counts!( ambig_cnt.value, utr_graph.value, sgquant )
+      add_edge_counts!( ambig_cnt.value, utr_graph.value, sgquant.edge )
       it = rec_utr_em!( utr_graph.value, ambig_cnt.value, sig=4 )
+      psi = Nullable( utr_graph.psi )
    end
 
-   psi
+   psi,utr_graph,ambig_cnt
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
