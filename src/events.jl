@@ -740,6 +740,14 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
+@inline function binomial_likelihood_ci( p, n, z=1.64 )
+   const fisher_info = (p * (1-p)) / n
+   const ci = z * sqrt( fisher_info )
+   const lo = max( 0.0, p - ci )
+   const hi = min( 1.0, p + ci )
+   lo,hi
+end
+
 # spliced psi
 function calculate_psi!( igraph::PsiGraph, egraph::PsiGraph, counts::Vector{Float64}; sig=0 )
    for i in 1:length(igraph.psi)
@@ -843,3 +851,5 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
    end
    it
 end
+
+
