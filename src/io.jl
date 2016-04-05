@@ -116,3 +116,72 @@ function write_sam_header( io::BufOut, lib::GraphLib )
       write( io, '\n' )
    end
 end
+
+### EVENT PRINTING
+function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph}, 
+                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     info::GeneMeta )
+   st = motif == TXST_MOTIF ? node : node - 1
+   en = st + length(psi) - 1
+   i = 1
+   for n in st:en
+      tab_write( io, info[1] )
+      coord_write( io, info[2], sg.nodecoord[n], sg.nodecoord[n]+sg.nodelen[n]-1, tab=true )
+      tab_write( io, info[3] )
+      tab_write( io, convert(ASCIIString, motif) )
+      tab_write( io, string(psi[i]) )
+      tab_write( io, "NA" )
+      if !isnull( pgraph )
+         count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i] )
+      else
+         tab_write( io, "NA" )
+             write( io, "NA" )
+      end 
+      write( io, '\n' )
+      i += 1
+   end
+
+end
+
+function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
+                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     info::GeneMeta, bias )
+
+   # gene
+     tab_write( io, info[1] )
+   # coordinate
+   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
+     tab_write( io, info[3] )
+   # event_type
+     tab_write( io, convert(ASCIIString, motif) )
+   # psi
+     tab_write( io, string(psi) )
+     tab_write( io, string(bias) )
+
+   if !isnull( inc ) && !isnull( exc )
+      count_write( io, get(inc), tab=true )
+      count_write( io, get(exc) )
+   else
+        tab_write( io, "NA" )
+            write( io, "NA" )
+   end
+
+   write( io, '\n' )
+end
+
+function count_write( io::BufOut, nodestr, countstr, lengstr )
+   write( io, string(nodestr) )
+   write( io, "-" )
+   write( io, string(countstr) )
+   write( io, "(" )
+   write( io, string(lengstr) )
+   write( io, ")" )
+end
+
+function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
+   for i in 1:length(pgraph.nodes)
+      count_write( io, pgraph.nodes[i], pgraph.count[i], pgraph.length[i] )
+      (i < length(pgraph.nodes)) && write( io, "," )
+   end
+   tab && write( io, '\t' )
+end
