@@ -363,9 +363,9 @@ end
 
 # add_edge_counts! for one psigraph, (used in tandem utr)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
-                           edges::Vector{IntervalValue} )
+                           sgquant::SpliceGraphQuant )
    iset = IntSet()
-   for edg in edges
+   for edg in sgquant.edge
       for i in 1:length(pgraph.nodes)
          if edg in pgraph.nodes[i]
             push!(iset, i)
@@ -376,7 +376,7 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
       length( iset ) == 0 && continue
       if length( iset ) == 1
          idx = first( iset )
-         igraph.count[idx] += edg.value
+         pgraph.count[idx] += edg.value
       else
          exists = false
          for am in ambig
@@ -486,27 +486,33 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       push!( used_node, i )
       total_cnt += sgquant.node[i]
       if i > 1
-         total_cnt += sgquant.edge[(i-1,i)]
+         interv = Interval{Exonmax}(i-1,i)
+         total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
       end
       i += 1
-      curmotif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
+      if i < length(sg.edgetype)
+         curmotif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
+      else
+         break
+      end
    end
 
    if motif == TXST_MOTIF
       # add node directly downstream (CE next to tandemUTR)
       push!( used_node, i+1 )
       total_cnt += sgquant.node[i+1]
-      total_cnt += sgquant.edge[(i,i+1)]
+      interv = Interval{Exonmax}( i, i+1 )
+      total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
    end
 
    psi = Nullable{Float64}()
    if total_cnt > 2
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
       utr_graph = build_utr_graph( used_node, motif, sgquant )
-      add_node_counts!( ambig_cnt.value, utr_graph.value, sgquant )
-      add_edge_counts!( ambig_cnt.value, utr_graph.value, sgquant.edge )
-      it = rec_utr_em!( utr_graph.value, ambig_cnt.value, sig=4 )
-      psi = Nullable( utr_graph.psi )
+      add_node_counts!( ambig_cnt.value, utr_graph.value, sgquant, 1.0 )
+      add_edge_counts!( ambig_cnt.value, utr_graph.value, sgquant )
+      #it = rec_utr_em!( utr_graph.value, ambig_cnt.value, sig=4 )
+      psi = Nullable( get(utr_graph).psi )
    end
 
    psi,utr_graph,ambig_cnt
@@ -695,7 +701,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       motif == NONE_MOTIF && continue
       if isobligate( motif ) # is utr event
-         
+         psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
