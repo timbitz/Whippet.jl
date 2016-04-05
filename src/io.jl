@@ -116,3 +116,94 @@ function write_sam_header( io::BufOut, lib::GraphLib )
       write( io, '\n' )
    end
 end
+
+### EVENT PRINTING
+function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph}, 
+                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     info::GeneMeta )
+   st = motif == TXST_MOTIF ? node : node - 1
+   en = st + length(psi) - 1
+   i = 1
+   for n in st:en
+      tab_write( io, info[1] )
+      coord_write( io, info[2], sg.nodecoord[n], sg.nodecoord[n]+sg.nodelen[n]-1, tab=true )
+      tab_write( io, info[3] )
+      tab_write( io, convert(ASCIIString, motif) )
+      tab_write( io, string(psi[i]) )
+      tab_write( io, "NA" )
+      if !isnull( pgraph )
+         count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i], tab=true )
+      else
+         tab_write( io, "NA" )
+      end 
+      write( io, "NA" )
+      write( io, '\n' )
+      i += 1
+   end
+
+end
+
+function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
+                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     info::GeneMeta, bias )
+
+   # gene
+     tab_write( io, info[1] )
+   # coordinate
+   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
+     tab_write( io, info[3] )
+   # event_type
+     tab_write( io, convert(ASCIIString, motif) )
+   # psi
+     tab_write( io, string(psi) )
+     tab_write( io, string(bias) )
+
+   if !isnull( inc ) && !isnull( exc )
+      count_write( io, get(inc), tab=true )
+      count_write( io, get(exc) )
+   else
+        tab_write( io, "NA" )
+            write( io, "NA" )
+   end
+
+   write( io, '\n' )
+end
+
+function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta )
+   for (st,en) in keys(sgquant.circ)
+      back_len = 0.0
+      back_cnt = 0.0
+      fore_cnt = sgquant.circ[(st,en)]
+      for edg in intersect( sgquant.edge, (st, st) )
+         if edg.first == st
+            back_len += 1
+            back_cnt += edg.value
+         end
+      end
+      psi = fore_cnt / (fore_cnt + back_cnt)
+      tab_write( io, info[1] )
+      coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
+      tab_write( io, info[3] )
+      tab_write( io, "BS" )
+      tab_write( io, string(psi) )
+      write( io, "NA\tNA\tNA\n" )
+   end
+end
+
+function count_write( io::BufOut, nodestr, countstr, lengstr; tab=false )
+   write( io, string(nodestr) )
+   write( io, "-" )
+   write( io, string(countstr) )
+   write( io, "(" )
+   write( io, string(lengstr) )
+   write( io, ")" )
+   tab && write( io, '\t' )
+end
+
+function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
+   for i in 1:length(pgraph.nodes)
+      count_write( io, pgraph.nodes[i], pgraph.count[i], pgraph.length[i] )
+      (i < length(pgraph.nodes)) && write( io, "," )
+   end
+   tab && write( io, '\t' )
+end

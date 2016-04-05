@@ -29,8 +29,8 @@ include("align.jl")
 include("quant.jl")
 include("reads.jl")
 include("paired.jl")
-include("io.jl")
 include("events.jl")
+include("io.jl")
 
 if VERSION >= v"0.5.0-dev"
    using Base.Threads

@@ -37,17 +37,27 @@ const MOTIF_STRING = fill( "", 9 )
 const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       # Alt TxStart  SL SL
       MOTIF_TABLE[ 0b000000 + 1 ] = TXST_MOTIF
+      # Alt TxStart  LS SL
+      MOTIF_TABLE[ 0b010000 + 1 ] = TXST_MOTIF
+
       # Alt PolyA    RS RS
       MOTIF_TABLE[ 0b011011 + 1 ] = TXEN_MOTIF
+      # Alt PolyA    RS SR
+      MOTIF_TABLE[ 0b011001 + 1 ] = TXEN_MOTIF
 
       # Alt FirstEx  LS LL
       MOTIF_TABLE[ 0b010101 + 1 ] = ALTF_MOTIF
       # Alt FirstEx  LS LR
       MOTIF_TABLE[ 0b010100 + 1 ] = ALTF_MOTIF
+      # Alt FirstEx  LS LS
+      MOTIF_TABLE[ 0b010010 + 1 ] = ALTF_MOTIF
+
       # Alt LastEx   RR SR
       MOTIF_TABLE[ 0b110001 + 1 ] = ALTL_MOTIF
       # Alt LastEx   LR SR
       MOTIF_TABLE[ 0b100001 + 1 ] = ALTL_MOTIF
+      # Alt LastEx   SR SR 
+      MOTIF_TABLE[ 0b001001 + 1 ] = ALTL_MOTIF
 
       # RetainedInt  LL RR
       MOTIF_TABLE[ 0b101110 + 1 ] = RETI_MOTIF
@@ -56,20 +66,37 @@ const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       MOTIF_TABLE[ 0b110101 + 1 ] = SKIP_MOTIF
       #              RR LR
       MOTIF_TABLE[ 0b110100 + 1 ] = SKIP_MOTIF
+      #              RR LS
+      MOTIF_TABLE[ 0b110010 + 1 ] = SKIP_MOTIF
+     
       #              LR LL
       MOTIF_TABLE[ 0b100101 + 1 ] = SKIP_MOTIF
       #              LR LR
       MOTIF_TABLE[ 0b100100 + 1 ] = SKIP_MOTIF
+      #              LR LS
+      MOTIF_TABLE[ 0b100010 + 1 ] = SKIP_MOTIF
+
+      #              SR LL
+      MOTIF_TABLE[ 0b001101 + 1 ] = SKIP_MOTIF
+      #              SR LR
+      MOTIF_TABLE[ 0b001100 + 1 ] = SKIP_MOTIF
+      #              SR LS
+      MOTIF_TABLE[ 0b001010 + 1 ] = SKIP_MOTIF
+
 
       # Alt Donor    LL LL
       MOTIF_TABLE[ 0b101101 + 1 ] = ALTD_MOTIF
       #              LL LR
       MOTIF_TABLE[ 0b101100 + 1 ] = ALTD_MOTIF
+      #              LL LS
+      MOTIF_TABLE[ 0b101010 + 1 ] = ALTD_MOTIF
 
       # Alt Acceptor RR RR
       MOTIF_TABLE[ 0b110110 + 1 ] = ALTA_MOTIF
       #              LR RR
       MOTIF_TABLE[ 0b100110 + 1 ] = ALTA_MOTIF
+      #              SR RR
+      MOTIF_TABLE[ 0b001110 + 1 ] = ALTA_MOTIF
 
 Base.convert(::Type{EdgeMotif}, tup::Tuple{EdgeType,EdgeType}) = Base.convert(EdgeMotif, tup... )
 Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE[ (UInt8(current) << 3) | UInt8(next) + 1 ]
@@ -92,13 +119,14 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-# Deprecated
+# Deprecated 
 type PsiPath
    psi::Float64
    count::Float64
    length::Float64
    nodes::IntSet
-end
+end # TODO: Delete PsiPath.
+
 
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
@@ -155,6 +183,14 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    false
 end
 
+# Build minimal set of paths to explain graph
+# Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3
+# We have to create 2 paths, 1-2-3, and 1-3, since 1-3 can't
+# possibly contain the second node.
+# This function will do this with any number of edges or complex
+# paths through a graph and is the essence of how Whippet quantification
+# works.. these graph paths are then assigned unambiguous counts, while
+# ambiguous counts are then assigned to each graph path using the EM algorithm
 function reduce_graph( pgraph::PsiGraph )
    newgraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
                         Vector{Float64}(), Vector{IntSet}(),
@@ -259,6 +295,48 @@ function Base.sum( vec::Vector{AmbigCounts} )
    sum
 end
 
+# add_node_counts! for single pgraph (used in tandem_utrs)
+function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
+                           sgquant::SpliceGraphQuant, bias::Float64 )
+
+   iset = IntSet()
+   for n in pgraph.min:pgraph.max # lets go through all possible nodes
+      for i in 1:length(pgraph.nodes)
+         if n in pgraph.nodes[i]
+            push!( iset, i )
+            pgraph.length[i] += 1 # sgquant.leng[n]
+         end
+      end
+
+      #=                                            =#
+      length( iset ) == 0 && continue # unspliced node
+      if length( iset ) == 1 # non-ambiguous node
+         if first( iset ) <= length(pgraph.nodes) # belongs to inclusion
+            idx = first( iset )
+            @fastmath pgraph.count[idx] += sgquant.node[n] * bias / sgquant.leng[n]
+         end
+      else
+         #check if there is already an entry for this set of paths
+         # if so, just increment multiplier, if not, make new one
+         exists = false
+         for am in ambig
+            if iset == am
+               @fastmath am.multiplier += sgquant.node[n] * bias / sgquant.leng[n]
+               exists = true
+               break
+            end
+         end
+         if !exists
+            push!( ambig, AmbigCounts( collect(iset),
+                                       ones( length(iset) ) / length(iset),
+                                       1.0, sgquant.node[n] * bias / sgquant.leng[n] ) )
+         end
+      end
+      empty!( iset ) # clean up
+   end
+end
+
+# add_node_counts! for two graphs, inc_graph and exc_graph (used in spliced events)
 function add_node_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph, 
                            egraph::PsiGraph, sgquant::SpliceGraphQuant, 
                            bias::Float64 )
@@ -310,6 +388,42 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
    end
 end
 
+# add_edge_counts! for one psigraph, (used in tandem utr)
+function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
+                           sgquant::SpliceGraphQuant )
+   iset = IntSet()
+   for edg in sgquant.edge
+      for i in 1:length(pgraph.nodes)
+         if edg in pgraph.nodes[i]
+            push!(iset, i)
+            pgraph.length[i] += 1
+         end
+      end
+      #=                                             =#
+      length( iset ) == 0 && continue
+      if length( iset ) == 1
+         idx = first( iset )
+         pgraph.count[idx] += edg.value
+      else
+         exists = false
+         for am in ambig
+            if iset == am
+               am.multiplier += edg.value
+               exists = true
+               break
+            end
+         end
+         if !exists
+            push!( ambig, AmbigCounts( collect(iset),
+                                       ones( length(iset) ) / length(iset),
+                                       1.0, edg.value ) )
+         end
+      end
+      empty!( iset )
+   end
+end
+
+# add_edge_counts! for two graphs, inc_graph and exc_graph! (used in spliced events)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
                            egraph::PsiGraph, edges::Vector{IntervalValue} )
    iset = IntSet()
@@ -355,17 +469,80 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
    end
 end
 
+function build_utr_graph( nodes::IntSet, motif::EdgeMotif, sgquant::SpliceGraphQuant )
+
+   utr_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
+                                  Vector{Float64}(), Vector{IntSet}(),
+                                  first(nodes), last(nodes) ))
+   curset = IntSet()
+
+   while length(nodes) > 0
+      if motif == TXST_MOTIF
+         curval = pop!(nodes)
+      else
+         curval = shift!(nodes)
+      end
+      push!( curset, curval )
+      push!( get(utr_graph).nodes, copy(curset) )
+      push!( get(utr_graph).psi, 0.0 )
+      push!( get(utr_graph).length, 0.0 )
+      push!( get(utr_graph).count, 0.0 )
+   end
+
+   utr_graph
+end
+
 function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
                               node::NodeInt, motif::EdgeMotif )
    
    utr_graph  = Nullable{PsiGraph}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
 
-   if motif == TXST_MOTIF
-      
-   elseif motif == TXEN_MOTIF
+   used_node  = IntSet()
+   total_cnt  = 0.0
 
-   end 
+   if motif == TXEN_MOTIF
+      # add node directly upstream (CE next to tandemUTR)
+      push!( used_node, node-1 )
+      total_cnt += sgquant.node[node-1]
+   end
+
+   i = node
+   curmotif = motif
+   while curmotif == motif
+      push!( used_node, i )
+      total_cnt += sgquant.node[i]
+      if i > 1
+         interv = Interval{Exonmax}(i-1,i)
+         total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
+      end
+      i += 1
+      if i < length(sg.edgetype)
+         curmotif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
+      else
+         break
+      end
+   end
+
+   if motif == TXST_MOTIF
+      # add node directly downstream (CE next to tandemUTR)
+      push!( used_node, i+1 )
+      total_cnt += sgquant.node[i+1]
+      interv = Interval{Exonmax}( i, i+1 )
+      total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
+   end
+
+   psi = Nullable{Float64}()
+   if total_cnt > 2
+      ambig_cnt = Nullable( Vector{AmbigCounts}() )
+      utr_graph = build_utr_graph( used_node, motif, sgquant )
+      add_node_counts!( ambig_cnt.value, utr_graph.value, sgquant, 1.0 )
+      add_edge_counts!( ambig_cnt.value, utr_graph.value, sgquant )
+      it = rec_tandem_em!( utr_graph.value, ambig_cnt.value, sig=4 )
+      psi = Nullable( get(utr_graph).psi )
+   end
+
+   psi,utr_graph,ambig_cnt
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
@@ -547,11 +724,17 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    if length( sg.edgetype ) <= 2
       return 0
    end
-   for i in 1:length(sg.edgetype)-1
+   i = 1
+   while i < length(sg.edgetype)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
-      motif == NONE_MOTIF && continue
+      motif == NONE_MOTIF && (i += 1; continue)
       if isobligate( motif ) # is utr event
-         
+         psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
+         if !isnull( psi )
+            ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
+            output_utr( io, get(psi), utr, ambig_cnt, motif, sg, i , info )
+            i += (motif == TXST_MOTIF) ? length(get(psi)-1) : length(get(psi)-2) 
+         end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
@@ -559,59 +742,11 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
             output_psi( io, get(psi), inc, exc, ambig_cnt, motif, sg, i, info, bias  ) # TODO bias
          end
-      end  
+      end
+      i += 1
    end
-end
-
-function count_write( io::BufOut, nodestr, countstr, lengstr )
-   write( io, string(nodestr) )
-   write( io, "-" )
-   write( io, string(countstr) )
-   write( io, "(" )
-   write( io, string(lengstr) )
-   write( io, ")" )
-end
-
-function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
-   for i in 1:length(pgraph.nodes)
-      count_write( io, pgraph.nodes[i], pgraph.count[i], pgraph.length[i] )
-      (i < length(pgraph.nodes)) && write( io, "," )
-   end
-   tab && write( io, '\t' )
-end
-
-
-function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph}, 
-                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int, 
-                     info::GeneMeta, bias )
-    
-   # gene
-     tab_write( io, info[1] )
-   # coordinate
-   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
-     tab_write( io, info[3] )
-   # event_type
-     tab_write( io, convert(ASCIIString, motif) )
-   # psi
-     tab_write( io, string(psi) )
-     tab_write( io, string(bias) )   
-
-   if !isnull( inc ) && !isnull( exc )
-      # tab_write( io, string(get(inc).nodes) )
-      
-      #for i in 1:length(get(exc).nodes)-1
-      #   write( io, string( get(exc).nodes[i] ) )
-      #   write( io, "," )
-      #end
-      #write( io, string( get(exc).nodes[end] ) )
-      count_write( io, get(inc), tab=true )
-      count_write( io, get(exc) )
-   else
-        tab_write( io, "NA" )
-            write( io, "NA" )
-   end
-
-   write( io, '\n' )
+   # process back-splicing
+   output_circular( io, sg, sgquant, info )
 end
 
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
@@ -632,6 +767,15 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
+@inline function binomial_likelihood_ci( p, n, z=1.64 )
+   const fisher_info = (p * (1-p)) / n
+   const ci = z * sqrt( fisher_info )
+   const lo = max( 0.0, p - ci )
+   const hi = min( 1.0, p + ci )
+   lo,hi
+end
+
+# spliced psi
 function calculate_psi!( igraph::PsiGraph, egraph::PsiGraph, counts::Vector{Float64}; sig=0 )
    for i in 1:length(igraph.psi)
       igraph.psi[i] = counts[i] / igraph.length[i]
@@ -643,6 +787,14 @@ function calculate_psi!( igraph::PsiGraph, egraph::PsiGraph, counts::Vector{Floa
    cnt_sum = sum( egraph.psi ) + sum( igraph.psi )
    divsignif!( igraph.psi, cnt_sum, sig )
    divsignif!( egraph.psi, cnt_sum, sig )
+end
+
+function calculate_psi!( pgraph::PsiGraph, counts::Vector{Float64}; sig=0 )
+   for i in 1:length(pgraph.psi)
+      pgraph.psi[i] = counts[i] / pgraph.length[i]
+   end
+   const cnt_sum = sum( pgraph.psi )
+   divsignif!( pgraph.psi, cnt_sum, sig )
 end
 
 function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph, 
@@ -687,3 +839,44 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
    end
    it
 end
+
+function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
+                          utr_temp::Vector{Float64}=zeros(length(pgraph.count)),
+                          count_temp::Vector{Float64}=ones(length(pgraph.count)),
+                          it=1, max=1000, sig=0 )
+
+   unsafe_copy!( count_temp, pgraph.count, indx_shift=0 )
+   unsafe_copy!( utr_temp, pgraph.psi )
+
+   for ac in ambig
+      idx = 1
+      if it > 1 # maximization
+         ac.prop_sum = 0.0
+         for p in ac.paths
+            prev_psi = pgraph.psi[p] 
+            ac.prop[idx] = prev_psi
+            ac.prop_sum += prev_psi
+            idx += 1
+         end
+      end
+
+      idx = 1
+      for p in ac.paths
+         @fastmath prop = ac.prop[idx] / ac.prop_sum
+         ac.prop[idx] = prop
+         @fastmath count_temp[p] += prop * ac.multiplier
+         idx += 1
+      end
+   end
+
+   calculate_psi!( pgraph, count_temp, sig=sig ) # expectation
+
+   if utr_temp != pgraph.psi && it < max
+      it = rec_tandem_em!( pgraph, ambig,
+                            utr_temp=utr_temp, count_temp=count_temp,
+                            it=it+1, max=max, sig=sig )
+   end
+   it
+end
+
+
