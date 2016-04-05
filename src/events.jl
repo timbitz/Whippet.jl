@@ -37,17 +37,27 @@ const MOTIF_STRING = fill( "", 9 )
 const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       # Alt TxStart  SL SL
       MOTIF_TABLE[ 0b000000 + 1 ] = TXST_MOTIF
+      # Alt TxStart  LS SL
+      MOTIF_TABLE[ 0b010000 + 1 ] = TXST_MOTIF
+
       # Alt PolyA    RS RS
       MOTIF_TABLE[ 0b011011 + 1 ] = TXEN_MOTIF
+      # Alt PolyA    RS SR
+      MOTIF_TABLE[ 0b011001 + 1 ] = TXEN_MOTIF
 
       # Alt FirstEx  LS LL
       MOTIF_TABLE[ 0b010101 + 1 ] = ALTF_MOTIF
       # Alt FirstEx  LS LR
       MOTIF_TABLE[ 0b010100 + 1 ] = ALTF_MOTIF
+      # Alt FirstEx  LS LS
+      MOTIF_TABLE[ 0b010010 + 1 ] = ALTF_MOTIF
+
       # Alt LastEx   RR SR
       MOTIF_TABLE[ 0b110001 + 1 ] = ALTL_MOTIF
       # Alt LastEx   LR SR
       MOTIF_TABLE[ 0b100001 + 1 ] = ALTL_MOTIF
+      # Alt LastEx   SR SR 
+      MOTIF_TABLE[ 0b001001 + 1 ] = ALTL_MOTIF
 
       # RetainedInt  LL RR
       MOTIF_TABLE[ 0b101110 + 1 ] = RETI_MOTIF
@@ -56,20 +66,37 @@ const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       MOTIF_TABLE[ 0b110101 + 1 ] = SKIP_MOTIF
       #              RR LR
       MOTIF_TABLE[ 0b110100 + 1 ] = SKIP_MOTIF
+      #              RR LS
+      MOTIF_TABLE[ 0b110010 + 1 ] = SKIP_MOTIF
+     
       #              LR LL
       MOTIF_TABLE[ 0b100101 + 1 ] = SKIP_MOTIF
       #              LR LR
       MOTIF_TABLE[ 0b100100 + 1 ] = SKIP_MOTIF
+      #              LR LS
+      MOTIF_TABLE[ 0b100010 + 1 ] = SKIP_MOTIF
+
+      #              SR LL
+      MOTIF_TABLE[ 0b001101 + 1 ] = SKIP_MOTIF
+      #              SR LR
+      MOTIF_TABLE[ 0b001100 + 1 ] = SKIP_MOTIF
+      #              SR LS
+      MOTIF_TABLE[ 0b001010 + 1 ] = SKIP_MOTIF
+
 
       # Alt Donor    LL LL
       MOTIF_TABLE[ 0b101101 + 1 ] = ALTD_MOTIF
       #              LL LR
       MOTIF_TABLE[ 0b101100 + 1 ] = ALTD_MOTIF
+      #              LL LS
+      MOTIF_TABLE[ 0b101010 + 1 ] = ALTD_MOTIF
 
       # Alt Acceptor RR RR
       MOTIF_TABLE[ 0b110110 + 1 ] = ALTA_MOTIF
       #              LR RR
       MOTIF_TABLE[ 0b100110 + 1 ] = ALTA_MOTIF
+      #              SR RR
+      MOTIF_TABLE[ 0b001110 + 1 ] = ALTA_MOTIF
 
 Base.convert(::Type{EdgeMotif}, tup::Tuple{EdgeType,EdgeType}) = Base.convert(EdgeMotif, tup... )
 Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE[ (UInt8(current) << 3) | UInt8(next) + 1 ]
