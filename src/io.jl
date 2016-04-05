@@ -132,11 +132,11 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       tab_write( io, string(psi[i]) )
       tab_write( io, "NA" )
       if !isnull( pgraph )
-         count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i] )
+         count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i], tab=true )
       else
          tab_write( io, "NA" )
-             write( io, "NA" )
       end 
+      write( io, "NA" )
       write( io, '\n' )
       i += 1
    end
@@ -169,13 +169,35 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
    write( io, '\n' )
 end
 
-function count_write( io::BufOut, nodestr, countstr, lengstr )
+function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta )
+   for (st,en) in keys(sgquant.circ)
+      back_len = 0.0
+      back_cnt = 0.0
+      fore_cnt = sgquant.circ[(st,en)]
+      for edg in intersect( sgquant.edge, (st, st) )
+         if edg.first == st
+            back_len += 1
+            back_cnt += edg.value
+         end
+      end
+      psi = fore_cnt / (fore_cnt + back_cnt)
+      tab_write( io, info[1] )
+      coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
+      tab_write( io, info[3] )
+      tab_write( io, "BS" )
+      tab_write( io, string(psi) )
+      tab_write( io, "NA\tNA\tNA\n" )
+   end
+end
+
+function count_write( io::BufOut, nodestr, countstr, lengstr; tab=false )
    write( io, string(nodestr) )
    write( io, "-" )
    write( io, string(countstr) )
    write( io, "(" )
    write( io, string(lengstr) )
    write( io, ")" )
+   tab && write( io, '\t' )
 end
 
 function count_write( io::BufOut, pgraph::PsiGraph; tab=false )

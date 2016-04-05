@@ -718,8 +718,9 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       end
       i += 1
    end
+   # process back-splicing
+   output_circular( io, sg, sgquant, info )
 end
-
 
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
    for i in 1:length(src)
