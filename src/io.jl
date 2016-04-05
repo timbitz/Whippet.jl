@@ -186,7 +186,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       tab_write( io, info[3] )
       tab_write( io, "BS" )
       tab_write( io, string(psi) )
-      tab_write( io, "NA\tNA\tNA\n" )
+      write( io, "NA\tNA\tNA\n" )
    end
 end
 
