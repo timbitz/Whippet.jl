@@ -140,7 +140,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       write( io, '\n' )
       i += 1
    end
-
+   en
 end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},

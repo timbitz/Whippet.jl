@@ -732,8 +732,8 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi )
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            output_utr( io, get(psi), utr, ambig_cnt, motif, sg, i , info )
-            i += (motif == TXST_MOTIF) ? length(get(psi)-1) : length(get(psi)-2) 
+            i = output_utr( io, get(psi), utr, ambig_cnt, motif, sg, i , info )
+            #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
