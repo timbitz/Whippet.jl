@@ -167,6 +167,11 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    println( STDERR, "Building edges.." ) 
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
+   println( STDERR, "Calculating Mappability..." )
+   @time for xg in xgraph
+      calculate_mappability!( xg, fm ) 
+   end
+
    GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true)
 end
 

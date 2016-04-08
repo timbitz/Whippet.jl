@@ -81,11 +81,12 @@ end
 immutable SpliceGraph
    nodeoffset::Vector{Coordint} # SG offset
    nodecoord::Vector{Coordint}  # Genome offset
-   nodelen::Vector{Coordint}
-   edgetype::Vector{EdgeType}
-   edgeleft::Vector{SGKmer}
-   edgeright::Vector{SGKmer}
-   seq::SGSequence
+   nodelen::Vector{Coordint}    # Node Length
+   edgetype::Vector{EdgeType}   # EdgeTypes
+   edgeleft::Vector{SGKmer}     # left edges
+   edgeright::Vector{SGKmer}    # right edges
+   seq::SGSequence              # SG sequence
+   map::BitVector               # Mappable positions
 end
 # All positive strand oriented sequences---> 
 # Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
@@ -93,8 +94,9 @@ end
 
 # empty constructor
 SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
-                             Vector{Coordint}(),  Vector{EdgeType}(),
-                             Vector{SGKmer}(), Vector{SGKmer}(), sg"" )
+                             Vector{Coordint}(), Vector{EdgeType}(), 
+                             Vector{SGKmer}(), Vector{SGKmer}(), 
+                             sg"", BitVector() )
 
 # Main constructor
 # Build splice graph here.
@@ -189,7 +191,9 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
    eleft  = Vector{SGKmer}(length(edgetype))
    eright = Vector{SGKmer}(length(edgetype))
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq )
+   bitvec = BitVector(length(seq))
+
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq, bitvec )
 end
 
 # re-orient - strand by using unshift! instead of push!
@@ -228,3 +232,17 @@ function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
    end
 end
 
+# This function calculates the mappability of a SpliceGraph's SGSequence using
+# the expected alignment parameters seed_size and tolerance that are given in AlignParam
+function calculate_mappability!( sg::SpliceGraph, index::FMIndex; seed_len=18, seed_tolerance=4 )
+   for n in 1:length(sg.nodeoffset)
+      const first = sg.nodeoffset[n]
+      const last  = first + sg.nodelen[n] - (seed_len + 1)
+      for pos in first:last
+         const seq = sg.seq[pos:(pos+seed_len-1)]
+         if length(FMIndexes.sa_range( seq, index )) <= seed_tolerance
+            sg.map[pos] = true
+         end
+      end
+   end
+end

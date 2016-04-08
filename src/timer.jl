@@ -1,3 +1,5 @@
+# Ported from time in Julia Base in order to print to STDERR instead of STDOUT.
+
 macro timer(ex)
     quote
         local stats = Base.gc_num()

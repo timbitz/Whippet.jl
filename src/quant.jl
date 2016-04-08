@@ -163,8 +163,12 @@ end
 # is put into units of junction derived effective_length
 # kadj is minimum of (readlength - minalignlen) and k-1
 @inline function eff_length( node, sg::SpliceGraph, eff_len::Int, kadj::Int )
-   len = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
-                            (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
+#   len = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
+#                            (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
+   first = sg.nodeoffset[node]
+   last  = sg.nodeoffset[node] + sg.nodelen[node] - 1
+   len = sum(sg.map[first:last]) + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
+                                   (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
    @fastmath len / eff_len
 end
 
