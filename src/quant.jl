@@ -167,9 +167,10 @@ end
 #                            (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
    first = sg.nodeoffset[node]
    last  = sg.nodeoffset[node] + sg.nodelen[node] - 1
-   len = sum(sg.map[first:last]) + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
-                                   (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
-   @fastmath len / eff_len
+   len   = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
+                              (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
+   @fastmath map = sum(sg.map[first:last]) / length(first:last)
+   @fastmath (len * map) / eff_len
 end
 
 function eff_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
