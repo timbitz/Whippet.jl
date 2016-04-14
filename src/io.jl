@@ -144,7 +144,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
 end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
-                     total_reads::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta, bias )
 
    # gene
