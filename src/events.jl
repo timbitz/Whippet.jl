@@ -187,19 +187,11 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    false
 end
 
-complexity( one::PsiGraph, two::PsiGraph ) = max( max_complexity(one), max_complexity(two) )
-
+complexity( one::PsiGraph, two::PsiGraph ) = complexity(length(one.nodes) + length(two.nodes))
+complexity( one::PsiGraph ) = complexity(length(one.nodes))
 # This function calculates complexity of a splicing event
-# as the difference of the common nodes and the alt nodes
-function complexity( pgraph::PsiGraph )
-   cmax = 1
-   inter = IntSet()
-   for g in pgraph.nodes
-      cmax = max( cmax, length(g) )
-      inter = intersect( inter, g )
-   end
-   max( 1, cmax - length(inter) )
-end
+# as the ceil log2 number of paths through the graph
+complexity( num_paths::Int ) = @fastmath Int(ceil(log2( num_paths )))
 
 # Build minimal set of paths to explain graph
 # Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3
@@ -761,7 +753,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
             conf_int  = binomial_likelihood_ci( get(psi), total_cnt )
-            output_psi( io, get(psi), inc, exc, total_cnt, motif, sg, i, info, bias  ) # TODO bias
+            output_psi( io, get(psi), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          end
       end
       i += 1
