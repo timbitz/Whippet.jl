@@ -144,6 +144,10 @@ type PsiGraph
    max::NodeInt
 end
 
+Base.sum( pgraph::PsiGraph ) = sum( pgraph.count )
+Base.sum( ngraph::Nullable{PsiGraph} ) = isnull( ngraph ) ? 
+                                         0.0 : convert(Float64, sum( ngraph.value ))
+
 function hasintersect( a::IntSet, b::IntSet )
    seta,setb = length(a) > length(b) ? (b,a) : (a,b)
    for elem in seta
@@ -181,6 +185,20 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
       end
    end
    false
+end
+
+complexity( one::PsiGraph, two::PsiGraph ) = max( max_complexity(one), max_complexity(two) )
+
+# This function calculates complexity of a splicing event
+# as the difference of the common nodes and the alt nodes
+function complexity( pgraph::PsiGraph )
+   cmax = 1
+   inter = IntSet()
+   for g in pgraph.nodes
+      cmax = max( cmax, length(g) )
+      inter = intersect( inter, g )
+   end
+   max( 1, cmax - length(inter) )
 end
 
 # Build minimal set of paths to explain graph
@@ -287,6 +305,8 @@ function Base.(:(==)){I <: Integer}( iset::IntSet, ivec::Vector{I} )
    true
 end
 
+Base.sum( nvec::Nullable{Vector{AmbigCounts}} ) = isnull( nvec ) ? 0.0 :
+                                                  sum( nvec.value )
 function Base.sum( vec::Vector{AmbigCounts} )
    sum = 0.0
    for i in 1:length(vec)
@@ -739,8 +759,9 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          if !isnull( psi )
-            ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            output_psi( io, get(psi), inc, exc, ambig_cnt, motif, sg, i, info, bias  ) # TODO bias
+            total_cnt = sum(inc) + sum(exc) + sum(ambig)
+            conf_int  = binomial_likelihood_ci( get(psi), total_cnt )
+            output_psi( io, get(psi), inc, exc, total_cnt, motif, sg, i, info, bias  ) # TODO bias
          end
       end
       i += 1
