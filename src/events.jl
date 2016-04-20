@@ -752,7 +752,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
-            conf_int  = binomial_likelihood_ci( get(psi), total_cnt )
+            conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
             output_psi( io, get(psi), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          end
       end
@@ -780,11 +780,16 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
-@inline function binomial_likelihood_ci( p, n, z=1.64 )
+@inline function binomial_likelihood_ci( p, n, z=1.64; sig=0 )
    const fisher_info = (p * (1-p)) / n
    const ci = z * sqrt( fisher_info )
-   const lo = max( 0.0, p - ci )
-   const hi = min( 1.0, p + ci )
+   if sig > 0
+      const lo = signif( max( 0.0, p - ci ), sig )
+      const hi = signif( min( 1.0, p + ci ), sig )
+   else
+      const lo = max( 0.0, p - ci )
+      const hi = min( 1.0, p + ci )
+   end
    lo,hi
 end
 
