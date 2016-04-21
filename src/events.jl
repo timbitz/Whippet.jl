@@ -144,6 +144,10 @@ type PsiGraph
    max::NodeInt
 end
 
+Base.sum( pgraph::PsiGraph ) = sum( pgraph.count )
+Base.sum( ngraph::Nullable{PsiGraph} ) = isnull( ngraph ) ? 
+                                         0.0 : convert(Float64, sum( ngraph.value ))
+
 function hasintersect( a::IntSet, b::IntSet )
    seta,setb = length(a) > length(b) ? (b,a) : (a,b)
    for elem in seta
@@ -182,6 +186,12 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    end
    false
 end
+
+complexity( one::PsiGraph, two::PsiGraph ) = complexity(length(one.nodes) + length(two.nodes))
+complexity( one::PsiGraph ) = complexity(length(one.nodes))
+# This function calculates complexity of a splicing event
+# as the ceil log2 number of paths through the graph
+complexity( num_paths::Int ) = @fastmath Int(ceil(log2( num_paths )))
 
 # Build minimal set of paths to explain graph
 # Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3
@@ -287,6 +297,8 @@ function Base.(:(==)){I <: Integer}( iset::IntSet, ivec::Vector{I} )
    true
 end
 
+Base.sum( nvec::Nullable{Vector{AmbigCounts}} ) = isnull( nvec ) ? 0.0 :
+                                                  sum( nvec.value )
 function Base.sum( vec::Vector{AmbigCounts} )
    sum = 0.0
    for i in 1:length(vec)
@@ -732,15 +744,16 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi )
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            i = output_utr( io, get(psi), utr, ambig_cnt, motif, sg, i , info )
+            i = output_utr( io, round(get(psi),4), utr, ambig_cnt, motif, sg, i , info )
             #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          if !isnull( psi )
-            ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            output_psi( io, get(psi), inc, exc, ambig_cnt, motif, sg, i, info, bias  ) # TODO bias
+            total_cnt = sum(inc) + sum(exc) + sum(ambig)
+            conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
+            output_psi( io, signif(get(psi),4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          end
       end
       i += 1
@@ -767,11 +780,19 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
-@inline function binomial_likelihood_ci( p, n, z=1.64 )
+@inline function binomial_likelihood_ci( p, n, z=1.64; sig=0 )
    const fisher_info = (p * (1-p)) / n
+   if fisher_info < 0
+      return(0.0,1.0)
+   end
    const ci = z * sqrt( fisher_info )
-   const lo = max( 0.0, p - ci )
-   const hi = min( 1.0, p + ci )
+   if sig > 0
+      const lo = signif( max( 0.0, p - ci ), sig )
+      const hi = signif( min( 1.0, p + ci ), sig )
+   else
+      const lo = max( 0.0, p - ci )
+      const hi = min( 1.0, p + ci )
+   end
    lo,hi
 end
 

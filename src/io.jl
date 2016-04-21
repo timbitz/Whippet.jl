@@ -18,6 +18,24 @@ function coord_write( io::BufOut, chr, first, last, strand; tab=false )
    tab && write( io, '\t' )
 end
 
+function complex_write( io::BufOut, complex::Int; tab=false )
+   write( io, 'C' )
+   write( io, string(complex) )
+   tab && write( io, '\t' )
+end
+
+function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, sig=4 )
+   lo,hi = conf_int #unpack
+   if width
+      write( io, string( signif(hi-lo, sig) ) )
+      write( io, '\t' )
+   end
+   write( io, string(lo) )
+   write( io, ',' )
+   write( io, string(hi) )
+   tab && write( io, '\t' )
+end
+
 function seq_write( io::BufOut, read::SeqRecord; tab=false )
    for c in read.seq
       write( io, convert(Char, c) )
@@ -129,8 +147,13 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       coord_write( io, info[2], sg.nodecoord[n], sg.nodecoord[n]+sg.nodelen[n]-1, tab=true )
       tab_write( io, info[3] )
       tab_write( io, convert(ASCIIString, motif) )
+      if !isnull( pgraph )
+         complex_write( io, length(get(pgraph).nodes), tab=true )
+      else
+         tab_write( io, "NA" )
+      end
       tab_write( io, string(psi[i]) )
-      tab_write( io, "NA" )
+      tab_write( io, "NA\tNA" ) # TODO add conf_interval to utr!
       if !isnull( pgraph )
          count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i], tab=true )
       else
@@ -144,7 +167,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
 end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
-                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta, bias )
 
    # gene
@@ -154,16 +177,20 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
      tab_write( io, info[3] )
    # event_type
      tab_write( io, convert(ASCIIString, motif) )
+   if !isnull( inc ) && !isnull( exc )
+      complex_write( io, complexity( inc.value, exc.value ), tab=true )
+   else
+          tab_write( io, "NA" )
+   end
    # psi
      tab_write( io, string(psi) )
-     tab_write( io, string(bias) )
 
    if !isnull( inc ) && !isnull( exc )
+      conf_int_write( io, conf_int, tab=true, width=true )
       count_write( io, get(inc), tab=true )
       count_write( io, get(exc) )
    else
-        tab_write( io, "NA" )
-            write( io, "NA" )
+      write( io, "NA\tNA\tNA\tNA" )
    end
 
    write( io, '\n' )
@@ -185,18 +212,19 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
       tab_write( io, info[3] )
       tab_write( io, "BS" )
+      tab_write( io, "C1" )
       tab_write( io, string(psi) )
-      write( io, "NA\tNA\tNA\n" )
+      write( io, "NA\tNA\tNA\tNA\n" )
    end
 end
 
 function count_write( io::BufOut, nodestr, countstr, lengstr; tab=false )
    write( io, string(nodestr) )
-   write( io, "-" )
+#=   write( io, "-" )
    write( io, string(countstr) )
    write( io, "(" )
    write( io, string(lengstr) )
-   write( io, ")" )
+   write( io, ")" ) =#
    tab && write( io, '\t' )
 end
 
