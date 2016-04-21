@@ -744,7 +744,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi )
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            i = output_utr( io, get(psi), utr, ambig_cnt, motif, sg, i , info )
+            i = output_utr( io, round(get(psi),4), utr, ambig_cnt, motif, sg, i , info )
             #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 
          end
       else  # is a spliced node
@@ -753,7 +753,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
             conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
-            output_psi( io, get(psi), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
+            output_psi( io, signif(get(psi),4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          end
       end
       i += 1
@@ -782,6 +782,9 @@ end
 
 @inline function binomial_likelihood_ci( p, n, z=1.64; sig=0 )
    const fisher_info = (p * (1-p)) / n
+   if fisher_info < 0
+      return(0.0,1.0)
+   end
    const ci = z * sqrt( fisher_info )
    if sig > 0
       const lo = signif( max( 0.0, p - ci ), sig )

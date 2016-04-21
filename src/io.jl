@@ -24,10 +24,10 @@ function complex_write( io::BufOut, complex::Int; tab=false )
    tab && write( io, '\t' )
 end
 
-function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false )
+function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, sig=4 )
    lo,hi = conf_int #unpack
    if width
-      write( io, string(hi-lo) )
+      write( io, string( signif(hi-lo, sig) ) )
       write( io, '\t' )
    end
    write( io, string(lo) )
@@ -153,6 +153,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
          tab_write( io, "NA" )
       end
       tab_write( io, string(psi[i]) )
+      tab_write( io, "NA\tNA" ) # TODO add conf_interval to utr!
       if !isnull( pgraph )
          count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i], tab=true )
       else
@@ -189,10 +190,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
       count_write( io, get(inc), tab=true )
       count_write( io, get(exc) )
    else
-        tab_write( io, "NA" )
-        tab_write( io, "NA" )
-        tab_write( io, "NA" )
-            write( io, "NA" )
+      write( io, "NA\tNA\tNA\tNA" )
    end
 
    write( io, '\n' )
@@ -216,7 +214,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       tab_write( io, "BS" )
       tab_write( io, "C1" )
       tab_write( io, string(psi) )
-      write( io, "NA\tNA\tNA\n" )
+      write( io, "NA\tNA\tNA\tNA\n" )
    end
 end
 
