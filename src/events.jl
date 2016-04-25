@@ -173,6 +173,8 @@ function Base.in{T <: Integer}( i::T, pgraph::PsiGraph )
    return false
 end
 
+# This looks for an edge in an IntSet... The two nodes in the edge
+# must be adjacent in the IntSet to be true.
 function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    s = start(iset)
    while !done( iset, s )
@@ -607,8 +609,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       inc_graph = Nullable( reduce_graph( inc_graph.value ) )
       exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
-      !isnull( ambig_edge ) && add_edge_counts!( ambig_cnt.value, inc_graph.value, 
-                                                 exc_graph.value, get(ambig_edge) )
+      add_edge_counts!( ambig_cnt.value, inc_graph.value, 
+                        exc_graph.value, get(ambig_edge) )
 
       if isnodeok
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
