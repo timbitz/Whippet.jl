@@ -173,6 +173,8 @@ function Base.in{T <: Integer}( i::T, pgraph::PsiGraph )
    return false
 end
 
+# This looks for an edge in an IntSet... The two nodes in the edge
+# must be adjacent in the IntSet to be true.
 function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    s = start(iset)
    while !done( iset, s )
@@ -338,7 +340,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
                break
             end
          end
-         if !exists
+         if !exists && sgquant.node[n] > 0
             push!( ambig, AmbigCounts( collect(iset),
                                        ones( length(iset) ) / length(iset),
                                        1.0, sgquant.node[n] * bias / sgquant.leng[n] ) )
@@ -390,7 +392,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
                break
             end
          end
-         if !exists
+         if !exists && sgquant.node[n] > 0
             push!( ambig, AmbigCounts( collect(iset), 
                                        ones( length(iset) ) / length(iset), 
                                        1.0, sgquant.node[n] * bias / sgquant.leng[n] ) )
@@ -425,7 +427,7 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
                break
             end
          end
-         if !exists
+         if !exists && edg.value > 0
             push!( ambig, AmbigCounts( collect(iset),
                                        ones( length(iset) ) / length(iset),
                                        1.0, edg.value ) )
@@ -471,7 +473,7 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
                break
             end
          end 
-         if !exists
+         if !exists && edg.value > 0
             push!( ambig, AmbigCounts( collect(iset),
                                        ones( length(iset) ) / length(iset),
                                        1.0, edg.value ) )
@@ -525,7 +527,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       push!( used_node, i )
       total_cnt += sgquant.node[i]
       if i > 1
-         interv = Interval{Exonmax}(i-1,i)
+         interv = Interval{Exonmax}( i-1, i )
          total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
       end
       i += 1
@@ -538,9 +540,9 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
 
    if motif == TXST_MOTIF
       # add node directly downstream (CE next to tandemUTR)
-      push!( used_node, i+1 )
-      total_cnt += sgquant.node[i+1]
-      interv = Interval{Exonmax}( i, i+1 )
+      push!( used_node, i )
+      total_cnt += sgquant.node[i]
+      interv = Interval{Exonmax}( i-1, i )
       total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
    end
 
@@ -600,16 +602,15 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
 
    if !isnull( exc_graph ) && !isnull( inc_graph )
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
+
       # try to bridge nodes by extending with potentially ambiguous edges
-      if isnodeok
-         ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_graph.value, ambig_edge, node )
-      end
+      ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_graph.value, ambig_edge, node )
 
       inc_graph = Nullable( reduce_graph( inc_graph.value ) )
       exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
-      !isnull( ambig_edge ) && add_edge_counts!( ambig_cnt.value, inc_graph.value, 
-                                                 exc_graph.value, get(ambig_edge) )
+      add_edge_counts!( ambig_cnt.value, inc_graph.value, 
+                        exc_graph.value, get(ambig_edge) )
 
       if isnodeok
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
@@ -743,6 +744,9 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       if isobligate( motif ) # is utr event
          psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi )
+            if any( map( isnan, psi.value ) )
+               println(STDERR, get(utr))
+            end
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
             i = output_utr( io, round(get(psi),4), utr, ambig_cnt, motif, sg, i , info )
             #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 

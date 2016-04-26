@@ -148,7 +148,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       tab_write( io, info[3] )
       tab_write( io, convert(ASCIIString, motif) )
       if !isnull( pgraph )
-         complex_write( io, length(get(pgraph).nodes), tab=true )
+         complex_write( io, complexity( pgraph.value ), tab=true )
       else
          tab_write( io, "NA" )
       end
