@@ -820,7 +820,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       if isobligate( motif ) # is utr event
          psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi )
-            if any( map( isnan, psi.value ) )
+            if any( map( isnan, psi.value ) ) # TODO: Remove once finished debugging
                println(STDERR, get(utr))
             end
             ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )

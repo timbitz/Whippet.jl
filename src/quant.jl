@@ -171,7 +171,7 @@ end
    len   = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
                               (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
    map   = map_ratio( sg, ur=first:last )
-   @fastmath (len * map) / eff_len
+   @fastmath max( 1.0, (len * map) ) / eff_len
 end
 
 function eff_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
