@@ -51,7 +51,8 @@ end
 
 function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen=50, sig=0 )
    for i in 1:length(counts)
-      @fastmath quant.tpm[ i ] = counts[i] / (quant.length[i] - readlen)
+      const denom = max( 1.0, (quant.length[i] - readlen) )
+      @fastmath quant.tpm[ i ] = counts[i] / denom
    end
    const rpk_sum = sum( quant.tpm )
    for i in 1:length(quant.tpm)
