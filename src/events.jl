@@ -290,7 +290,7 @@ function eff_junc_length{I <: AbstractInterval}( sg::SpliceGraph, edg::I, nodes:
    if kwidth <= sg.nodelen[first(edg)]
       const right = sg.nodeoffset[first(edg)] + sg.nodelen[first(edg)] - 1
       const left  = right - kwidth + 1
-      @fastmath map += map_ratio( sg, left:right )
+      @fastmath map += map_ratio( sg, ur=left:right )
    else
       # iterate backwards with one-way forward iterators?
       @fastmath map += rev_eff_junc( sg, nodes, first(edg), kwidth ) 
@@ -299,7 +299,7 @@ function eff_junc_length{I <: AbstractInterval}( sg::SpliceGraph, edg::I, nodes:
    if kwidth <= sg.nodelen[last(edg)]
       const left  = sg.nodeoffset[last(edg)]
       const right = left + kwidth - 1
-      @fastmath map += map_ratio( sg, left:right )
+      @fastmath map += map_ratio( sg, ur=left:right )
    else
       # easy... iterate forwards
       @fastmath map += fwd_eff_junc( sg, nodes, last(edg), kwidth )   
@@ -309,7 +309,7 @@ function eff_junc_length{I <: AbstractInterval}( sg::SpliceGraph, edg::I, nodes:
 end
 
 # calculate mappability from gapped path in the forward direction.
-function fwd_eff_junc( sg::SpliceGraph, nodes::IntSet, nval::Int, amt::Int )
+function fwd_eff_junc( sg::SpliceGraph, nodes::IntSet, nval, amt::Int )
    map = 0.0
    s = start(nodes)
    has_started = false
@@ -320,7 +320,7 @@ function fwd_eff_junc( sg::SpliceGraph, nodes::IntSet, nval::Int, amt::Int )
          has_started = true
          to_sub = min( work_amt, sg.nodelen[v] )
          work_amt -= to_sub
-         @fastmath map += map_ratio( sg, sg.nodeoffset[v]:(sg.nodeoffset[v] + to_sub - 1) )
+         @fastmath map += map_ratio( sg, ur=sg.nodeoffset[v]:(sg.nodeoffset[v] + to_sub - 1) )
       end
    end
    @fastmath map / (amt - work_amt)
@@ -328,7 +328,7 @@ end
 
 # calculate mappability from gapped path in the reverse direction.
 # we cant iterate backwards without reverse iterators, so we will use memory
-function rev_eff_junc( sg::SpliceGraph, nodes::IntSet, nval::Int, amt::Int )
+function rev_eff_junc( sg::SpliceGraph, nodes::IntSet, nval, amt::Int )
    map = 0.0
    work_amt = amt
    vec = Vector{Int}()
@@ -336,18 +336,18 @@ function rev_eff_junc( sg::SpliceGraph, nodes::IntSet, nval::Int, amt::Int )
    # collect left direction values
    while !done( nodes, s )
       v,s = next( nodes, s )
-      if n <= nval
-         push!( vec, n )
+      if v <= nval
+         push!( vec, v )
       end
    end
    # now reverse iterate and add to map
    for i in length(vec):-1:1
       if work_amt > 0
-         to_sub = min( work_amt, sg.nodelen[vec[i]] )
+         to_sub = min( work_amt, sg.nodelen[ vec[i] ] )
          work_amt -= to_sub
          const right = sg.nodeoffset[ vec[i] ] + sg.nodelen[ vec[i] ] - 1
          const left  = right - to_sub + 1
-         @fastmath map += map_ratio( sg, left:right )
+         @fastmath map += map_ratio( sg, ur=left:right )
       end
    end
 
@@ -520,13 +520,13 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph, egraph:
       for i in 1:length(igraph.nodes)
          if edg in igraph.nodes[i]
             push!(iset, i)
-            igraph.length[i] += eff_junc_length( sg, edg, igraph.nodes, kwidth ) # 1
+            igraph.length[i] += eff_junc_length( sg, edg, igraph.nodes[i], kwidth ) # 1
          end
       end
       for i in 1:length(egraph.nodes)
          if edg in egraph.nodes[i]
             push!( iset, i+length(igraph.nodes) )
-            egraph.length[i] += eff_junc_length( sg, edg, egraph.nodes, kwidth ) # 1
+            egraph.length[i] += eff_junc_length( sg, edg, egraph.nodes[i], kwidth ) # 1
          end
       end
       #=                                             =#
