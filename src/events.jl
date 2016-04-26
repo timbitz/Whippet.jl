@@ -479,7 +479,7 @@ end
 
 # add_edge_counts! for one psigraph, (used in tandem utr)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
-                           sgquant::SpliceGraphQuant) #, readlen::Int )
+                           sgquant::SpliceGraphQuant)
    iset = IntSet()
    for edg in sgquant.edge
       for i in 1:length(pgraph.nodes)
@@ -514,19 +514,19 @@ end
 
 # add_edge_counts! for two graphs, inc_graph and exc_graph! (used in spliced events)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph, egraph::PsiGraph,
-                           edges::Vector{IntervalValue}, sg::SpliceGraph, readlen::Int )
+                           edges::Vector{IntervalValue}, sg::SpliceGraph, kwidth::Int )
    iset = IntSet()
    for edg in edges
       for i in 1:length(igraph.nodes)
          if edg in igraph.nodes[i]
             push!(iset, i)
-            igraph.length[i] += eff_junc_length( sg, edg, igraph.nodes, readlen ) # 1
+            igraph.length[i] += eff_junc_length( sg, edg, igraph.nodes, kwidth ) # 1
          end
       end
       for i in 1:length(egraph.nodes)
          if edg in egraph.nodes[i]
             push!( iset, i+length(igraph.nodes) )
-            egraph.length[i] += eff_junc_length( sg, edg, egraph.nodes, readlen ) # 1
+            egraph.length[i] += eff_junc_length( sg, edg, egraph.nodes, kwidth ) # 1
          end
       end
       #=                                             =#
@@ -636,7 +636,7 @@ end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
                            node::NodeInt, motif::EdgeMotif, bias::Float64, 
-                           readlen::Int, isnodeok::Bool )
+                           kwidth::Int, isnodeok::Bool )
 
    inc_graph  = Nullable{PsiGraph}()
    exc_graph  = Nullable{PsiGraph}()
@@ -686,7 +686,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
       add_edge_counts!( ambig_cnt.value, inc_graph.value, 
-                        exc_graph.value, get(ambig_edge), sg, readlen )
+                        exc_graph.value, get(ambig_edge), sg, kwidth )
 
       if isnodeok
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
@@ -791,7 +791,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, igraph::
    ambig_edge
 end
 
-function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant, readlen::Int; isnodeok=true )
+function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant, kwidth::Int; isnodeok=true )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream(io)
    for g in 1:length(lib.graphs)
@@ -799,13 +799,13 @@ function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant, readlen:
       chr  = lib.info[g].name
       strand = lib.info[g].strand ? '+' : '-'
       #println(STDERR, "$g, $name, $chr, $strand" )
-      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), readlen, isnodeok=isnodeok )
+      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), kwidth, isnodeok=isnodeok )
    end
    close(stream)
    close(io)
 end
 
-function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta, readlen::Int; isnodeok=false )
+function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta, kwidth::Int; isnodeok=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -829,7 +829,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
-         psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, readlen, isnodeok )
+         psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, kwidth, isnodeok )
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
             conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
