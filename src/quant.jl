@@ -42,7 +42,7 @@ function GraphLibQuant( lib::GraphLib, ref::Refset )
    for i in 1:length( lib.graphs )
       name = lib.names[i]
       if haskey( ref.geneset, name )
-         len[i] = ref.geneset[name].length
+         len[i] = ref.geneset[name].length * map_ratio( lib.graphs[i] )
       end
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end

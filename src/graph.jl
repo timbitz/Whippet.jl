@@ -246,3 +246,7 @@ function calculate_mappability!( sg::SpliceGraph, index::FMIndex; seed_len=18, s
       end
    end
 end
+
+@fastmath map_ratio( bv::BitVector ) = sum( bv ) / length( bv )
+map_ratio( sg::SpliceGraph; ur::UnitRange=1:length(sg.map) ) = map_ratio( sg.map[ur] )
+
