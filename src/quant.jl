@@ -170,7 +170,7 @@ end
    last  = sg.nodeoffset[node] + sg.nodelen[node] - 1
    len   = sg.nodelen[node] + (istxstart( sg.edgetype[node] ) ? 0 : kadj) +
                               (istxstop( sg.edgetype[node+1] ) ? 0 : kadj)
-   @fastmath map = sum(sg.map[first:last]) / length(first:last)
+   map   = map_ratio( sg, ur=first:last )
    @fastmath (len * map) / eff_len
 end
 

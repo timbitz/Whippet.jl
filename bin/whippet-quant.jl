@@ -114,7 +114,7 @@ function main()
    @timer bias_ave,bias_var = global_bias( quant )
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"] )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"], readlen=readlen )
    println(STDERR, "Whippet $ver done." )
 end
 

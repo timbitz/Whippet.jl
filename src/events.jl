@@ -280,6 +280,81 @@ function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I;
    push!( ppath.nodes, edg.last  )
 end
 
+# This function tries to extract the mappable space for a specific edge.
+# If the exons on either side of the junction are bigger than the readlength overlap
+# then this is simple... however if the read can overlap multiple exons, then we add
+# mappability from the adjacent exons given in nodes for as far as we can or need to 
+# extend 'nodes::IntSet'.  kwidth is edge (readlen - Kmer) 
+function eff_junc_length{I <: AbstractInterval}( sg::SpliceGraph, edg::I, nodes::IntSet, kwidth::Int )
+   map = 0.0
+   if kwidth <= sg.nodelen[first(edg)]
+      const right = sg.nodeoffset[first(edg)] + sg.nodelen[first(edg)] - 1
+      const left  = right - kwidth + 1
+      @fastmath map += map_ratio( sg, left:right )
+   else
+      # iterate backwards with one-way forward iterators?
+      @fastmath map += rev_eff_junc( sg, nodes, first(edg), kwidth ) 
+   end
+
+   if kwidth <= sg.nodelen[last(edg)]
+      const left  = sg.nodeoffset[last(edg)]
+      const right = left + kwidth - 1
+      @fastmath map += map_ratio( sg, left:right )
+   else
+      # easy... iterate forwards
+      @fastmath map += fwd_eff_junc( sg, nodes, last(edg), kwidth )   
+   end
+
+   @fastmath map/2
+end
+
+# calculate mappability from gapped path in the forward direction.
+function fwd_eff_junc( sg::SpliceGraph, nodes::IntSet, nval::Int, amt::Int )
+   map = 0.0
+   s = start(nodes)
+   has_started = false
+   work_amt = amt
+   while !done( nodes, s )
+      v,s = next( nodes, s )
+      if work_amt > 0 && (v == nval || has_started)
+         has_started = true
+         to_sub = min( work_amt, sg.nodelen[v] )
+         work_amt -= to_sub
+         @fastmath map += map_ratio( sg, sg.nodeoffset[v]:(sg.nodeoffset[v] + to_sub - 1) )
+      end
+   end
+   @fastmath map / (amt - work_amt)
+end
+
+# calculate mappability from gapped path in the reverse direction.
+# we cant iterate backwards without reverse iterators, so we will use memory
+function rev_eff_junc( sg::SpliceGraph, nodes::IntSet, nval::Int, amt::Int )
+   map = 0.0
+   work_amt = amt
+   vec = Vector{Int}()
+   s = start(nodes)
+   # collect left direction values
+   while !done( nodes, s )
+      v,s = next( nodes, s )
+      if n <= nval
+         push!( vec, n )
+      end
+   end
+   # now reverse iterate and add to map
+   for i in length(vec):-1:1
+      if work_amt > 0
+         to_sub = min( work_amt, sg.nodelen[vec[i]] )
+         work_amt -= to_sub
+         const right = sg.nodeoffset[ vec[i] ] + sg.nodelen[ vec[i] ] - 1
+         const left  = right - to_sub + 1
+         @fastmath map += map_ratio( sg, left:right )
+      end
+   end
+
+   @fastmath map / (amt - work_amt)
+end
+
+
 type AmbigCounts
    paths::Vector{NodeInt}
    prop::Vector{Float64}
@@ -404,7 +479,7 @@ end
 
 # add_edge_counts! for one psigraph, (used in tandem utr)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
-                           sgquant::SpliceGraphQuant )
+                           sgquant::SpliceGraphQuant) #, readlen::Int )
    iset = IntSet()
    for edg in sgquant.edge
       for i in 1:length(pgraph.nodes)
@@ -438,20 +513,20 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
 end
 
 # add_edge_counts! for two graphs, inc_graph and exc_graph! (used in spliced events)
-function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
-                           egraph::PsiGraph, edges::Vector{IntervalValue} )
+function add_edge_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph, egraph::PsiGraph,
+                           edges::Vector{IntervalValue}, sg::SpliceGraph, readlen::Int )
    iset = IntSet()
    for edg in edges
       for i in 1:length(igraph.nodes)
          if edg in igraph.nodes[i]
             push!(iset, i)
-            igraph.length[i] += 1
+            igraph.length[i] += eff_junc_length( sg, edg, igraph.nodes, readlen ) # 1
          end
       end
       for i in 1:length(egraph.nodes)
          if edg in egraph.nodes[i]
             push!( iset, i+length(igraph.nodes) )
-            egraph.length[i] += 1
+            egraph.length[i] += eff_junc_length( sg, edg, egraph.nodes, readlen ) # 1
          end
       end
       #=                                             =#
@@ -560,7 +635,8 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
-                           node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool )
+                           node::NodeInt, motif::EdgeMotif, bias::Float64, 
+                           readlen::Int, isnodeok::Bool )
 
    inc_graph  = Nullable{PsiGraph}()
    exc_graph  = Nullable{PsiGraph}()
@@ -610,7 +686,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
       add_edge_counts!( ambig_cnt.value, inc_graph.value, 
-                        exc_graph.value, get(ambig_edge) )
+                        exc_graph.value, get(ambig_edge), sg, readlen )
 
       if isnodeok
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
@@ -715,7 +791,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, igraph::
    ambig_edge
 end
 
-function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=true )
+function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant, readlen::Int; isnodeok=true )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream(io)
    for g in 1:length(lib.graphs)
@@ -723,13 +799,13 @@ function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok
       chr  = lib.info[g].name
       strand = lib.info[g].strand ? '+' : '-'
       #println(STDERR, "$g, $name, $chr, $strand" )
-      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), isnodeok=isnodeok )
+      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), readlen, isnodeok=isnodeok )
    end
    close(stream)
    close(io)
 end
 
-function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; isnodeok=false )
+function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta, readlen::Int; isnodeok=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -753,7 +829,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
-         psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
+         psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, readlen, isnodeok )
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
             conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
@@ -814,6 +890,7 @@ function calculate_psi!( igraph::PsiGraph, egraph::PsiGraph, counts::Vector{Floa
    divsignif!( egraph.psi, cnt_sum, sig )
 end
 
+# utr psi
 function calculate_psi!( pgraph::PsiGraph, counts::Vector{Float64}; sig=0 )
    for i in 1:length(pgraph.psi)
       pgraph.psi[i] = counts[i] / pgraph.length[i]
