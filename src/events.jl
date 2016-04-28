@@ -314,16 +314,19 @@ function fwd_eff_junc( sg::SpliceGraph, nodes::IntSet, nval, amt::Int )
    s = start(nodes)
    has_started = false
    work_amt = amt
+   n = 0
    while !done( nodes, s )
       v,s = next( nodes, s )
       if work_amt > 0 && (v == nval || has_started)
          has_started = true
          to_sub = min( work_amt, sg.nodelen[v] )
          work_amt -= to_sub
+         n += 1
          @fastmath map += map_ratio( sg, ur=sg.nodeoffset[v]:(sg.nodeoffset[v] + to_sub - 1) )
       end
    end
-   @fastmath map / (amt - work_amt)
+   @fastmath map = n > 0 ? map/n : 1.0
+   @fastmath (map * (amt - work_amt)/amt + work_amt/amt)
 end
 
 # calculate mappability from gapped path in the reverse direction.
@@ -333,6 +336,7 @@ function rev_eff_junc( sg::SpliceGraph, nodes::IntSet, nval, amt::Int )
    work_amt = amt
    vec = Vector{Int}()
    s = start(nodes)
+   n = 0
    # collect left direction values
    while !done( nodes, s )
       v,s = next( nodes, s )
@@ -347,11 +351,12 @@ function rev_eff_junc( sg::SpliceGraph, nodes::IntSet, nval, amt::Int )
          work_amt -= to_sub
          const right = sg.nodeoffset[ vec[i] ] + sg.nodelen[ vec[i] ] - 1
          const left  = right - to_sub + 1
+         n += 1
          @fastmath map += map_ratio( sg, ur=left:right )
       end
    end
-
-   @fastmath map / (amt - work_amt)
+   map = n > 0 ? map/n : 1.0
+   @fastmath (map * (amt - work_amt)/amt + work_amt/amt)
 end
 
 

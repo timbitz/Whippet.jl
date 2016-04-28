@@ -24,6 +24,7 @@ immutable GraphLib <: SeqLibrary
 end
 
 # Binary search.  -- deprecated for more efficient Base.searchsortedlast !!
+# note: never forget that recursion has overhead... lots of overhead.
 @inline function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1; lower=false )
    low == high && return(lower ? low - 1 : 0)
    const mid = ((high - low) >> 1) + low
