@@ -5,7 +5,7 @@
 
 ### Features
 - High performance
-- Robust quantification in any species
+- Robust quantification of the expression and transcriptome structure of model and non-model organisms
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Accurate splice graph representations of high complexity event types (splicing and alt-3'/5' end usage)
