@@ -639,9 +639,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
          get(exc_graph).psi = zeros( length( get(exc_graph).count ) )
          get(inc_graph).psi = zeros( length( get(inc_graph).count ) )
          calculate_psi!( inc_graph.value, exc_graph.value, [get(inc_graph).count; get(exc_graph).count] )
-         #println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
          it = rec_spliced_em!( inc_graph.value, exc_graph.value, ambig_cnt.value, sig=4 )
-         #println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
          psi = Nullable( sum( get(inc_graph).psi ) )
       end
    end
