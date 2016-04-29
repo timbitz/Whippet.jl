@@ -26,14 +26,14 @@ julia dependencies.jl
 
 3) Build an index.  You need your genome sequence in fasta, and a gene annotation file in refflat. A default example is supplied for hg19 in anno/refseq_hg19.flat.gz
 ```
-julia whippet-index --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
+julia whippet-index.jl --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
 ```
 
 4) Quantify FASTQ files.
 ```
-julia whippet-quant file.fastq.gz
+julia whippet-quant.jl file.fastq.gz
 ```
 or if you have paired-end RNA-seq data...
 ```
-julia whippet-quant fwd_file.fastq.gz rev_file.fastq.gz
+julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
