@@ -47,5 +47,15 @@ function open_streams( files::Vector{ASCIIString} )
       buf[i] = open_stream( files[i] )
    end
 end
- 
 
+function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} )
+   for bs in streams
+      
+   end
+end
+
+function process_psi_files( a::Vector{BufferedStreams.BufferedInputStream}, 
+                            b::Vector{BufferedStreams.BufferedInputStream} )
+   i = 0
+   
+end
