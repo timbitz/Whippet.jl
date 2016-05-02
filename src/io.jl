@@ -187,6 +187,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
 
    if !isnull( inc ) && !isnull( exc )
       conf_int_write( io, conf_int, tab=true, width=true )
+      conf_int_write( io, (sum(inc)+sum(exc),total_reads-sum(inc)+sum(exc)), tab=true, width=false )
       count_write( io, get(inc), tab=true )
       count_write( io, get(exc) )
    else
@@ -235,3 +236,14 @@ function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
    end
    tab && write( io, '\t' )
 end
+
+function output_psi_header( io::BufOut )
+   tab_write( io, "Gene\tNode\tStrand" )
+   tab_write( io, "Type\tComplexity\tPsi\tCI_Width\tCI_Lo,Hi" )
+   write( io, "Inc_Paths\tExc_Paths\n" )
+end
+
+function output_tpm_header( io::BufOut )
+   write( io, "Gene\tTpM\tRead_Counts\n" )
+end
+

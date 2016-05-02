@@ -235,6 +235,7 @@ end
 function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
    io = open( file, "w" )
    stream = ZlibDeflateOutputStream( io )
+   output_tpm_header( stream )
    for i in 1:length(lib.names)
       tab_write( stream, lib.names[i] )
       tab_write( stream, string(gquant.tpm[i]) )

@@ -716,6 +716,7 @@ end
 function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=true )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream(io)
+   output_psi_header( stream )
    for g in 1:length(lib.graphs)
       name = lib.names[g]
       chr  = lib.info[g].name
@@ -754,7 +755,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
-            conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
+            conf_int  = beta_posterior_ci( get(psi), total_cnt, sig=3 )
             output_psi( io, signif(get(psi),4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          end
       end
@@ -794,6 +795,20 @@ end
    else
       const lo = max( 0.0, p - ci )
       const hi = min( 1.0, p + ci )
+   end
+   lo,hi
+end
+
+@inline function beta_posterior_ci( p, n, ci=0.9; sig=0 )
+   const lo_q = (1 - 0.9)/2
+   const hi_q = 1 - lo_q
+   const beta = Beta( p*n + 1, (1-p)*n + 1 )
+   if sig > 0
+      const lo = signif( quantile(beta, lo_q), sig )
+      const hi = signif( quantile(beta, hi_q), sig )
+   else 
+      const lo = quantile(beta, lo_q)
+      const hi = quantile(beta, hi_q)
    end
    lo,hi
 end
