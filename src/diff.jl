@@ -5,6 +5,7 @@ immutable PosteriorPsi
    psi::Float64
 end
 
+# create one PosteriorPsi object given psi, N, and priors α and β
 function PosteriorPsi( psi::Float64, N::Float64, α=1.0, β=1.0; size=1000 )
    # Posterior Beta is k + α, n-k + β
    beta = Beta( psi*N + α, (1-psi)*N + β )
@@ -48,9 +49,18 @@ function open_streams( files::Vector{ASCIIString} )
    end
 end
 
+function parse_psi_line( line::ASCIIString )
+   res = split( line, '\t' )
+   
+end
+
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} )
+   
    for bs in streams
-      
+      line = readline( bs )
+      if line != ""
+         
+      end
    end
 end
 

@@ -746,8 +746,8 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
             if any( map( isnan, psi.value ) )
                println(STDERR, get(utr))
             end
-            ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            i = output_utr( io, round(get(psi),4), utr, ambig_cnt, motif, sg, i , info )
+            total_cnt = sum(utr) + sum(ambig)
+            i = output_utr( io, round(get(psi),4), utr, total_cnt, motif, sg, i , info )
             #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 
          end
       else  # is a spliced node
@@ -783,6 +783,9 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
+# Deprecated -- for beta_posterior_ci which is more accurate and on the correct
+# 0,1 domain, rather than the normal approximation given by the sqrt of 
+# fisher information below
 @inline function binomial_likelihood_ci( p, n, z=1.64; sig=0 )
    const fisher_info = (p * (1-p)) / n
    if fisher_info < 0
@@ -799,8 +802,8 @@ end
    lo,hi
 end
 
-@inline function beta_posterior_ci( p, n, ci=0.9; sig=0 )
-   const lo_q = (1 - 0.9)/2
+@inline function beta_posterior_ci( p, n; ci=0.9, sig=0 )
+   const lo_q = (1 - ci)/2
    const hi_q = 1 - lo_q
    const beta = Beta( p*n + 1, (1-p)*n + 1 )
    if sig > 0

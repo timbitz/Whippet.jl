@@ -137,7 +137,7 @@ end
 
 ### EVENT PRINTING
 function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph}, 
-                     ambig::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
+                     total_reads::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta )
    st = motif == TXST_MOTIF ? node : node - 1
    en = st + length(psi) - 1
@@ -153,11 +153,13 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
          tab_write( io, "NA" )
       end
       tab_write( io, string(psi[i]) )
-      tab_write( io, "NA\tNA" ) # TODO add conf_interval to utr!
       if !isnull( pgraph )
+         conf_int  = beta_posterior_ci( psi[i], total_reads, sig=3 )
+         conf_int_write( io, conf_int, tab=true, width=true)
+         tab_write( io, string( signif(total_reads, 3) ) )
          count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i], tab=true )
       else
-         tab_write( io, "NA" )
+         tab_write( io, "NA\tNA\tNA\tNA" )
       end 
       write( io, "NA" )
       write( io, '\n' )
@@ -187,11 +189,11 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
 
    if !isnull( inc ) && !isnull( exc )
       conf_int_write( io, conf_int, tab=true, width=true )
-      conf_int_write( io, (sum(inc)+sum(exc),total_reads-sum(inc)+sum(exc)), tab=true, width=false )
+      tab_write( io, string( signif(total_reads, 3) ) )
       count_write( io, get(inc), tab=true )
       count_write( io, get(exc) )
    else
-      write( io, "NA\tNA\tNA\tNA" )
+      write( io, "NA\tNA\tNA\tNA\tNA" )
    end
 
    write( io, '\n' )
@@ -208,14 +210,18 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
             back_cnt += edg.value
          end
       end
-      psi = fore_cnt / (fore_cnt + back_cnt)
+      total_reads = (fore_cnt + back_cnt)
+      psi = fore_cnt / total_reads
       tab_write( io, info[1] )
       coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
       tab_write( io, info[3] )
       tab_write( io, "BS" )
       tab_write( io, "C1" )
       tab_write( io, string(psi) )
-      write( io, "NA\tNA\tNA\tNA\n" )
+      conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
+      conf_int_write( io, conf_int, tab=true, width=true)
+      tab_write( io, string( signif(total_reads, 3) ) )
+      write( io, "NA\tNA\n" )
    end
 end
 
