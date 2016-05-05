@@ -749,6 +749,9 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
             total_cnt = sum(utr) + sum(ambig)
             i = output_utr( io, round(get(psi),4), utr, total_cnt, motif, sg, i , info )
             #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 
+         else
+            # psi/utr/total_cnt ignored here.
+            i = output_utr( io, get(psi), utr, total_cnt, motif, sg, i, info, empty=true )
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
@@ -757,6 +760,8 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
             conf_int  = beta_posterior_ci( get(psi), total_cnt, sig=3 )
             output_psi( io, signif(get(psi),4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
+         else
+            output_empty( io, motif, sg, i, info )
          end
       end
       i += 1
@@ -802,6 +807,8 @@ end
    lo,hi
 end
 
+
+# Beta(
 @inline function beta_posterior_ci( p, n; ci=0.9, sig=0 )
    const lo_q = (1 - ci)/2
    const hi_q = 1 - lo_q

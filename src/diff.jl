@@ -5,31 +5,40 @@ immutable PosteriorPsi
    psi::Float64
 end
 
+PosteriorPsi() = PosteriorPsi( Beta(1,1), Float64[], 0.0 )
+
 # create one PosteriorPsi object given psi, N, and priors α and β
-function PosteriorPsi( psi::Float64, N::Float64, α=1.0, β=1.0; size=1000 )
+# Posterior                      Likelihood         Prior
+# Beta( Ψ*N + α, (1-Ψ)*N + β ) ∝ Binomial( Ψ, N ) * Beta( α, β )
+function PosteriorPsi( Ψ::Float64, N::Float64, α=1.0, β=1.0; size=1000 )
    # Posterior Beta is k + α, n-k + β
-   beta = Beta( psi*N + α, (1-psi)*N + β )
+   beta = Beta( Ψ*N + α, (1-Ψ)*N + β )
    emperical = rand(beta, size)
    psi = mean(beta)
-   PosteriorPsi( beta, emperical, psi )
+   PosteriorPsi( beta, emperical, Ψ )
 end
 
 # combine multiple beta posteriors for replicates into one
-function PosteriorPsi( set::Vector{PosteriorPsi} )
+# if unpaired, we don't need to maintain sample1_rep1 to sample2_rep1
+# so we can re-sample from the new joint beta
+function PosteriorPsi( set::Vector{PosteriorPsi}; paired=false, size=1000 )
    emperical = vcat( map( x->x.emperical, set )... )
    beta = fit(Beta, emperical)
-   psi = mean(beta)
+   psi  = mean(beta)
+   if !paired
+      emperical = rand(beta, size)
+   end
    PosteriorPsi( beta, emperical, psi )
 end
 
 # Calculates the probability, P( a-b > amt)
 function probability( a::PosteriorPsi, b::PosteriorPsi; amt=0.0 )
-   good = 0
+   success = 0
    total = min(length(a.emperical),length(b.emperical))
    for i in 1:total
-      good += a.emperical[i] - b.emperical[i] > amt ? 1 : 0
+      success += a.emperical[i] - b.emperical[i] > amt ? 1 : 0
    end
-   @fastmath good / total
+   @fastmath success / total
 end
 
 function open_stream( filename )
@@ -49,16 +58,26 @@ function open_streams( files::Vector{ASCIIString} )
    end
 end
 
-function parse_psi_line( line::ASCIIString )
-   res = split( line, '\t' )
-   
+function parse_psi_line( line::ASCIIString; min_num=5 )
+   res  = split( line, '\t' )
+   psi  = res[6] != "NA" ? parse(Float64, res[6]) : 0.0
+   num  = res[9] != "NA" ? parse(Float64, res[9]) : 0.0
+   if psi < 0 || num <= min_num
+      post = PosteriorPsi()
+      bool = false
+   else
+      post = PosteriorPsi( psi, num )
+      bool = true
+   end
+   res,post,bool
 end
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} )
-   
    for bs in streams
       line = readline( bs )
       if line != ""
+         par,post,isok = parse_psi_line( line )
+         !isok && continue
          
       end
    end
