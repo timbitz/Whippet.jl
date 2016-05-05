@@ -79,16 +79,12 @@ type PosteriorEvent
    b::PosteriorPsi
 end
 
-function max_complexity( first::ASCIIString, last::ASCIIString )
-   firstspl = split( first, 'C', keep=false )
-   lastspl = split( last, 'C', keep=false )
-   parse(Int, firstspl) > parse(Int, lastspl) ? first : last
-end
+parse_complexity( c::ASCIIString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} )
-   postvec = Vector{PosteriorPsi}
+   postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
-   complex = "C0"
+   complex = 0
    for bs in streams
       line = readline( bs )
       if line != ""
@@ -96,17 +92,21 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} 
          !isok && continue
          push!( postvec, post )
          event = par[1:4]
-         complex = max_complexity( par[5], complex )
+         parcomplex = parse_complexity( par[5] )
+         complex = parcomplex > complex ? parcomplex : complex
       end
    end
    event,complex,postvec
 end
 
 function process_psi_files( a::Vector{BufferedStreams.BufferedInputStream}, 
-                            b::Vector{BufferedStreams.BufferedInputStream} )
+                            b::Vector{BufferedStreams.BufferedInputStream}; min_samp=1 )
    i = 0
    
    a_event,a_complex,a_post = process_psi_line( a )
    b_event,b_complex,b_post = process_psi_line( b )
-   
+   if length(a_post) > min_samp && length(b_post) > min_samp
+      a_post = PosteriorPsi( a_post )
+      b_post = PosteriorPsi( b_post )
+   end
 end
