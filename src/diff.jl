@@ -69,22 +69,44 @@ function parse_psi_line( line::ASCIIString; min_num=5 )
       post = PosteriorPsi( psi, num )
       bool = true
    end
-   res,post,bool
+   res[1:5],post,bool
+end
+
+type PosteriorEvent
+   event::Vector{SubString{ASCIIString}}
+   complexity::ASCIIString
+   a::PosteriorPsi
+   b::PosteriorPsi
+end
+
+function max_complexity( first::ASCIIString, last::ASCIIString )
+   firstspl = split( first, 'C', keep=false )
+   lastspl = split( last, 'C', keep=false )
+   parse(Int, firstspl) > parse(Int, lastspl) ? first : last
 end
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} )
+   postvec = Vector{PosteriorPsi}
+   event   = split( "", "" )
+   complex = "C0"
    for bs in streams
       line = readline( bs )
       if line != ""
          par,post,isok = parse_psi_line( line )
          !isok && continue
-         
+         push!( postvec, post )
+         event = par[1:4]
+         complex = max_complexity( par[5], complex )
       end
    end
+   event,complex,postvec
 end
 
 function process_psi_files( a::Vector{BufferedStreams.BufferedInputStream}, 
                             b::Vector{BufferedStreams.BufferedInputStream} )
    i = 0
+   
+   a_event,a_complex,a_post = process_psi_line( a )
+   b_event,b_complex,b_post = process_psi_line( b )
    
 end
