@@ -715,7 +715,7 @@ end
 
 function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=true )
    io = open( outfile, "w" )
-   stream = ZlibDeflateOutputStream(io)
+   stream = ZlibDeflateOutputStream( io )
    output_psi_header( stream )
    for g in 1:length(lib.graphs)
       name = lib.names[g]

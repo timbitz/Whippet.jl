@@ -261,3 +261,18 @@ function output_tpm_header( io::BufOut )
    write( io, "Gene\tTpM\tRead_Counts\n" )
 end
 
+function output_diff_header( io::BufOut )
+   tab_write( io, "Gene\tNode\tStrand" )
+   tab_write( io, "Type\tComplexity\tDeltaPsi\tProbability" )
+end
+
+function output_diff( io::BufOut, event, complex::Int, deltapsi::Float64, prob::Float64, sig=5 )
+   for i in 1:length(event)
+      tab_write( io, event[i] )
+   end
+   write( io, 'C' )
+   tab_write( io, string(complex) )
+   tab_write( io, string(signif(deltapsi, sig)) )
+   write( io, string(signif(prob, sig)) )
+   write( io, '\n' )
+end

@@ -99,10 +99,12 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} 
    event,complex,postvec
 end
 
-function process_psi_files( a::Vector{BufferedStreams.BufferedInputStream}, 
-                            b::Vector{BufferedStreams.BufferedInputStream}; 
-                            min_samp=1, amt=0.0 )
-   
+function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStream}, 
+                                     b::Vector{BufferedStreams.BufferedInputStream}; 
+                                     min_samp=1, amt=0.0 )
+   io = open( outfile, "w" )
+   stream = ZlibDeflateOutputStream( io )
+   output_diff_header( stream )
    while true # go through all lines until we hit eof
       a_event,a_complex,a_post = process_psi_line( a )
       b_event,b_complex,b_post = process_psi_line( b )
@@ -112,12 +114,15 @@ function process_psi_files( a::Vector{BufferedStreams.BufferedInputStream},
       complex = a_complex > b_complex ? a_complex : b_complex
       @assert( a_event == b_event, "Incorrect events matched\n$a_event\n$b_event!!!" )
       if length(a_post) > min_samp && length(b_post) > min_samp
-         a_post  = PosteriorPsi( a_post ) # fit new posterior
-         b_post  = PosteriorPsi( b_post ) 
-         fwdprob = probability( a_post, b_post, amt=amt )
-         revprob = probability( a_post, b_post, amt=amt )
-         prob    = fwdprob > revprob ? fwdprob : revprob
-         # print 
-      end 
+         a_post   = PosteriorPsi( a_post ) # fit new posterior
+         b_post   = PosteriorPsi( b_post ) 
+         fwdprob  = probability( a_post, b_post, amt=amt )
+         revprob  = probability( a_post, b_post, amt=amt )
+         prob     = fwdprob > revprob ? fwdprob : revprob
+         deltapsi = mean(a_post) - mean(b_post)
+         output_diff( stream, a_event, complex, prob, deltapsi )
+      end
    end
+   close(stream)
+   close(io)
 end
