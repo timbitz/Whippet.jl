@@ -80,5 +80,7 @@ export SpliceGraph,
        process_events, 
        fixpath,
        @timer,
-       timer_print
+       timer_print,
+       open_streams,
+       process_psi_files
 end

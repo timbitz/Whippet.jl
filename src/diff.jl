@@ -56,10 +56,12 @@ function open_streams( files::Vector{ASCIIString} )
    for i in 1:length(files)
       buf[i] = open_stream( files[i] )
    end
+   buf
 end
 
 function parse_psi_line( line::ASCIIString; min_num=5 )
    res  = split( line, '\t' )
+   println(res[6])
    psi  = res[6] != "NA" ? parse(Float64, res[6]) : 0.0
    num  = res[9] != "NA" ? parse(Float64, res[9]) : 0.0
    if psi < 0 || num <= min_num
@@ -85,9 +87,10 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
+   i = 1
    for bs in streams
       line = readline( bs )
-      if line != ""
+      if line != "" && i > 1
          par,post,isok = parse_psi_line( line, min_num=min_reads )
          !isok && continue
          push!( postvec, post )
@@ -95,6 +98,7 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
          parcomplex = parse_complexity( par[5] )
          complex = parcomplex > complex ? parcomplex : complex
       end
+      i += 1
    end
    event,complex,postvec
 end
