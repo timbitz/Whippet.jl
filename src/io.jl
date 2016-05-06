@@ -263,7 +263,7 @@ end
 
 function output_diff_header( io::BufOut )
    tab_write( io, "Gene\tNode\tStrand" )
-   tab_write( io, "Type\tComplexity\tDeltaPsi\tProbability" )
+   write( io, "Type\tComplexity\tDeltaPsi\tProbability\n" )
 end
 
 function output_diff( io::BufOut, event, complex::Int, deltapsi::Float64, prob::Float64, sig=5 )

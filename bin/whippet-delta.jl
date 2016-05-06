@@ -54,7 +54,7 @@ end
 function retrievefilelist( pattern::ASCIIString, dir::ASCIIString )
    list = Vector{ASCIIString}()
    if search(pattern, ',') > 0
-      tmp = split( pattern, ',' )
+      tmp = split( pattern, ',', keep=false )
    else
       tmp = glob( "*" * pattern * "*.psi*", dir )
    end
@@ -70,8 +70,8 @@ function main()
    dir   = fixpath( args["directory"] )
    lista = retrievefilelist( args["a"], dir )
    listb = retrievefilelist( args["b"], dir )
-   println(join(lista, ','))
-   println(join(listb, ','))
+   println(STDERR, "Sample A: $(join(map(basename, lista), ','))")
+   println(STDERR, "Sample B: $(join(map(basename, listb), ','))")
    if length(lista) <= 0 || length(listb) <= 0
       error("Unable to match files! length(a) == $(length(lista)), length(b) == $(length(listb))!")
    end
@@ -79,12 +79,12 @@ function main()
    astreams = open_streams( lista )
    bstreams = open_streams( listb )   
 
-   println(typeof(astreams))
-
-   process_psi_files( args["out"], astreams, bstreams, 
-                      min_samp=args["min-samples"], 
-                      min_reads=args["min-reads"],
-                      amt=args["min-delta-psi"] ) 
+   println(STDERR, "Now processing files and calculating posterior distributions...") 
+   @timer process_psi_files( args["out"] * ".diff.gz", astreams, bstreams, 
+                             min_samp=args["min-samples"], 
+                             min_reads=args["min-reads"],
+                             amt=args["min-delta-psi"] ) 
+   println(STDERR, "Whippet $ver done." )
 end
 
 main()

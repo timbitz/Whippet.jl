@@ -62,8 +62,8 @@ end
 function parse_psi_line( line::ASCIIString; min_num=5 )
    res  = split( line, '\t' )
    psi  = res[6] != "NA" && res[6] != "Psi" ? parse(Float64, res[6]) : 0.0
-   num  = res[9] != "NA" && res[6] != "Total_Reads" ? parse(Float64, res[9]) : 0.0
-   if psi < 0 || num <= min_num
+   num  = res[9] != "NA" && res[9] != "Total_Reads" ? parse(Float64, res[9]) : 0.0
+   if psi < 0 || num < min_num
       post = PosteriorPsi()
       bool = false
    else
@@ -80,19 +80,22 @@ type PosteriorEvent
    b::PosteriorPsi
 end
 
-parse_complexity( c::ASCIIString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
+parse_complexity( c::AbstractString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5 )
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
-   for bs in streams
-      line = readline( bs )
+   i = 1
+   while i <= length(streams)
+      line = readline( streams[i] )
+      i += 1
       if line != ""
          par,post,isok = parse_psi_line( line, min_num=min_reads )
+         event = par[1:4]
+         event[4] == "BS" && (i -= 1; continue)
          !isok && continue
          push!( postvec, post )
-         event = par[1:4]
          parcomplex = parse_complexity( par[5] )
          complex = parcomplex > complex ? parcomplex : complex
       end
@@ -113,15 +116,15 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
          break # eof
       end
       complex = a_complex > b_complex ? a_complex : b_complex
-      @assert( a_event == b_event, "Incorrect events matched\n$a_event\n$b_event!!!" )
-      if length(a_post) > min_samp && length(b_post) > min_samp
+      @assert( a_event == b_event, "Incorrect events matched!!" )
+      if length(a_post) >= min_samp && length(b_post) >= min_samp
          a_post   = PosteriorPsi( a_post ) # fit new posterior
          b_post   = PosteriorPsi( b_post ) 
          fwdprob  = probability( a_post, b_post, amt=amt )
          revprob  = probability( a_post, b_post, amt=amt )
          prob     = fwdprob > revprob ? fwdprob : revprob
-         deltapsi = mean(a_post) - mean(b_post)
-         output_diff( stream, a_event, complex, prob, deltapsi )
+         deltapsi = mean(a_post.beta) - mean(b_post.beta)
+         output_diff( stream, a_event, complex, deltapsi, prob )
       end
    end
    close(stream)
