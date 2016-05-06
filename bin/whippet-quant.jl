@@ -81,7 +81,7 @@ function main()
       # Load Fastq files in chunks
       # Parallel reduction loop through fastq chunks
       println(STDERR, "Whippet does not currrently support nprocs() > 1")
-      return #TODO
+      return #TODO: first implementation was too slow, ie too much communication overhead
    else
       println(STDERR, "Processing reads...")
       if ispaired

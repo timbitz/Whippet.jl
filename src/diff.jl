@@ -81,14 +81,14 @@ end
 
 parse_complexity( c::ASCIIString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
 
-function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream} )
+function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5 )
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
    for bs in streams
       line = readline( bs )
       if line != ""
-         par,post,isok = parse_psi_line( line )
+         par,post,isok = parse_psi_line( line, min_num=min_reads )
          !isok && continue
          push!( postvec, post )
          event = par[1:4]
@@ -101,13 +101,13 @@ end
 
 function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStream}, 
                                      b::Vector{BufferedStreams.BufferedInputStream}; 
-                                     min_samp=1, amt=0.0 )
+                                     min_samp=1, min_reads=5, amt=0.0 )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream( io )
    output_diff_header( stream )
    while true # go through all lines until we hit eof
-      a_event,a_complex,a_post = process_psi_line( a )
-      b_event,b_complex,b_post = process_psi_line( b )
+      a_event,a_complex,a_post = process_psi_line( a, min_reads=min_reads )
+      b_event,b_complex,b_post = process_psi_line( b, min_reads=min_reads )
       if a_event == split( "", "" ) || b_event == split( "", "" )
          break # eof
       end
