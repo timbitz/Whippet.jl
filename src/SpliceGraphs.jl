@@ -9,6 +9,7 @@ import FMIndexes
 import IntArrays
 import IntervalTrees
 import Libz
+import Distributions
 
 using DataStructures
 using BufferedStreams
@@ -17,6 +18,7 @@ using FMIndexes
 using IntArrays
 using IntervalTrees
 using Libz
+using Distributions
 
 include("types.jl")
 include("timer.jl")
@@ -31,6 +33,7 @@ include("reads.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
+include("diff.jl")
 
 if VERSION >= v"0.5.0-dev"
    using Base.Threads
@@ -77,5 +80,7 @@ export SpliceGraph,
        process_events, 
        fixpath,
        @timer,
-       timer_print
+       timer_print,
+       open_streams,
+       process_psi_files
 end

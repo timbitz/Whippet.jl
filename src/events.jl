@@ -636,7 +636,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       psi = Nullable( get(utr_graph).psi )
    end
 
-   psi,utr_graph,ambig_cnt
+   psi,utr_graph,ambig_cnt,length(used_node)
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
@@ -720,9 +720,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
          get(exc_graph).psi = zeros( length( get(exc_graph).count ) )
          get(inc_graph).psi = zeros( length( get(inc_graph).count ) )
          calculate_psi!( inc_graph.value, exc_graph.value, [get(inc_graph).count; get(exc_graph).count] )
-         #println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
          it = rec_spliced_em!( inc_graph.value, exc_graph.value, ambig_cnt.value, sig=4 )
-         #println( "$inc_path\n$exc_graph\n$ambig_cnt\n\n" )
          psi = Nullable( sum( get(inc_graph).psi ) )
       end
    end
@@ -798,7 +796,8 @@ end
 
 function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant, kwidth::Int; isnodeok=true )
    io = open( outfile, "w" )
-   stream = ZlibDeflateOutputStream(io)
+   stream = ZlibDeflateOutputStream( io )
+   output_psi_header( stream )
    for g in 1:length(lib.graphs)
       name = lib.names[g]
       chr  = lib.info[g].name
@@ -823,22 +822,27 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       motif == NONE_MOTIF && (i += 1; continue)
       if isobligate( motif ) # is utr event
-         psi,utr,ambig = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
+         psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi )
             if any( map( isnan, psi.value ) ) # TODO: Remove once finished debugging
                println(STDERR, get(utr))
             end
-            ambig_cnt = isnull( ambig ) ? 0.0 : sum( ambig.value )
-            i = output_utr( io, round(get(psi),4), utr, ambig_cnt, motif, sg, i , info )
+            total_cnt = sum(utr) + sum(ambig)
+            i = output_utr( io, round(get(psi),4), utr, total_cnt, motif, sg, i , info )
             #i += (motif == TXST_MOTIF) ? length(psi.value)-2 : length(psi.value)-2 
+         else
+            # psi/utr/total_cnt ignored here.
+            i = output_utr( io, zeros(len), utr, 0.0, motif, sg, i, info, empty=true )
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, kwidth, isnodeok )
          if !isnull( psi )
             total_cnt = sum(inc) + sum(exc) + sum(ambig)
-            conf_int  = binomial_likelihood_ci( get(psi), total_cnt, sig=3 )
+            conf_int  = beta_posterior_ci( get(psi), total_cnt, sig=3 )
             output_psi( io, signif(get(psi),4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
+         else
+            output_empty( io, motif, sg, i, info )
          end
       end
       i += 1
@@ -865,6 +869,9 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
+# Deprecated -- for beta_posterior_ci which is more accurate and on the correct
+# 0,1 domain, rather than the normal approximation given by the sqrt of 
+# fisher information below
 @inline function binomial_likelihood_ci( p, n, z=1.64; sig=0 )
    const fisher_info = (p * (1-p)) / n
    if fisher_info < 0
@@ -877,6 +884,22 @@ end
    else
       const lo = max( 0.0, p - ci )
       const hi = min( 1.0, p + ci )
+   end
+   lo,hi
+end
+
+
+# Beta(
+@inline function beta_posterior_ci( p, n; ci=0.9, sig=0 )
+   const lo_q = (1 - ci)/2
+   const hi_q = 1 - lo_q
+   const beta = Beta( p*n + 1, (1-p)*n + 1 )
+   if sig > 0
+      const lo = signif( quantile(beta, lo_q), sig )
+      const hi = signif( quantile(beta, hi_q), sig )
+   else 
+      const lo = quantile(beta, lo_q)
+      const hi = quantile(beta, hi_q)
    end
    lo,hi
 end

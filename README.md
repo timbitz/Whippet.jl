@@ -5,7 +5,7 @@
 
 ### Features
 - High performance
-- Robust quantification in any species
+- Robust quantification of the expression and transcriptome structure of model and non-model organisms
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Accurate splice graph representations of high complexity event types (splicing and alt-3'/5' end usage)
@@ -25,15 +25,24 @@ julia dependencies.jl
 ```
 
 3) Build an index.  You need your genome sequence in fasta, and a gene annotation file in refflat. A default example is supplied for hg19 in anno/refseq_hg19.flat.gz
-```
-julia whippet-index --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
+```bash
+$ julia whippet-index.jl --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
 ```
 
 4) Quantify FASTQ files.
-```
-julia whippet-quant file.fastq.gz
+```bash
+$ julia whippet-quant.jl file.fastq.gz
 ```
 or if you have paired-end RNA-seq data...
+```bash
+$ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
-julia whippet-quant fwd_file.fastq.gz rev_file.fastq.gz
+
+5) Compare multiple psi files
+```bash
+$ ls *.psi.gz
+sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
+$ julia whippet-delta.jl -a sample1 -b sample2
+OR
+$ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
