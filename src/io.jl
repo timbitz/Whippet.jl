@@ -263,15 +263,17 @@ end
 
 function output_diff_header( io::BufOut )
    tab_write( io, "Gene\tNode\tStrand" )
-   write( io, "Type\tComplexity\tDeltaPsi\tProbability\n" )
+   write( io, "Type\tComplexity\tPsi_A\tPsi_B\tDeltaPsi\tProbability\n" )
 end
 
-function output_diff( io::BufOut, event, complex::Int, deltapsi::Float64, prob::Float64, sig=5 )
+function output_diff( io::BufOut, event, complex::Int, psi_a::Float64, psi_b::Float64, deltapsi::Float64, prob::Float64, sig=5 )
    for i in 1:length(event)
       tab_write( io, event[i] )
    end
    write( io, 'C' )
    tab_write( io, string(complex) )
+   tab_write( io, string(signif(psi_a, sig)) )
+   tab_write( io, string(signif(psi_b, sig)) )
    tab_write( io, string(signif(deltapsi, sig)) )
    write( io, string(signif(prob, sig)) )
    write( io, '\n' )

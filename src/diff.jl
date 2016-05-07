@@ -123,8 +123,10 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
          fwdprob  = probability( a_post, b_post, amt=amt )
          revprob  = probability( a_post, b_post, amt=amt )
          prob     = fwdprob > revprob ? fwdprob : revprob
-         deltapsi = mean(a_post.beta) - mean(b_post.beta)
-         output_diff( stream, a_event, complex, deltapsi, prob )
+         psi_a    = mean(a_post.beta)
+         psi_b    = mean(b_post.beta)
+         deltapsi = psi_a - psi_b
+         output_diff( stream, a_event, complex, psi_a, psi_b, deltapsi, prob )
       end
    end
    close(stream)
