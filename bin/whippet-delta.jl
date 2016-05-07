@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2016
 
-const ver = "v0.1-rc1"
+const ver = "v0.1-map1"
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
