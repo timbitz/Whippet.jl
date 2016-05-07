@@ -56,21 +56,25 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind )
    flag   
 end
 
+
+# Lets build a pseudo spliced CIGAR string from an SGAlignment
 function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matches )
    matchleft = align.matches
    cigar = ""
    curpos = align.offset
    leftover = 0
    total = 0
+   # step through nodes in the path
    for idx in 1:length( align.path )
       const i = align.path[idx].node
-      i <= length(sg.nodeoffset) || return cigar
+      i <= length(sg.nodeoffset) || return cigar # this shouldn't happen
+      # do the alignment matches left fit into the current node width
       if matchleft + curpos <= sg.nodeoffset[i] + sg.nodelen[i] 
          cigar *= string( min( readlen - total, matchleft + leftover ) ) * "M"
          total += matchleft + leftover
          matchleft = 0
          leftover = 0
-      else
+      else # they don't fit -->
          curspace = (sg.nodeoffset[i] + sg.nodelen[i] - 1) - curpos
          matchleft -= curspace
          curpos += curspace
