@@ -67,6 +67,7 @@ end
 
 function main()
    args  = parse_cmd()
+   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
    dir   = fixpath( args["directory"] )
    lista = retrievefilelist( args["a"], dir )
    listb = retrievefilelist( args["b"], dir )
