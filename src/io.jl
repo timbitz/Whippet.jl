@@ -68,7 +68,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
    for idx in 1:length( align.path )
       const i = align.path[idx].node
       i <= length(sg.nodeoffset) || return cigar # this shouldn't happen
-      # do the alignment matches left fit into the current node width
+      # do the remaining alignment matches fit into the current node width
       if matchleft + curpos <= sg.nodeoffset[i] + sg.nodelen[i] 
          cigar *= string( min( readlen - total, matchleft + leftover ) ) * "M"
          total += matchleft + leftover
@@ -78,6 +78,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
          curspace = (sg.nodeoffset[i] + sg.nodelen[i] - 1) - curpos
          matchleft -= curspace
          curpos += curspace
+         # is the read spliced and is there another node left
          if idx < length( align.path )
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar
@@ -92,6 +93,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
          end
       end
    end
+   
    if matchleft + leftover > 0
       cigar *= string( min( readlen - total, matchleft + leftover) ) * "M"
       total += matchleft + leftover
