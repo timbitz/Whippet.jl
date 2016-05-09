@@ -17,7 +17,7 @@ function check_and_install( pkg; clone=false )
 end
 
 clones = ["https://github.com/dcjones/Switch.jl.git",
-#          "https://github.com/BioJulia/IndexableBitVectors.jl.git",
+          "https://github.com/BioJulia/IndexableBitVectors.jl.git",
           "https://github.com/quinnj/SuffixArrays.jl.git",
           "https://github.com/BioJulia/BufferedStreams.jl.git"]
 
@@ -43,7 +43,6 @@ Pkg.pin("BufferedStreams", v"0.0.3")
 using DataStructures
 using Switch
 using ArgParse
-using IndexableBitVectors
 using Bio
 using SuffixArrays
 using FMIndexes
