@@ -17,7 +17,7 @@ function check_and_install( pkg; clone=false )
 end
 
 clones = ["https://github.com/dcjones/Switch.jl.git",
-          "https://github.com/BioJulia/IndexableBitVectors.jl.git",
+#          "https://github.com/BioJulia/IndexableBitVectors.jl.git",
           "https://github.com/quinnj/SuffixArrays.jl.git",
           "https://github.com/BioJulia/BufferedStreams.jl.git"]
 
@@ -27,7 +27,6 @@ pkgs = [ "DataStructures",
          "FMIndexes", 
          "IntArrays",
          "IntervalTrees",
-         "BufferedStreams", 
          "Libz",
          "Bio",
          "StatsBase",
@@ -37,6 +36,9 @@ pkgs = [ "DataStructures",
 Pkg.update()
 map( x->check_and_install(x,clone=true), clones )
 map( check_and_install, pkgs )
+
+# Version v0.1.0 works for Bio v0.2, but breaks v0.1
+Pkg.pin("BufferedStreams", v"0.0.3")
 
 using DataStructures
 using Switch
