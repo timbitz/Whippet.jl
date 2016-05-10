@@ -10,7 +10,7 @@ PosteriorPsi() = PosteriorPsi( Beta(1,1), Float64[], 0.0 )
 # create one PosteriorPsi object given psi, N, and priors α and β
 # Posterior                      Likelihood         Prior
 # Beta( Ψ*N + α, (1-Ψ)*N + β ) ∝ Binomial( Ψ, N ) * Beta( α, β )
-function PosteriorPsi( Ψ::Float64, N::Float64, α=1.0, β=1.0; size=10000 )
+function PosteriorPsi( Ψ::Float64, N::Float64, α=1.0, β=1.0; size=1000 )
    # Posterior Beta is k + α, n-k + β
    beta = Beta( Ψ*N + α, (1-Ψ)*N + β )
    emperical = rand(beta, size)
@@ -21,7 +21,7 @@ end
 # combine multiple beta posteriors for replicates into one
 # if unpaired, we don't need to maintain sample1_rep1 to sample2_rep1
 # so we can re-sample from the new joint beta
-function PosteriorPsi( set::Vector{PosteriorPsi}; paired=false, size=10000 )
+function PosteriorPsi( set::Vector{PosteriorPsi}; paired=false, size=1000 )
    emperical = vcat( map( x->x.emperical, set )... )
    beta = fit(Beta, emperical)
    psi  = mean(beta)
