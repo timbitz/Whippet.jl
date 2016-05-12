@@ -222,12 +222,16 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
       tab_write( io, info[3] )
       tab_write( io, "BS" )
-      tab_write( io, "C1" )
-      tab_write( io, string(psi) )
-      conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
-      conf_int_write( io, conf_int, tab=true, width=true)
-      tab_write( io, string( signif(total_reads, 3) ) )
-      write( io, "NA\tNA\n" )
+      if !isnan(psi) && total_reads > 0
+         tab_write( io, "C1" )
+         tab_write( io, string(psi) )
+         conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
+         conf_int_write( io, conf_int, tab=true, width=true)
+         tab_write( io, string( signif(total_reads, 3) ) )
+         write( io, "NA\tNA\n" )
+      else
+         write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
+      end
    end
 end
 
