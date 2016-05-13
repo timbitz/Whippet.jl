@@ -56,24 +56,29 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind )
    flag   
 end
 
+
+# Lets build a pseudo spliced CIGAR string from an SGAlignment
 function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matches )
    matchleft = align.matches
    cigar = ""
    curpos = align.offset
    leftover = 0
    total = 0
+   # step through nodes in the path
    for idx in 1:length( align.path )
       const i = align.path[idx].node
-      i <= length(sg.nodeoffset) || return cigar
+      i <= length(sg.nodeoffset) || return cigar # this shouldn't happen
+      # do the remaining alignment matches fit into the current node width
       if matchleft + curpos <= sg.nodeoffset[i] + sg.nodelen[i] 
          cigar *= string( min( readlen - total, matchleft + leftover ) ) * "M"
          total += matchleft + leftover
          matchleft = 0
          leftover = 0
-      else
+      else # they don't fit -->
          curspace = (sg.nodeoffset[i] + sg.nodelen[i] - 1) - curpos
          matchleft -= curspace
          curpos += curspace
+         # is the read spliced and is there another node left
          if idx < length( align.path )
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar
@@ -88,6 +93,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, readlen=align.matche
          end
       end
    end
+   
    if matchleft + leftover > 0
       cigar *= string( min( readlen - total, matchleft + leftover) ) * "M"
       total += matchleft + leftover
@@ -212,16 +218,18 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       end
       total_reads = (fore_cnt + back_cnt)
       psi = fore_cnt / total_reads
-      tab_write( io, info[1] )
-      coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
-      tab_write( io, info[3] )
-      tab_write( io, "BS" )
-      tab_write( io, "C1" )
-      tab_write( io, string(psi) )
-      conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
-      conf_int_write( io, conf_int, tab=true, width=true)
-      tab_write( io, string( signif(total_reads, 3) ) )
-      write( io, "NA\tNA\n" )
+      if !isnan(psi) && total_reads > 0
+         tab_write( io, info[1] )
+         coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
+         tab_write( io, info[3] )
+         tab_write( io, "BS" )
+         tab_write( io, "C1" )
+         tab_write( io, string(psi) )
+         conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
+         conf_int_write( io, conf_int, tab=true, width=true)
+         tab_write( io, string( signif(total_reads, 3) ) )
+         write( io, "NA\tNA\n" )
+      end
    end
 end
 
