@@ -1,14 +1,13 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-const ver = "v0.1-rc2"
+const dir = abspath( splitdir(@__FILE__)[1] )
+const ver = chomp(readline(open(dir * "/VERSION")))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
- 
-dir = splitdir(@__FILE__)[1]
 
 push!( LOAD_PATH, dir * "/../src" )
 import SpliceGraphs
