@@ -1,18 +1,22 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+const dir = abspath( splitdir(@__FILE__)[1] )
+const ver = chomp(readline(open(dir * "/VERSION")))
+
+tic()
+println( STDERR, "Whippet $ver loading and compiling... " )
+
 using Libz
 using ArgParse
 using StatsBase
-
-dir = splitdir(@__FILE__)[1]
 
 push!( LOAD_PATH, dir * "/../src" )
 import SpliceGraphs
 using SpliceGraphs
 
 function parse_cmd()
-  s = ArgParseSettings(version="Whippet v0.0.1-dev", add_version=true)
+  s = ArgParseSettings()
   # TODO finish options...
   @add_arg_table s begin
     "--index", "-x"
@@ -39,14 +43,16 @@ function main()
 
    args = parse_cmd()
 
+   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
+
    println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
-   @time const lib = open(deserialize, "$( args["index"] ).jls")
+   @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
    println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
-   @time const anno = open(deserialize, "$( args["index"] )_anno.jls")
+   @timer const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
    println(STDERR, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
-   @time simulate_genes( lib, anno, args["max-complexity"], output=args["out"], gene_num=args["num-genes"] )
+   @timer simulate_genes( lib, anno, args["max-complexity"], output=args["out"], gene_num=args["num-genes"] )
 
 end
 

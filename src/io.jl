@@ -156,6 +156,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       tab_write( io, convert(ASCIIString, motif) )
       if empty # had to add this flag since we iterate through the TS/TE nodes
          write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
+         i += 1
          continue
       end
       if !isnull( pgraph )

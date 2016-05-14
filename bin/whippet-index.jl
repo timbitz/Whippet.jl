@@ -1,7 +1,8 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-const ver = "v0.1-rc2"
+const ver = chomp(readline(open(splitdir(@__FILE__)[1] * "/VERSION")))
+const dir = abspath( splitdir(@__FILE__)[1] * "/../src" )
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
@@ -14,8 +15,6 @@ using IntArrays
 using Libz
 
 using ArgParse
-
-const dir = abspath( splitdir(@__FILE__)[1] * "/../src" )
 
 include("$dir/types.jl")
 include("$dir/bio_nuc_safepatch.jl")
