@@ -147,6 +147,9 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
                      info::GeneMeta; empty=false )
    st = motif == TXST_MOTIF ? node : node - 1
    en = st + length(psi) - 1
+   if en < st
+      error("$psi, $total_reads, $motif, $node, $info, $empty")
+   end
    i = 1
    for n in st:en
       tab_write( io, info[1] )
