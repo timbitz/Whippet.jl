@@ -150,6 +150,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
    i = 1
    for n in st:en
       tab_write( io, info[1] )
+      tab_write( io, string(n) )
       coord_write( io, info[2], sg.nodecoord[n], sg.nodecoord[n]+sg.nodelen[n]-1, tab=true )
       tab_write( io, info[3] )
       tab_write( io, convert(ASCIIString, motif) )
@@ -183,6 +184,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
                      info::GeneMeta, bias )
 
    tab_write( io, info[1] ) # gene
+   tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true ) #coord
    tab_write( io, info[3] )
    tab_write( io, convert(ASCIIString, motif) )
@@ -220,6 +222,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       psi = fore_cnt / total_reads
       if !isnan(psi) && total_reads > 0
          tab_write( io, info[1] )
+         tab_write( io, string(st) * "\-" * string(en) )
          coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
          tab_write( io, info[3] )
          tab_write( io, "BS" )
@@ -235,6 +238,7 @@ end
 
 function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int, info::GeneMeta )
    tab_write( io, info[1] )
+   tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
    tab_write( io, info[3] )
    tab_write( io, convert(ASCIIString, motif) )
@@ -260,7 +264,7 @@ function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
 end
 
 function output_psi_header( io::BufOut )
-   tab_write( io, "Gene\tNode\tStrand" )
+   tab_write( io, "Gene\tNode\tCoord\tStrand" )
    tab_write( io, "Type\tComplexity\tPsi\tCI_Width\tCI_Lo,Hi" )
    write( io, "Total_Reads\tInc_Paths\tExc_Paths\n" )
 end
@@ -270,7 +274,7 @@ function output_tpm_header( io::BufOut )
 end
 
 function output_diff_header( io::BufOut )
-   tab_write( io, "Gene\tNode\tStrand" )
+   tab_write( io, "Gene\tNode\tCoord\tStrand" )
    write( io, "Type\tComplexity\tPsi_A\tPsi_B\tDeltaPsi\tProbability\n" )
 end
 
