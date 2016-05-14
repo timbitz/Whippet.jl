@@ -61,8 +61,8 @@ end
 
 function parse_psi_line( line::ASCIIString; min_num=5 )
    res  = split( line, '\t' )
-   psi  = res[6] != "NA" && res[6] != "Psi" ? parse(Float64, res[6]) : 0.0
-   num  = res[9] != "NA" && res[9] != "Total_Reads" ? parse(Float64, res[9]) : 0.0
+   psi  = res[7] != "NA" && res[7] != "Psi" ? parse(Float64, res[6]) : 0.0
+   num  = res[10] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[9]) : 0.0
    if psi < 0 || num < min_num
       post = PosteriorPsi()
       bool = false
@@ -92,8 +92,8 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
       i += 1
       if line != ""
          par,post,isok = parse_psi_line( line, min_num=min_reads )
-         event = par[1:4]
-         event[4] == "BS" && (i -= 1; continue)
+         event = par[1:5]
+         event[5] == "BS" && (i -= 1; continue)
          !isok && continue
          push!( postvec, post )
          parcomplex = parse_complexity( par[5] )
