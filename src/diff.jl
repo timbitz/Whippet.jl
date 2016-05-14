@@ -59,18 +59,18 @@ function open_streams( files::Vector{ASCIIString} )
    buf
 end
 
-function parse_psi_line( line::ASCIIString; min_num=5 )
+function parse_psi_line( line::ASCIIString; min_num=5, size=1000 )
    res  = split( line, '\t' )
-   psi  = res[7] != "NA" && res[7] != "Psi" ? parse(Float64, res[6]) : 0.0
-   num  = res[10] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[9]) : 0.0
+   psi  = res[7] != "NA" && res[7] != "Psi" ? parse(Float64, res[7]) : 0.0
+   num  = res[10] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[10]) : 0.0
    if psi < 0 || num < min_num
       post = PosteriorPsi()
       bool = false
    else
-      post = PosteriorPsi( psi, num )
+      post = PosteriorPsi( psi, num, size=size )
       bool = true
    end
-   res[1:5],post,bool
+   res[1:6],post,bool
 end
 
 type PosteriorEvent
@@ -82,7 +82,7 @@ end
 
 parse_complexity( c::AbstractString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
 
-function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5 )
+function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5, size=1000 )
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
@@ -91,12 +91,12 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
       line = readline( streams[i] )
       i += 1
       if line != ""
-         par,post,isok = parse_psi_line( line, min_num=min_reads )
+         par,post,isok = parse_psi_line( line, min_num=min_reads, size=size )
          event = par[1:5]
          event[5] == "BS" && (i -= 1; continue)
          !isok && continue
          push!( postvec, post )
-         parcomplex = parse_complexity( par[5] )
+         parcomplex = parse_complexity( par[6] )
          complex = parcomplex > complex ? parcomplex : complex
       end
    end
@@ -105,13 +105,13 @@ end
 
 function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStream}, 
                                      b::Vector{BufferedStreams.BufferedInputStream}; 
-                                     min_samp=1, min_reads=5, amt=0.0 )
+                                     min_samp=1, min_reads=5, amt=0.0, size=1000 )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream( io )
    output_diff_header( stream )
    while true # go through all lines until we hit eof
-      a_event,a_complex,a_post = process_psi_line( a, min_reads=min_reads )
-      b_event,b_complex,b_post = process_psi_line( b, min_reads=min_reads )
+      a_event,a_complex,a_post = process_psi_line( a, min_reads=min_reads, size=size )
+      b_event,b_complex,b_post = process_psi_line( b, min_reads=min_reads, size=size )
       if a_event == split( "", "" ) || b_event == split( "", "" )
          break # eof
       end

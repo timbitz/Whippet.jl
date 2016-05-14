@@ -26,26 +26,30 @@ function parse_cmd()
       help     = "Replicates for Set B -- Same rules as for (-a)"
       arg_type = ASCIIString
 #      required = true
-    "--out","-o"
+    "--out", "-o"
       help     = "Core file name to send .diff.gz output to!"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../output" )
-    "--directory","-d"
+    "--directory", "-d"
       help     = "Directory to search for file patterns or list in -a and -b"
       arg_type = ASCIIString
       default  = "."
-    "--min-reads","-r"
+    "--min-reads", "-r"
       help     = "Minimum number of reads for a single event to be included!"
       arg_type = Int64
       default  = 5
-    "--min-samples","-s"
+    "--min-samples", "-s"
       help     = "Minimum number of samples in a or in b for each event to be considered!"
       arg_type = Int64
       default  = 1
-    "--min-delta-psi"
+    "--min-delta-psi", "-m"
       help     = "Calculate probability of deltaPsi greater than this value."
       arg_type = Float64
       default  = 0.0
+    "--emperical-size", "-e"
+      help     = "Emperical distribution size to sample from."
+      arg_type = Int64
+      default  = 1000
   end
   return parse_args(s)
 end
@@ -83,7 +87,8 @@ function main()
    @timer process_psi_files( args["out"] * ".diff.gz", astreams, bstreams, 
                              min_samp=args["min-samples"], 
                              min_reads=args["min-reads"],
-                             amt=args["min-delta-psi"] ) 
+                             amt=args["min-delta-psi"],
+                             size=args["emperical-size"] ) 
    println(STDERR, "Whippet $ver done." )
 end
 
