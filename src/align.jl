@@ -339,8 +339,8 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
    const left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
    const right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ kmer_index(rkmer) ]
 
-   # do a test for trans splicing, and reset right_nodes
    for rn in right_nodes
+      rn.gene == align.path[1].gene || continue
       const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
       res_align::SGAlignment = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
                                                     align=deepcopy(align), nodeidx=rn.node )
@@ -510,6 +510,7 @@ function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
 
    # do a test for trans-splicing, and reset left_nodes
    for rn in left_nodes
+      rn.gene == align.path[1].gene || continue
       const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node-1] + lib.graphs[rn.gene].nodelen[rn.node-1] - 1
       #println("$(lib.graphs[rn.gene].seq[rn_offset-50:rn_offset])") 
       res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
