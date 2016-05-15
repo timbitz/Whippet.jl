@@ -614,6 +614,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    end
 
    psi = Nullable{Float64}()
+   len = length(used_node)
    if total_cnt > 2
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
       utr_graph = build_utr_graph( used_node, motif, sgquant )
@@ -623,7 +624,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       psi = Nullable( get(utr_graph).psi )
    end
 
-   psi,utr_graph,ambig_cnt,length(used_node)
+   psi,utr_graph,ambig_cnt,len
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
@@ -747,18 +748,13 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
             i = output_utr( io, round(get(psi),4), utr, total_cnt, motif, sg, i , info )   
          else
             # psi/utr/total_cnt ignored here.
-            prei = i
             i = output_utr( io, zeros(len), utr, 0.0, motif, sg, i, info, empty=true )
-            if prei == i+1
-               #println(STDERR, info )
-               i += 1
-            end
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          total_cnt = sum(inc) + sum(exc) + sum(ambig)
-         if !isnull( psi ) && !isnan( psi.value ) && total_cnt > 0
+         if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
             output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          else
