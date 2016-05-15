@@ -50,9 +50,22 @@ function qual_write( io::BufOut, read::SeqRecord, qualoffset=64; tab=false )
    tab && write( io, '\t' )
 end
 
-function sam_flag( align::SGAlignment, lib::GraphLib, ind )
+function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pair_rc )
    flag = UInt16(0)
-   lib.info[ ind ].strand || (flag |= 0x10)
+   if paired
+      flag |= 0x01
+      flag |= 0x02
+      if first
+         flag |= 0x40
+         lib.info[ ind ].strand || (flag |= 0x10)
+      else
+         flag |= 0x80
+         lib.info[ ind ].strand || (flag $= 0x20)
+         is_pair_rc && (flag $= 0x20)
+      end
+   else
+      lib.info[ ind ].strand || (flag |= 0x10)
+   end
    flag   
 end
 
@@ -118,13 +131,13 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
    cigar
 end
 
-function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; mapq=0 )
+function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; mapq=0, paired=false, fwd_mate=true )
    const geneind = align.path[1].gene
    const nodeind = align.path[1].node
    align.path[end].node < nodeind && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
    tab_write( io, read.name )
-   tab_write( io, string( sam_flag(align, lib, geneind) ) )
+   tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate) ) )
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
    tab_write( io, string(mapq) )
