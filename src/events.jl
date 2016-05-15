@@ -754,7 +754,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          bias = calculate_bias!( sgquant )
          psi,inc,exc,ambig = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
          total_cnt = sum(inc) + sum(exc) + sum(ambig)
-         if !isnull( psi ) && !isnan( psi.value ) && total_cnt > 0
+         if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
             output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
          else

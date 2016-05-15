@@ -37,6 +37,11 @@ or if you have paired-end RNA-seq data...
 ```bash
 $ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
+you can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
+```bash
+$ julia whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
+```
+
 
 5) Compare multiple psi files
 ```bash
