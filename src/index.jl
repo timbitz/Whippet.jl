@@ -138,13 +138,13 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    # set up splice graphs
    runoffset = 0
    for r in fhIter
+      haskey(seqdic, r.name) || continue
       Bio.Seq.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
       r.seq = dna""
       gc() # free
 
-      haskey(seqdic, r.name) || continue
       println(STDERR, "Building Splice Graphs for $( r.name ).." )
       for g in seqdic[r.name]
          #println( STDERR, "Building $g Splice Graph..." )
