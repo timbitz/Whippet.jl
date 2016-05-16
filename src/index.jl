@@ -181,7 +181,7 @@ end
 function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
    if isgzipped( filename )
       println(STDERR, "Decompressing and Indexing $filename...")
-      to_open = open( filename ) |> ZlibInflateInputStream
+      to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
    else
       println(STDERR, "Indexing $filename...")
       to_open = filename
