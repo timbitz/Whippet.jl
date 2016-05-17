@@ -138,13 +138,13 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    # set up splice graphs
    runoffset = 0
    for r in fhIter
+      haskey(seqdic, r.name) || continue
       Bio.Seq.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
       r.seq = dna""
       gc() # free
 
-      haskey(seqdic, r.name) || continue
       println(STDERR, "Building Splice Graphs for $( r.name ).." )
       for g in seqdic[r.name]
          #println( STDERR, "Building $g Splice Graph..." )
@@ -181,7 +181,7 @@ end
 function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
    if isgzipped( filename )
       println(STDERR, "Decompressing and Indexing $filename...")
-      to_open = open( filename ) |> ZlibInflateInputStream
+      to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
    else
       println(STDERR, "Indexing $filename...")
       to_open = filename

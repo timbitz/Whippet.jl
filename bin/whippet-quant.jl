@@ -48,6 +48,9 @@ function parse_cmd()
     "--no-tpm"
       help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
+    "--force-gz"
+      help     = "Regardless of suffix, consider read input as gzipped"
+      action   = :store_true
   end
   return parse_args(s)
 end
@@ -58,11 +61,12 @@ function main()
 
    println(STDERR, " $( round( toq(), 6 ) ) seconds" )
 
-   println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
-   @timer const lib = open(deserialize, "$( args["index"] ).jls")
+   indexpath = fixpath( args["index"] )
+   println(STDERR, "Loading splice graph index... $( indexpath ).jls")
+   @timer const lib = open(deserialize, "$( indexpath ).jls")
 
-   println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
-   @timer const anno = open(deserialize, "$( args["index"] )_anno.jls")
+   println(STDERR, "Loading annotation index... $( indexpath )_anno.jls")
+   @timer const anno = open(deserialize, "$( indexpath )_anno.jls")
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
@@ -70,9 +74,9 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]) )
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]) )
+      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1

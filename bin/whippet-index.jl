@@ -58,7 +58,7 @@ function main()
    flat = fixpath( args["flat"] )
    fh = open( flat , "r")
    if isgzipped( flat )
-      fh = fh |> ZlibInflateInputStream
+      fh = fh |> x->ZlibInflateInputStream(x, reset_on_end=true)
    end
    @timer ref = load_refflat(fh)
 
