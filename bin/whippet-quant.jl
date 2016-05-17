@@ -48,6 +48,9 @@ function parse_cmd()
     "--no-tpm"
       help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
+    "--force-gz"
+      help     = "Regardless of suffix, consider read input as gzipped"
+      action   = :store_true
   end
   return parse_args(s)
 end
@@ -70,9 +73,9 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]) )
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]) )
+      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
