@@ -61,11 +61,12 @@ function main()
 
    println(STDERR, " $( round( toq(), 6 ) ) seconds" )
 
-   println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
-   @timer const lib = open(deserialize, "$( args["index"] ).jls")
+   indexpath = fixpath( args["index"] )
+   println(STDERR, "Loading splice graph index... $( indexpath ).jls")
+   @timer const lib = open(deserialize, "$( indexpath ).jls")
 
-   println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
-   @timer const anno = open(deserialize, "$( args["index"] )_anno.jls")
+   println(STDERR, "Loading annotation index... $( indexpath )_anno.jls")
+   @timer const anno = open(deserialize, "$( indexpath )_anno.jls")
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
