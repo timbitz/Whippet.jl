@@ -30,7 +30,7 @@ function parse_cmd()
   @add_arg_table s begin
     "--kmer", "-k"
       help = "Kmer size to use for exon-exon junctions (default 9)"
-      arg_type = Int
+      arg_type = Int64
       default  = 9
     "--fasta"
       help = "File containg the genome in fasta, one entry per chromosome [.gz]"

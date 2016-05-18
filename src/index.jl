@@ -21,6 +21,7 @@ immutable GraphLib <: SeqLibrary
    edges::Edges
    index::FMIndex
    sorted::Bool
+   kmer::Int64
 end
 
 # Binary search.  -- deprecated for more efficient Base.searchsortedlast !!
@@ -167,7 +168,7 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    println( STDERR, "Building edges.." ) 
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
-   GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true)
+   GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer )
 end
 
 fixpath( str::ASCIIString ) = abspath( expanduser( str ) )

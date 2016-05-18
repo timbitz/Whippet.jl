@@ -34,7 +34,7 @@ function parse_cmd()
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
-    "--seed-len", "-K"
+    "--seed-len", "-L"
       help     = "Seed length"
       arg_type = Int
       default  = 18
@@ -103,7 +103,7 @@ function main()
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
-   const param = AlignParam( args, ispaired ) # defaults for now
+   const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
