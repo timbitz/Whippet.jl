@@ -69,6 +69,12 @@ function parse_cmd()
     "--junc-only", "-j"
       help     = "Only use junction reads, no internal exon reads will be considered."
       action   = :store_true
+    "--stranded"
+      help     = "Is the data strand specific? If so, increase speed with this flag"
+      action   = :store_true
+    "--rev-pair"
+      help     = "Is the second mate the reverse complement of the first? If so, increase speed with this flag"
+      action   = :store_true
     "--no-circ"
       help     = "Do not allow back/circular splicing"
       action   = :store_false

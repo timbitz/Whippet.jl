@@ -38,7 +38,7 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 4, 18, 5, 18
                            args["seed-len"],
                            args["seed-buf"],
                            args["seed-inc"],
-                           args["pair-range"],
+                           args["pair-range"], 10,
                            args["score-min"],
                            args["stranded"], ispaired,
                            args["rev-pair"], false,
