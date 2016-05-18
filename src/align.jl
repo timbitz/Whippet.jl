@@ -24,8 +24,27 @@ immutable AlignParam
    is_circ_ok::Bool     # Do we allow back edges
 end
 
-AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 2500, 25, 45, false, true, true, false, true ) :
-                                            AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 1000, 10, 45, false, false, true, false, true )
+AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 2500, 25, 45, 
+                                                        false, true, true, false, true ) :
+                                            AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 1000, 10, 45, 
+                                                        false, false, true, false, true )
+
+# load from command line args
+@inline function AlignParam( args::Dict{AbstractString,Any}, ispaired=false )
+   const aln = AlignParam( args["mismatches"],
+                           args["seed-len"] >> 1,
+                           args["seed-try"],
+                           args["seed-tol"], 4,
+                           args["seed-len"],
+                           args["seed-buf"],
+                           args["seed-inc"],
+                           args["pair-range"],
+                           args["score-min"],
+                           args["stranded"], ispaired,
+                           args["rev-pair"], false,
+                           args["no-circ"] )
+   aln
+end
 
 abstract UngappedAlignment
 
