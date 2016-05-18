@@ -50,6 +50,14 @@ function parse_cmd()
       help     = "Ignore this many bases from beginning and end of read for seed"
       arg_type = Int
       default  = 5
+    "--seed-inc", "-I"
+      help     = "Number of bases to increment seed each iteration"
+      arg_type = Int
+      default  = 18
+    "--pair-range", "-P"
+      help     = "Seeds for paired end reads must match within _ bases of one another"
+      arg_type = Int
+      default  = 2500
     "--mismatches", "-X"
       help     = "Allowable number of mismatches in alignment"
       arg_type = Int
@@ -61,6 +69,9 @@ function parse_cmd()
     "--junc-only", "-j"
       help     = "Only use junction reads, no internal exon reads will be considered."
       action   = :store_true
+    "--no-circ"
+      help     = "Do not allow back/circular splicing"
+      action   = :store_false
     "--no-tpm"
       help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
@@ -82,7 +93,7 @@ function main()
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
-   const param = AlignParam( ispaired ) # defaults for now
+   const param = AlignParam( args, ispaired ) # defaults for now
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
