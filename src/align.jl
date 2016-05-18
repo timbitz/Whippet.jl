@@ -356,6 +356,7 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
 
    best = align
    const left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
+   isdefined( lib.edges.left, left_kmer_ind ) || return align
    const right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ kmer_index(rkmer) ]
 
    for rn in right_nodes
@@ -522,6 +523,7 @@ function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordin
 
    best = align
    const right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind])
+   isdefined( lib.edges.right, right_kmer_ind ) || return align
    const left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ kmer_index(lkmer) ]
 
    #println("$left_nodes, $lkmer")
