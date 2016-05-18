@@ -34,14 +34,30 @@ function parse_cmd()
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
-    "--seed_len", "-K"
+    "--seed-len", "-K"
       help     = "Seed length"
       arg_type = Int
       default  = 18
-    "--seed_try", "-M"
+    "--seed-try", "-M"
       help     = "Number of failed seeds to try before giving up"
       arg_type = Int
       default  = 3
+    "--seed-tol", "-T"
+      help     = "Number of seed hits to tolerate"
+      arg_type = Int
+      default  = 4
+    "--seed-buf", "-B"
+      help     = "Ignore this many bases from beginning and end of read for seed"
+      arg_type = Int
+      default  = 5
+    "--mismatches", "-X"
+      help     = "Allowable number of mismatches in alignment"
+      arg_type = Int
+      default  = 2
+    "--score-min", "-S"
+      help     = "Minimum alignment score (matches - mismatches)"
+      arg_type = Int
+      default  = 45
     "--junc-only", "-j"
       help     = "Only use junction reads, no internal exon reads will be considered."
       action   = :store_true
