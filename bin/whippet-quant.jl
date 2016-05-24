@@ -34,17 +34,50 @@ function parse_cmd()
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
-    "--seed_len", "-K"
+    "--seed-len", "-L"
       help     = "Seed length"
       arg_type = Int
       default  = 18
-    "--seed_try", "-M"
+    "--seed-try", "-M"
       help     = "Number of failed seeds to try before giving up"
       arg_type = Int
       default  = 3
+    "--seed-tol", "-T"
+      help     = "Number of seed hits to tolerate"
+      arg_type = Int
+      default  = 4
+    "--seed-buf", "-B"
+      help     = "Ignore this many bases from beginning and end of read for seed"
+      arg_type = Int
+      default  = 5
+    "--seed-inc", "-I"
+      help     = "Number of bases to increment seed each iteration"
+      arg_type = Int
+      default  = 18
+    "--pair-range", "-P"
+      help     = "Seeds for paired end reads must match within _ bases of one another"
+      arg_type = Int
+      default  = 2500
+    "--mismatches", "-X"
+      help     = "Allowable number of mismatches in alignment"
+      arg_type = Int
+      default  = 2
+    "--score-min", "-S"
+      help     = "Minimum alignment score (matches - mismatches)"
+      arg_type = Int
+      default  = 45
     "--junc-only", "-j"
       help     = "Only use junction reads, no internal exon reads will be considered."
       action   = :store_true
+    "--stranded"
+      help     = "Is the data strand specific? If so, increase speed with this flag"
+      action   = :store_true
+    "--rev-pair"
+      help     = "Is the second mate the reverse complement of the first? If so, increase speed with this flag"
+      action   = :store_true
+    "--no-circ"
+      help     = "Do not allow back/circular splicing"
+      action   = :store_false
     "--no-tpm"
       help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
@@ -70,7 +103,7 @@ function main()
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
-   const param = AlignParam( ispaired ) # defaults for now
+   const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
