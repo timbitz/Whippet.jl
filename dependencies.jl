@@ -18,7 +18,9 @@ end
 
 clones = [ "https://github.com/dcjones/Switch.jl.git",
            "https://github.com/BioJulia/IndexableBitVectors.jl.git",
-           "https://github.com/quinnj/SuffixArrays.jl.git" ]
+           "https://github.com/quinnj/SuffixArrays.jl.git",
+           "https://github.com/BioJulia/BufferedStreams.jl.git",
+           "https://github.com/BioJulia/Bio.jl.git" ]
 
 
 adds = [ "DataStructures",
@@ -26,9 +28,7 @@ adds = [ "DataStructures",
          "FMIndexes", 
          "IntArrays",
          "IntervalTrees",
-         "BufferedStreams",
          "Libz",
-         "Bio",
          "StatsBase",
          "Distributions",
          "Glob" ]
