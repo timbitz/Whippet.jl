@@ -16,7 +16,7 @@
 ### How to use Whippet
 
 ## 1) Install 
-Install most recent stable [julia release here](http://julialang.org/downloads/), which must be >= v0.4.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install most recent stable [julia release here](http://julialang.org/downloads/), which must be >= v0.4.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started).  Make sure `julia` is in your `$PATH`.
 
 ## 2) Clone Whippet
 Make sure dependencies are satisfied. Executables are in bin/
@@ -27,7 +27,10 @@ julia dependencies.jl
 ```
 
 ## 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in refflat. A default example is supplied for hg19 in anno/refseq_hg19.flat.gz
+You need your genome sequence in fasta, and a gene annotation file in refflat. A default flat file is supplied for hg19 in `anno/refseq_hg19.flat.gz`.  
+
+Note: Until GTF format is supported, you will need to make your own flat files from gtf using the `gtfToGenePred` utility from the UCSC Genome Browser kent source, you can obtain the pre-compiled executable [here](http://hgdownload.soe.ucsc.edu/admin/exe/).  Run `gtfToGenePred` with `-genePredExt` flag.
+
 ```bash
 $ julia whippet-index.jl --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
 ```
