@@ -50,7 +50,7 @@ You can output the alignments in SAM format with the `--sam` flag and convert to
 $ julia whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
 ```
 
-It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files
+It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
 $ julia whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
 ```
