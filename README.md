@@ -26,7 +26,7 @@ cd Whippet
 julia dependencies.jl
 ```
 
-Note: on `julia dependencies.jl` there might be some noise, and throw an error on SuffixArray precompilation.  That is OK, just run it again and it should be OK.
+Note: on `julia dependencies.jl` there might be some noise or an error on SuffixArray precompilation.  Just run it again and it should be OK.
 
 ## 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in refflat. A default flat file is supplied for hg19 in `anno/refseq_hg19.flat.gz`.  
