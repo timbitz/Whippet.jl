@@ -16,7 +16,7 @@
 ### How to use Whippet
 
 ## 1) Install 
-Install most recent [julia release here](http://julialang.org/downloads/), which must be >= v0.4.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install most recent stable [julia release here](http://julialang.org/downloads/), which must be >= v0.4.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started).  Make sure `julia` is in your `$PATH`.
 
 ## 2) Clone Whippet
 Make sure dependencies are satisfied. Executables are in bin/
@@ -26,8 +26,13 @@ cd Whippet
 julia dependencies.jl
 ```
 
+Note: on `julia dependencies.jl` there might be some noise or an error on SuffixArray precompilation.  Just run it again and it should be OK.
+
 ## 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in refflat. A default example is supplied for hg19 in anno/refseq_hg19.flat.gz
+You need your genome sequence in fasta, and a gene annotation file in refflat. A default flat file is supplied for hg19 in `anno/refseq_hg19.flat.gz`.  
+
+Note: Until GTF format is supported, you will need to make your own flat files from gtf using the `gtfToGenePred` utility from the UCSC Genome Browser kent source, you can obtain the pre-compiled executable [here](http://hgdownload.soe.ucsc.edu/admin/exe/).  Run `gtfToGenePred` with `-genePredExt` flag.
+
 ```bash
 $ julia whippet-index.jl --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
 ```
@@ -47,7 +52,7 @@ You can output the alignments in SAM format with the `--sam` flag and convert to
 $ julia whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
 ```
 
-It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files
+It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
 $ julia whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
 ```

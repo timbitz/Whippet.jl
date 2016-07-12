@@ -131,13 +131,14 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
    cigar
 end
 
-function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; mapq=0, paired=false, fwd_mate=true )
+function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
+                    mapq=0, paired=false, fwd_mate=true, is_pair_rc=true )
    const geneind = align.path[1].gene
    const nodeind = align.path[1].node
    align.path[end].node < nodeind && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
    tab_write( io, read.name )
-   tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate) ) )
+   tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc) ) )
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
    tab_write( io, string(mapq) )

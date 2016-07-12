@@ -124,9 +124,9 @@ function _process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib:
             else
                count!( quant, fwd_aln.value[1], rev_aln.value[1] )
                sam && write_sam( stdbuf, fwd_reads[i], fwd_aln.value[1], lib, 
-                                 paired=true, first=true, is_pair_rc=param.is_pair_rc )
+                                 paired=true, fwd_mate=true, is_pair_rc=param.is_pair_rc )
                sam && write_sam( stdbuf, rev_reads[i], rev_aln.value[1], lib, 
-                                 paired=true, first=false, is_pair_rc=param.is_pair_rc )
+                                 paired=true, fwd_mate=false, is_pair_rc=param.is_pair_rc )
             end
             mapped += 1
             @fastmath mean_readlen += (length(fwd_reads[i].seq) - mean_readlen) / mapped
