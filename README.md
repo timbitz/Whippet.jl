@@ -25,6 +25,7 @@ git clone https://github.com/timbitz/Whippet.git
 cd Whippet
 julia dependencies.jl
 ```
+NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies.
 
 ## 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in refflat. A default example is supplied for hg19 in anno/refseq_hg19.flat.gz
