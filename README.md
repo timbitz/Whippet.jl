@@ -69,9 +69,9 @@ $ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.ps
 ### Advanced Index Building
 
 If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effectively as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
-    - Increase the number of true splice sites that whippet index is given. 
-    - Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering for valid splice sites first.
-    - Choose a Kmer size appropriate for the node size and number in the transcriptome and the read length you plan to align.
+  * Increase the number of true splice sites that `whippet index` is given. 
+  * Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering for valid splice sites first.
+  * Choose a Kmer size appropriate for the node size and number in the transcriptome and the read length you plan to align.
 
 ```bash
 $ bin/whippet-index.jl -h
