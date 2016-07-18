@@ -4,7 +4,7 @@
 ### Why use Whippet?
 
 ### Features
-- High performance
+- High performance PolyA+ Spliced Read Alignment
 - Robust quantification of the expression and transcriptome structure of model and non-model organisms
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
@@ -63,11 +63,33 @@ $ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.ps
 
 ---
 
+### Output Format
+
+
 ### Advanced Index Building
 
 If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effectively as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
     - Increase the number of true splice sites that whippet index is given. 
     - Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering for valid splice sites first.
+    - Choose a Kmer size appropriate for the node size and number in the transcriptome and the read length you plan to align.
+
+```bash
+$ bin/whippet-index.jl -h
+Whippet v0.1-rc4 loading and compiling... 
+usage: whippet-index.jl [-k KMER] --fasta FASTA --flat FLAT
+                        [--index INDEX] [-h]
+
+optional arguments:
+  -k, --kmer KMER  Kmer size to use for exon-exon junctions (default
+                   9) (type: Int64, default: 9)
+  --fasta FASTA    File containg the genome in fasta, one entry per
+                   chromosome [.gz]
+  --flat FLAT      Gene annotation file in RefFlat format
+  --index INDEX    Output prefix for saving index 'dir/prefix'
+                   (default Whippet/index/graph) (default:
+                   "/Users/timsw/Documents/git/Whippet/src/../index/graph")
+  -h, --help       show this help message and exit
+```
 
 ### Custom Alignment Parameters
 
@@ -140,4 +162,5 @@ For example: In order to align very short reads (lets say 35nt reads), the defau
 ```bash
 $ julia whippet-quant.jl SRR2080801.fastq.gz -x ../genomes/Strongylocentrotus/Strongylocentrotus -S 25 -I 10 -o SRR2080801
 ```
+
 
