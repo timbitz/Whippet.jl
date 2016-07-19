@@ -6,16 +6,16 @@ abstract SeqLibrary
 
 immutable SeqLib <: SeqLibrary
    seq::NucleotideSequence
-   offset::Vector{Coordint}
-   names::Vector{Genename}
+   offset::Vector{CoordInt}
+   names::Vector{GeneName}
    info::Vector{GeneInfo}
    index::FMIndex
    sorted::Bool
 end
 
 immutable GraphLib <: SeqLibrary
-   offset::Vector{Coordint}
-   names::Vector{Genename}
+   offset::Vector{CoordInt}
+   names::Vector{GeneName}
    info::Vector{GeneInfo}
    graphs::Vector{SpliceGraph}
    edges::Edges
@@ -36,9 +36,9 @@ end
    end
 end
 
-offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, Coordint(offset), lower=true) )
+offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, CoordInt(offset), lower=true) )
 
-function name_to_offset( seqlib::SeqLibrary, name::Genename )
+function name_to_offset( seqlib::SeqLibrary, name::GeneName )
    if seqlib.sorted
       ind = search_sorted( seqlib.names, name, true )
       ret = seqlib.names[ind]
@@ -48,7 +48,7 @@ function name_to_offset( seqlib::SeqLibrary, name::Genename )
    ret
 end
 
-function brute_getoffset( seqlib::SeqLibrary, name::Genename )
+function brute_getoffset( seqlib::SeqLibrary, name::GeneName )
    ret = -1
    for n in 1:length(seqlib.names)
      if seqlib.names[n] == name
@@ -70,11 +70,11 @@ function build_offset_dict{I <: Integer,
 end
 
 function build_chrom_dict( ref::Refset )
-   ret = Dict{Seqname,Vector{Genename}}() # refgenomeseq->geneid[]
+   ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
    for g in keys(ref.geneset)
       chrom = ref.geneset[g].info[1]
       if !haskey(ret, chrom)
-         ret[chrom] = Vector{Genename}()
+         ret[chrom] = Vector{GeneName}()
       end
       push!(ret[chrom], g)
    end
@@ -109,7 +109,7 @@ end
 function load_fasta( fhIter; verbose=false )
    seq = SGSequence(mutable=false)
    offset = Int[]
-   names = Seqname[]
+   names = SeqName[]
    for r in fhIter
       immutable!(r.seq)
       push!(names, r.name)
@@ -133,7 +133,7 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    seqdic  = build_chrom_dict( ref )
    xcript  = sg""
    xoffset = Vector{UInt64}()
-   xgenes  = Vector{Genename}()
+   xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
    xgraph  = Vector{SpliceGraph}()
    # set up splice graphs

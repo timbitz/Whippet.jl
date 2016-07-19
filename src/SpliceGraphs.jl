@@ -22,7 +22,7 @@ using Distributions
 include("types.jl")
 include("timer.jl")
 include("bio_nuc_safepatch.jl")
-include("refflat.jl")
+include("refset.jl")
 include("graph.jl")
 include("edges.jl") 
 include("index.jl")

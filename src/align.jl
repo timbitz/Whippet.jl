@@ -135,7 +135,7 @@ function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, bu
 end
 
 @inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int;
-                                  ispos=true, geneind=convert(Coordint, searchsortedlast( lib.offset, indx )) )
+                                  ispos=true, geneind=convert(CoordInt, searchsortedlast( lib.offset, indx )) )
 
    align = ungapped_fwd_extend( p, lib, geneind,
                                 indx - lib.offset[geneind] + p.seed_length,
@@ -204,10 +204,10 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
-                                nodeidx=searchsortedlast(lib.graphs[geneind].nodeoffset,Coordint(sgidx)) )
+                                nodeidx=searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx)) )
    const sg       = lib.graphs[geneind]
    const readlen  = length(read.seq)
 
@@ -347,7 +347,7 @@ end
 
 
 
-function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::UInt32, 
+function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::CoordInt, edgeind::UInt32, 
                                   read::SeqRecord, ridx::Int, rkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes
@@ -380,10 +380,10 @@ end
 
 # This is the main ungapped alignment extension function in the <-- direction
 # Returns: SGAlignment
-function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, sgidx::Int, 
+function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos=true,
                                 align::SGAlignment=SGAlignment(p.seed_length,0,sgidx,SGNode[],ispos,false),
-                                nodeidx=searchsortedlast(lib.graphs[geneind].nodeoffset,Coordint(sgidx)) )
+                                nodeidx=searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx)) )
    const sg       = lib.graphs[geneind]
    const readlen  = length(read.seq)
 
@@ -514,7 +514,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::Coordint, s
    align
 end
 
-function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::Coordint, edgeind::Coordint,
+function spliced_rev_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::CoordInt, edgeind::CoordInt,
                                   read::SeqRecord, ridx::Int, lkmer::Bio.Seq.Kmer{T,K}, align::SGAlignment )
    # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
    # returns right nodes with matching genes

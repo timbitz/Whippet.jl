@@ -57,7 +57,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
       const dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
       if dist < p.seed_pair_range # inside allowable pair distance
 
-         const geneind = convert( Coordint, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
+         const geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
          const inc = geneind < length(lib.offset) ? 1 : 0
          if lib.offset[geneind] <= rev_sorted[ridx] < lib.offset[geneind+inc]
 
@@ -146,7 +146,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          push!( used, lnode )
          push!( used, rnode )
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonMax}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
@@ -172,7 +172,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          const rnode = rev.path[n+1].node
          (lnode in used && rnode in used) && continue
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonMax}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val

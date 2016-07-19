@@ -18,7 +18,7 @@ using ArgParse
 
 include("$dir/types.jl")
 include("$dir/bio_nuc_safepatch.jl")
-include("$dir/refflat.jl")
+include("$dir/refset.jl")
 include("$dir/graph.jl")
 include("$dir/edges.jl")
 include("$dir/index.jl")

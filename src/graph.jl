@@ -79,9 +79,9 @@ end
 # This holds a representation of the splice graph
 # which is a directed multigraph
 immutable SpliceGraph
-   nodeoffset::Vector{Coordint} # SG offset
-   nodecoord::Vector{Coordint}  # Genome offset
-   nodelen::Vector{Coordint}
+   nodeoffset::Vector{CoordInt} # SG offset
+   nodecoord::Vector{CoordInt}  # Genome offset
+   nodelen::Vector{CoordInt}
    edgetype::Vector{EdgeType}
    edgeleft::Vector{SGKmer}
    edgeright::Vector{SGKmer}
@@ -92,17 +92,17 @@ end
 # Edge array:        1   2       3   4         5 6   7
 
 # empty constructor
-SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
-                             Vector{Coordint}(),  Vector{EdgeType}(),
+SpliceGraph() = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
+                             Vector{CoordInt}(),  Vector{EdgeType}(),
                              Vector{SGKmer}(), Vector{SGKmer}(), sg"" )
 
 # Main constructor
 # Build splice graph here.
 function SpliceGraph( gene::Refgene, genome::SGSequence )
    # splice graph variables
-   nodeoffset = Vector{Coordint}()
-   nodecoord  = Vector{Coordint}()
-   nodelen    = Vector{Coordint}()
+   nodeoffset = Vector{CoordInt}()
+   nodecoord  = Vector{CoordInt}()
+   nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
    seq        = sg""
 
@@ -148,7 +148,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
       end
       
       # now should we make a node?
-      if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
+      if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) )
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
          nodesize = Int(secval - minval) - leftadj - rightadj + 1

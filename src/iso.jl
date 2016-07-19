@@ -18,7 +18,7 @@ function process_isoforms( sg::SpliceGraph, sgquant::SpliceGraphQuant )
    if !isnull( graph )
       graph = Nullable( reduce_graph( graph.value ) )
    end
-   
+    
 end
 
 # TODO: filter isoforms with out txStart and End
