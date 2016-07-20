@@ -88,7 +88,7 @@ function load_refflat( fh; txbool=false )
 
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
-   for l::ASCIIString in eachline(fh)
+   for l in eachline(fh)
       (refid,chrom,strand, # NM_001177644,chr3,+
        txS,txE, # Int,Int
        cdS,cdE, # Int,Int
@@ -98,7 +98,7 @@ function load_refflat( fh; txbool=false )
 
       exCnt = parse(UInt16, exCnt)
 
-      if exCnt <= 2 continue end # no alternative splicing possible  TODO
+#      if exCnt <= 2 continue end # no alternative splicing possible  TODO
 
       txlen = 0
 
@@ -123,6 +123,19 @@ function load_refflat( fh; txbool=false )
 
       don = don[1:(end-1)] #ignore txStart and end
       acc = acc[2:end] # TODO make safe for single exon genes
+
+      # Add original edges to interval tree-->
+      for i in 1:length(don)
+         insval = Interval{CoordInt}(don[i],acc[i])
+         if haskey(gnedges, gene)
+            if !haskey(gnedges[gene], (don[i],acc[i]))
+               push!(gnedges[gene], insval)
+            end
+         else
+            gnedges[gene] = CoordTree()
+            push!(gnedges[gene], insval)
+         end
+      end
 
       # set values
       txinfo = (gene,parse(CoordInt, txS),
@@ -157,7 +170,7 @@ function load_refflat( fh; txbool=false )
    for gene in keys(genetotx)
       geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
                                gntxst[gene], gntxen[gene], 
-                               gnexons[gene],deepcopy(gnexons[gene]), 
+                               gnexons[gene],gnedges[gene], 
                                gnlen[gene] / gncnt[gene] )
    end
 
