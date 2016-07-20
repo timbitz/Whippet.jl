@@ -45,7 +45,7 @@ end
 
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
-parseSplice( subArray; l=0, r=0, c=0 ) = tuple(map( x->convert(CoordInt,parse(Int,x)+c), subArray )...)[(1+l):(end-r)]
+parse_splice( subarray; l=0, r=0, c=0 ) = tuple(map( x->convert(CoordInt,parse(Int,x)+c), subarray )...)[(1+l):(end-r)]
 
 function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
    uniq = SortedSet{T,Base.Order.ForwardOrdering}()
@@ -103,8 +103,8 @@ function load_refflat( fh; txbool=false )
       txlen = 0
 
       # get donor and acceptor splice sites, adjust for 0-based coords 
-      don = split(donCom, '\,', keep=false) |> s->parseSplice(s, r=0)
-      acc = split(accCom, '\,', keep=false) |> s->parseSplice(s, l=0, c=1)
+      don = split(donCom, '\,', keep=false) |> s->parse_splice(s, r=0)
+      acc = split(accCom, '\,', keep=false) |> s->parse_splice(s, l=0, c=1)
 
       # Add original exons to interval tree-->
       for i in 1:length(don)
