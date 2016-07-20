@@ -1,5 +1,4 @@
 
-#requires
 include("types.jl")
 
 typealias Refseqid    ASCIIString
@@ -209,6 +208,6 @@ function load_gtf( fh; txbool=false )
 
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
-      
+   #TODO   
 
 end
