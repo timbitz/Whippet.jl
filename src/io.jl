@@ -102,12 +102,12 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar # this shouldn't happen
             curpos = sg.nodeoffset[ nexti ]
-            const next_edge_coord = strand ? sg.nodecoord[nexti] : sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
-            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) : Int(adjacent_edge_coord) - Int(next_edge_coord)
+            const next_edge_coord = strand ? sg.nodecoord[nexti] : 
+                                             sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
+            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) : 
+                                    Int(adjacent_edge_coord) - Int(next_edge_coord)
             if intron > 1
                matches_to_add = min( cur_matches, readlen - total )
-              # if matches_to_add < 0 || intron > 1_000_000_000
-              #    error("$(align), $cigar, $matches_to_add, $intron, $i->$adjacent_edge_coord, $nexti->$next_edge_coord\t$strand\n$(sg.edgetype[i])\t$(sg.edgetype[nexti])")
               # end
                cigar *= string( matches_to_add ) * "M" * string( intron ) * "N"
                total += cur_matches
