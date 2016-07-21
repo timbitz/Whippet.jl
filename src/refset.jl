@@ -1,3 +1,4 @@
+
 # Single Reftx entry
 immutable Reftx
    info::Txinfo
@@ -8,8 +9,8 @@ end
 # Single Refgene entry
 immutable Refgene
    info::GeneTup
-   don::CoordTuple # make Coordarray instead?
-   acc::CoordTuple # TODO?
+   don::CoordTuple 
+   acc::CoordTuple 
    txst::CoordTuple
    txen::CoordTuple
    exons::CoordTree
@@ -37,8 +38,8 @@ end
 parse_splice( subarray; l=0, r=0, c=0 ) = tuple(map( x->convert(CoordInt,parse(Int,x)+c), subarray )...)[(1+l):(end-r)]
 
 unique_tuple( tup1::Tuple{}, tup2::Tuple{} ) = ()
-unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) = tup1
-unique_tuple{T}( tup1::Tuple{}, tup2::Tuple{Vararg{T}} ) = tup2
+unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) = unique_tuple(tup1, tup1)
+unique_tuple{T}( tup1::Tuple{}, tup2::Tuple{Vararg{T}} ) = unique_tuple(tup2, tup2)
 
 function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
    uniq = SortedSet{T,Base.Order.ForwardOrdering}()
