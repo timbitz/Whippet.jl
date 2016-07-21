@@ -92,8 +92,6 @@ function load_refflat( fh; txbool=false )
 
       exCnt = parse(UInt16, exCnt)
 
-#      if exCnt <= 2 continue end # no alternative splicing possible  TODO
-
       txlen = 0
 
       # get donor and acceptor splice sites, adjust for 0-based coords 
@@ -116,7 +114,7 @@ function load_refflat( fh; txbool=false )
       end
 
       don = don[1:(end-1)] #ignore txStart and end
-      acc = acc[2:end] # TODO make safe for single exon genes
+      acc = acc[2:end] 
 
       # Add original edges to interval tree-->
       for i in 1:length(don)
@@ -165,10 +163,10 @@ function load_refflat( fh; txbool=false )
    end
    # now make Refset and add genes.
    for gene in keys(genetotx)
-      geneset[gene] = Refgene( gninfo[gene], gndon[gene], gnacc[gene],
-                               gntxst[gene], gntxen[gene], 
-                               gnexons[gene],gnedges[gene], 
-                               gnlen[gene] / gncnt[gene] )
+      geneset[gene] = Refgene( gninfo[gene],  gndon[gene], gnacc[gene],
+                               gntxst[gene],  gntxen[gene], 
+                               gnexons[gene], gnedges[gene], 
+                               gnlen[gene] /  gncnt[gene] )
    end
 
    if !txbool
