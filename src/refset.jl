@@ -1,4 +1,3 @@
-
 # Single Reftx entry
 immutable Reftx
    info::Txinfo
@@ -206,6 +205,6 @@ function load_gtf( fh; txbool=false )
 
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
-      
+   #TODO   
 
 end
