@@ -14,6 +14,13 @@ typealias GeneName   ASCIIString
 typealias SeqName    ASCIIString
 typealias GeneMeta Tuple{GeneName, SeqName, Char}
 
+typealias Refseqid    ASCIIString
+typealias Txinfo      Tuple{GeneName,CoordInt,CoordInt,CoordInt}
+                       #   {GeneName, TxStart, TxEnd, ExonCount}
+typealias GeneTup    Tuple{ASCIIString, Char}
+                       #    Chrom/seqname, Strand '+'/'-'
+typealias CoordTree IntervalTree{CoordInt,Interval{CoordInt}}
+
 typealias BufOut BufferedStreams.BufferedOutputStream
 
 immutable GeneInfo

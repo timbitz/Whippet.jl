@@ -1,14 +1,4 @@
 
-#requires
-include("types.jl")
-
-typealias Refseqid    ASCIIString
-typealias Txinfo      Tuple{GeneName,CoordInt,CoordInt,CoordInt} 
-                       #   {GeneName, TxStart, TxEnd, ExonCount}
-typealias GeneTup    Tuple{ASCIIString, Char}
-                       #    Chrom/seqname, Strand '+'/'-'
-typealias CoordTree IntervalTree{CoordInt,Interval{CoordInt}}
-
 # Single Reftx entry
 immutable Reftx
    info::Txinfo
@@ -46,6 +36,10 @@ end
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
 parse_splice( subarray; l=0, r=0, c=0 ) = tuple(map( x->convert(CoordInt,parse(Int,x)+c), subarray )...)[(1+l):(end-r)]
+
+unique_tuple( tup1::Tuple{}, tup2::Tuple{} ) = ()
+unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) = tup1
+unique_tuple{T}( tup1::Tuple{}, tup2::Tuple{Vararg{T}} ) = tup2
 
 function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
    uniq = SortedSet{T,Base.Order.ForwardOrdering}()
@@ -135,6 +129,9 @@ function load_refflat( fh; txbool=false )
             gnedges[gene] = CoordTree()
             push!(gnedges[gene], insval)
          end
+      end
+      if !haskey(gnedges, gene)
+         gnedges[gene] = CoordTree()
       end
 
       # set values
