@@ -93,8 +93,8 @@ end
 
 # empty constructor
 SpliceGraph() = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
-                             Vector{CoordInt}(),  Vector{EdgeType}(),
-                             Vector{SGKmer}(), Vector{SGKmer}(), sg"" )
+                             Vector{CoordInt}(), Vector{EdgeType}(),
+                             Vector{SGKmer}(),   Vector{SGKmer}(), sg"" )
 
 # Main constructor
 # Build splice graph here.
