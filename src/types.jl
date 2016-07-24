@@ -23,11 +23,6 @@ typealias RefSeqId   String
 
 typealias GeneMeta   Tuple{GeneName, SeqName, Char}
 
-typealias Txinfo     Tuple{GeneName,CoordInt,CoordInt,CoordInt}
-                       #   {GeneName, TxStart, TxEnd, ExonCount}
-typealias GeneTup    Tuple{String, Char}
-                       #    Chrom/seqname, Strand '+'/'-'
-
 typealias BufOut BufferedStreams.BufferedOutputStream
 
 immutable GeneInfo
@@ -38,7 +33,7 @@ end
 GeneInfo( name::SeqName, strand::Char ) = GeneInfo( name, strand == '+' ? true : false )
 
 immutable TxInfo
-   name::GeneName
+   name::RefSeqId
    txstart::CoordInt
    txend::CoordInt
    exnum::CoordInt

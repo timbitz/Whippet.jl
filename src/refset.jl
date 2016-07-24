@@ -123,7 +123,7 @@ function load_refflat( fh; txbool=true )
       acc = acc[2:end] 
 
       # set values
-      txinfo = (gene,parse(CoordInt, txS),
+      txinfo = TxInfo(gene,parse(CoordInt, txS),
                      parse(CoordInt, txE)-1,
                      exCnt)
 
@@ -153,9 +153,11 @@ function load_refflat( fh; txbool=true )
    end
    # now make RefSet and add genes.
    for gene in keys(genetotx)
-      geneset[gene] = RefGene( gninfo[gene],  gndon[gene], gnacc[gene],
+      geneset[gene] = RefGene( gninfo[gene],  
+                               gndon[gene],   gnacc[gene],
                                gntxst[gene],  gntxen[gene], 
-                               gnexons[gene], gnlen[gene] /  gncnt[gene] )
+                               gnexons[gene], 
+                               gnlen[gene] /  gncnt[gene] )
    end
 
    if !txbool
