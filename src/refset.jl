@@ -13,6 +13,8 @@ immutable Refgene
    acc::CoordTuple 
    txst::CoordTuple
    txen::CoordTuple
+   orfst::CoordTuple
+   orfen::CoordTuple
    exons::CoordTree
    edges::CoordTree
    length::Float64
@@ -63,6 +65,8 @@ function load_refflat( fh; txbool=false )
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
    gntxen   = Dict{GeneName,CoordTuple}()
+   gnorfst  = Dict{GeneName,CoordTuple}()
+   gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
    gnedges  = Dict{GeneName,CoordTree}()
