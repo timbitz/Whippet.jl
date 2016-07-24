@@ -596,7 +596,7 @@ Base.convert{T<:SGNucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [
 
 # Convert from/to Strings
 Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
-Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(ASCIIString, [convert(Char, x) for x in seq])
+Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
 
 # Convert between DNA/RNA and SG
 Base.convert(::Type{SGSequence}, seq::Bio.Seq.NucleotideSequence) = SGSequence( convert(AbstractString, seq) )

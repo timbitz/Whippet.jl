@@ -171,15 +171,15 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer )
 end
 
-fixpath( str::ASCIIString ) = abspath( expanduser( str ) )
+fixpath( str::String ) = abspath( expanduser( str ) )
 
-function isgzipped( filename::ASCIIString )
+function isgzipped( filename::String )
    restr = "\.gz\$"
    re = match(Regex(restr), filename)
    return re == nothing ? false : true
 end
 
-function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
+function fasta_to_index( filename::String, ref::Refset; kmer=9 )
    if isgzipped( filename )
       println(STDERR, "Decompressing and Indexing $filename...")
       to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)

@@ -7,17 +7,22 @@ if GENOMESIZE < typemax(UInt32)
 else
    typealias CoordInt UInt64
 end
+
+if VERSION < v"0.5.0-dev"
+   typealias String ASCIIString
+end
+
 typealias CoordTuple Tuple{Vararg{CoordInt}}
 typealias CoordArray Vector{CoordInt}
 typealias ExonMax    UInt16
-typealias GeneName   ASCIIString
-typealias SeqName    ASCIIString
-typealias GeneMeta Tuple{GeneName, SeqName, Char}
+typealias GeneName   String
+typealias SeqName    String
+typealias GeneMeta   Tuple{GeneName, SeqName, Char}
 
-typealias Refseqid    ASCIIString
-typealias Txinfo      Tuple{GeneName,CoordInt,CoordInt,CoordInt}
+typealias Refseqid   String
+typealias Txinfo     Tuple{GeneName,CoordInt,CoordInt,CoordInt}
                        #   {GeneName, TxStart, TxEnd, ExonCount}
-typealias GeneTup    Tuple{ASCIIString, Char}
+typealias GeneTup    Tuple{String, Char}
                        #    Chrom/seqname, Strand '+'/'-'
 typealias CoordTree IntervalTree{CoordInt,Interval{CoordInt}}
 
