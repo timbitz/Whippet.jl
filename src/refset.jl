@@ -87,7 +87,10 @@ function load_refflat( fh; txbool=false )
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
    for l in eachline(fh)
-      (refid,chrom,strand, # NM_001177644,chr3,+
+       if l[1] == "#" # ignore comment lines
+          continue
+       end
+       (refid,chrom,strand, # NM_001177644,chr3,+
        txS,txE, # Int,Int
        cdS,cdE, # Int,Int
        exCnt, # Int,
