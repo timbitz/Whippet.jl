@@ -168,11 +168,20 @@ function load_refflat( fh; txbool=true )
    return RefSet( txset, geneset, genetotx )
 end
 
+function fetch_meta( var::String, meta; off=1 )
+   val = "_" # empty
+   for i in off:length(meta)
+      if meta[i] == var && i <= length(meta)
+         return meta[i+1],i+1
+      end
+   end
+   val,off
+end
 
-function load_gtf( fh; txbool=false )
+function load_gtf( fh; txbool=true )
 
    # Temporary variables   
-   gninfo   = Dict{GeneName,GeneTup}()
+   gninfo   = Dict{GeneName,GeneInfo}()
    gndon    = Dict{GeneName,CoordTuple}()
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
@@ -197,6 +206,25 @@ function load_gtf( fh; txbool=false )
 
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
-      
+   curtx = ""
 
+   for l in eachline(fh)
+
+      (l[1] == "#") || continue # ignore comment lines
+
+      (chrom, src, entry,
+       st, en, _, 
+       strand, _,
+       meta) = split(l, '\t')
+
+      (entry != "exon") && continue
+
+      metaspl = split(meta, ['\s','\;','\"'], keep=false)
+      geneid,pos  = fetch_meta( "gene_id" )
+      tranid,pos  = fetch_meta( "transcript_id", off=pos+1 )
+      genesym     = fetch_meta( "gene_name", off=pos+1 )
+
+      
+   end
 end
+
