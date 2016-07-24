@@ -34,7 +34,7 @@ immutable GraphLibQuant
    quant::Vector{SpliceGraphQuant}
 end
 
-function GraphLibQuant( lib::GraphLib, ref::Refset )
+function GraphLibQuant( lib::GraphLib, ref::RefSet )
    tpm    = zeros( length(lib.graphs) )
    count  = zeros( length(lib.graphs) )
    len    =  ones( length(lib.graphs) )

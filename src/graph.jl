@@ -98,7 +98,7 @@ SpliceGraph() = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
 
 # Main constructor
 # Build splice graph here.
-function SpliceGraph( gene::Refgene, genome::SGSequence )
+function SpliceGraph( gene::RefGene, genome::SGSequence )
    # splice graph variables
    nodeoffset = Vector{CoordInt}()
    nodecoord  = Vector{CoordInt}()
@@ -118,7 +118,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
 
    # return a tuple containing the min coordinate's idx,val
    # each of 4 categories, txstart, donor, acceptor, txend
-   function getmin_ind_val( gene::Refgene, idx; def=Inf )
+   function getmin_ind_val( gene::RefGene, idx; def=Inf )
       retarr = [ get(gene.txen, idx[1], def),
                  get(gene.acc,  idx[2], def),
                  get(gene.don,  idx[3], def),

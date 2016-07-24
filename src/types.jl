@@ -8,23 +8,25 @@ else
    typealias CoordInt UInt64
 end
 
+typealias CoordTuple Tuple{Vararg{CoordInt}}
+typealias CoordArray Vector{CoordInt}
+typealias CoordTree IntervalTree{CoordInt,Interval{CoordInt}}
+
+typealias ExonMax    UInt16
+
 if VERSION < v"0.5.0-dev"
    typealias String ASCIIString
 end
-
-typealias CoordTuple Tuple{Vararg{CoordInt}}
-typealias CoordArray Vector{CoordInt}
-typealias ExonMax    UInt16
 typealias GeneName   String
 typealias SeqName    String
+typealias RefSeqId   String
+
 typealias GeneMeta   Tuple{GeneName, SeqName, Char}
 
-typealias Refseqid   String
 typealias Txinfo     Tuple{GeneName,CoordInt,CoordInt,CoordInt}
                        #   {GeneName, TxStart, TxEnd, ExonCount}
 typealias GeneTup    Tuple{String, Char}
                        #    Chrom/seqname, Strand '+'/'-'
-typealias CoordTree IntervalTree{CoordInt,Interval{CoordInt}}
 
 typealias BufOut BufferedStreams.BufferedOutputStream
 
@@ -33,9 +35,12 @@ immutable GeneInfo
    strand::Bool # pos is true, neg is false
 end
 
+GeneInfo( name::SeqName, strand::Char ) = GeneInfo( name, strand == '+' ? true : false )
+
 immutable TxInfo
    name::GeneName
-   
+   txstart::CoordInt
+   txend::CoordInt
+   exnum::CoordInt
 end
 
-GeneInfo( name::SeqName, strand::Char ) = GeneInfo( name, strand == '+' ? true : false )

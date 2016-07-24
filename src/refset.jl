@@ -1,14 +1,15 @@
 
-# Single Reftx entry
-immutable Reftx
-   info::Txinfo
+# Single RefTx entry
+immutable RefTx
+   info::TxInfo
    don::CoordTuple
    acc::CoordTuple
+   length::Float64
 end
 
-# Single Refgene entry
-immutable Refgene
-   info::GeneTup
+# Single RefGene entry
+immutable RefGene
+   info::GeneInfo
    don::CoordTuple 
    acc::CoordTuple 
    txst::CoordTuple
@@ -16,19 +17,18 @@ immutable Refgene
    orfst::CoordTuple
    orfen::CoordTuple
    exons::CoordTree
-   edges::CoordTree
    length::Float64
 end
 
 # Full Annotation Set
-type Refset
-   txset::Dict{Refseqid,Reftx}
-   geneset::Dict{GeneName,Refgene}
-   genetotx::Dict{GeneName,Vector{Refseqid}}
+type RefSet
+   txset::Dict{RefSeqId,RefTx}
+   geneset::Dict{GeneName,RefGene}
+   genetotx::Dict{GeneName,Vector{RefSeqId}}
 end
 
 
-function Base.show(io::Base.IO, ref::Refset)
+function Base.show(io::Base.IO, ref::RefSet)
    Base.show(io, ref.txset)
    Base.show(io, ref.geneset)
    Base.show(io, ref.genetotx)
@@ -56,11 +56,11 @@ end
 # Load refflat file from filehandle
 # Refflat format must be as expected from output of gtfToGenePred -ext
 # Options:
-#         if txbool=false, then return Refset with empty txset variable
-function load_refflat( fh; txbool=false )
+#         if txbool=false, then return RefSet with empty txset variable
+function load_refflat( fh; txbool=true )
    
    # Temporary variables   
-   gninfo   = Dict{GeneName,GeneTup}()
+   gninfo   = Dict{GeneName,GeneInfo}()
    gndon    = Dict{GeneName,CoordTuple}()
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
@@ -69,14 +69,13 @@ function load_refflat( fh; txbool=false )
    gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
-   gnedges  = Dict{GeneName,CoordTree}()
    gnlen    = Dict{GeneName,Float64}()
    gncnt    = Dict{GeneName,Int}()
 
-   # Refset variables
-   txset    = Dict{Refseqid,Reftx}()
-   geneset  = Dict{GeneName,Refgene}()
-   genetotx = Dict{GeneName,Vector{Refseqid}}()
+   # RefSet variables
+   txset    = Dict{RefSeqId,RefTx}()
+   geneset  = Dict{GeneName,RefGene}()
+   genetotx = Dict{GeneName,Vector{RefSeqId}}()
 
 
    txnum = 75000
@@ -123,33 +122,17 @@ function load_refflat( fh; txbool=false )
       don = don[1:(end-1)] #ignore txStart and end
       acc = acc[2:end] 
 
-      # Add original edges to interval tree-->
-      for i in 1:length(don)
-         insval = Interval{CoordInt}(don[i],acc[i])
-         if haskey(gnedges, gene)
-            if !haskey(gnedges[gene], (don[i],acc[i]))
-               push!(gnedges[gene], insval)
-            end
-         else
-            gnedges[gene] = CoordTree()
-            push!(gnedges[gene], insval)
-         end
-      end
-      if !haskey(gnedges, gene)
-         gnedges[gene] = CoordTree()
-      end
-
       # set values
       txinfo = (gene,parse(CoordInt, txS),
                      parse(CoordInt, txE)-1,
                      exCnt)
 
       if txbool
-         txset[refid] = Reftx( txinfo, don, acc )      
+         txset[refid] = RefTx( txinfo, don, acc, txlen )      
       end
 
       if haskey(genetotx, gene)
-         chrom == gninfo[gene][1] || continue # can have only one chrom
+         chrom == gninfo[gene].name || continue # can have only one chrom
          push!(genetotx[gene], refid)
          gndon[gene]  = unique_tuple(gndon[gene], don)
          gnacc[gene]  = unique_tuple(gnacc[gene], acc)
@@ -158,30 +141,29 @@ function load_refflat( fh; txbool=false )
          gnlen[gene] += txlen
          gncnt[gene] += 1
       else
-         genetotx[gene] = Refseqid[refid]
+         genetotx[gene] = RefSeqId[refid]
          gndon[gene]  = don
          gnacc[gene]  = acc
-         gninfo[gene] = (chrom,strand[1])
+         gninfo[gene] = GeneInfo(chrom,strand[1])
          gntxst[gene] = tuppar(txS, c=1)
          gntxen[gene] = tuppar(txE)
          gnlen[gene]  = txlen
          gncnt[gene]  = 1
       end
    end
-   # now make Refset and add genes.
+   # now make RefSet and add genes.
    for gene in keys(genetotx)
-      geneset[gene] = Refgene( gninfo[gene],  gndon[gene], gnacc[gene],
+      geneset[gene] = RefGene( gninfo[gene],  gndon[gene], gnacc[gene],
                                gntxst[gene],  gntxen[gene], 
-                               gnexons[gene], gnedges[gene], 
-                               gnlen[gene] /  gncnt[gene] )
+                               gnexons[gene], gnlen[gene] /  gncnt[gene] )
    end
 
    if !txbool
-      genetotx = Dict{GeneName,Vector{Refseqid}}()
+      genetotx = Dict{GeneName,Vector{RefSeqId}}()
       gc()
    end
 
-   return Refset( txset, geneset, genetotx )
+   return RefSet( txset, geneset, genetotx )
 end
 
 
@@ -193,15 +175,17 @@ function load_gtf( fh; txbool=false )
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
    gntxen   = Dict{GeneName,CoordTuple}()
+   gnorfst  = Dict{GeneName,CoordTuple}()
+   gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
    gnlen    = Dict{GeneName,Float64}()
    gncnt    = Dict{GeneName,Int}()
 
-   # Refset variables
-   txset    = Dict{Refseqid,Reftx}()
-   geneset  = Dict{GeneName,Refgene}()
-   genetotx = Dict{GeneName,Vector{Refseqid}}()
+   # RefSet variables
+   txset    = Dict{RefSeqId,RefTx}()
+   geneset  = Dict{GeneName,RefGene}()
+   genetotx = Dict{GeneName,Vector{RefSeqId}}()
 
 
    txnum = 75000
@@ -211,6 +195,6 @@ function load_gtf( fh; txbool=false )
 
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
-   #TODO   
+      
 
 end

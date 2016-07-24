@@ -69,7 +69,7 @@ function build_offset_dict{I <: Integer,
    ret
 end
 
-function build_chrom_dict( ref::Refset )
+function build_chrom_dict( ref::RefSet )
    ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
    for g in keys(ref.geneset)
       chrom = ref.geneset[g].info[1]
@@ -129,7 +129,7 @@ function single_genome_index!( fhIter; verbose=false )
 end
 
 
-function trans_index!( fhIter, ref::Refset; kmer=9 )
+function trans_index!( fhIter, ref::RefSet; kmer=9 )
    seqdic  = build_chrom_dict( ref )
    xcript  = sg""
    xoffset = Vector{UInt64}()
@@ -153,7 +153,7 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
          xcript  *= curgraph.seq
          push!(xgraph, curgraph)
          push!(xgenes, g)
-         push!(xinfo, GeneInfo( ref.geneset[g].info... ))
+         push!(xinfo, ref.geneset[g].info )
          push!(xoffset, runoffset)
          runoffset += length(curgraph.seq) 
       end
@@ -179,7 +179,7 @@ function isgzipped( filename::String )
    return re == nothing ? false : true
 end
 
-function fasta_to_index( filename::String, ref::Refset; kmer=9 )
+function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
    if isgzipped( filename )
       println(STDERR, "Decompressing and Indexing $filename...")
       to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
