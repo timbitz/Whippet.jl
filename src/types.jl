@@ -28,4 +28,9 @@ immutable GeneInfo
    strand::Bool # pos is true, neg is false
 end
 
+immutable TxInfo
+   name::GeneName
+   
+end
+
 GeneInfo( name::SeqName, strand::Char ) = GeneInfo( name, strand == '+' ? true : false )
