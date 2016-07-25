@@ -255,6 +255,7 @@ function load_gtf( fh; txbool=true )
       push!(trandon, parse_coordint(en))
       txlen += trandon[end] - tranacc[end]
 
+
    end
 end
 
