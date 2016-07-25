@@ -38,6 +38,8 @@ end
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
 parse_splice( subarray; l=0, r=0, c=0 ) = tuple(map( x->convert(CoordInt,parse(Int,x)+c), subarray )...)[(1+l):(end-r)]
+parse_coordint( i ) = convert(CoordInt, parse(Int, i))
+parse_coordtup( i; c=0 ) = tuple(parse_coordint(i)+c)
 
 unique_tuple( tup1::Tuple{}, tup2::Tuple{} ) = ()
 unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) = unique_tuple(tup1, tup1)
@@ -83,13 +85,12 @@ function load_refflat( fh; txbool=true )
    sizehint!(geneset, txnum >> 1)
    sizehint!(genetotx, txnum)
 
-   tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
    for l in eachline(fh)
-       if l[1] == "#" # ignore comment lines
-          continue
-       end
-       (refid,chrom,strand, # NM_001177644,chr3,+
+
+      (l[1] == "#") && continue # ignore comment lines
+      
+      (refid,chrom,strand, # NM_001177644,chr3,+
        txS,txE, # Int,Int
        cdS,cdE, # Int,Int
        exCnt, # Int,
@@ -136,8 +137,8 @@ function load_refflat( fh; txbool=true )
          push!(genetotx[gene], refid)
          gndon[gene]  = unique_tuple(gndon[gene], don)
          gnacc[gene]  = unique_tuple(gnacc[gene], acc)
-         gntxst[gene] = unique_tuple(gntxst[gene], tuppar(txS, c=1))
-         gntxen[gene] = unique_tuple(gntxen[gene], tuppar(txE))
+         gntxst[gene] = unique_tuple(gntxst[gene], parse_coordtup(txS, c=1))
+         gntxen[gene] = unique_tuple(gntxen[gene], parse_coordtup(txE))
          gnlen[gene] += txlen
          gncnt[gene] += 1
       else
@@ -145,8 +146,8 @@ function load_refflat( fh; txbool=true )
          gndon[gene]  = don
          gnacc[gene]  = acc
          gninfo[gene] = GeneInfo(chrom,strand[1])
-         gntxst[gene] = tuppar(txS, c=1)
-         gntxen[gene] = tuppar(txE)
+         gntxst[gene] = parse_coordtup(txS, c=1)
+         gntxen[gene] = parse_coordtup(txE)
          gnlen[gene]  = txlen
          gncnt[gene]  = 1
       end
@@ -204,21 +205,23 @@ function load_gtf( fh; txbool=true )
    sizehint!(geneset, txnum >> 1)
    sizehint!(genetotx, txnum)
 
-   tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
-
    curtran = ""
    curgene = ""
 
+   trandon = Vector{CoordInt}()
+   tranacc = Vector{CoordInt}()
+   txlen   = 0
+
    for l in eachline(fh)
 
-      (l[1] == "#") || continue # ignore comment lines
+      (l[1] == "#") && continue # ignore comment lines
 
-      (chrom, src, entry,
+      (chrom, src, entrytype,
        st, en, _, 
        strand, _,
        meta) = split(l, '\t')
 
-      (entry != "exon") && continue
+      (entrytype != "exon") || continue
 
       metaspl = split(meta, [' ',';','"'], keep=false)
 
@@ -228,15 +231,30 @@ function load_gtf( fh; txbool=true )
 
       if tranid != curtran
          # clean up tran
+         txinfo = TxInfo(curgene, minimum(tranacc),
+                                  minimum(trandon),
+                                  length(tranacc))
+
+         don = tuple(trandon[1:(end-1)]...)
+         acc = tuple(tranacc[2:end]...)
+
+         if txbool
+            txset[refid] = RefTx( txinfo, don, acc, txlen )
+         end
 
          curtran = tranid
-      end
 
-      if geneid != curgene
-         # celan up gene
+         if geneid != curgene
+         # clean up gene
 
-         curgene = geneid
+            curgene = geneid
+         end
       end
+ 
+      push!(tranacc, parse_coordint(st)) 
+      push!(trandon, parse_coordint(en))
+      txlen += trandon[end] - tranacc[end]
+
    end
 end
 
