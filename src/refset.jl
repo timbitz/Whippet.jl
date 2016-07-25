@@ -212,6 +212,41 @@ function load_gtf( fh; txbool=true )
    tranacc = Vector{CoordInt}()
    txlen   = 0
 
+   function private_add_transcript!( curtran, curgene, trandon, tranacc, txlen )
+      txS = minimum(tranacc)
+      txE = minimum(trandon)
+
+      txinfo = TxInfo(curgene, txS, txE, length(tranacc))
+
+      don = tuple(trandon[1:(end-1)]...)
+      acc = tuple(tranacc[2:end]...)
+
+      if txbool
+         txset[refid] = RefTx( txinfo, don, acc, txlen )
+      end
+
+      if haskey(genetotx, curgene)
+         chrom == gninfo[curgene].name || continue # can have only one chrom
+         push!(genetotx[curgene], curtran)
+         gndon[curgene]  = unique_tuple(gndon[curgene], don)
+         gnacc[curgene]  = unique_tuple(gnacc[curgene], acc)
+         gntxst[curgene] = unique_tuple(gntxst[curgene], tuple(txS))
+         gntxen[curgene] = unique_tuple(gntxen[curgene], tuple(txE))
+         gnlen[curgene] += txlen
+         gncnt[curgene] += 1
+      else
+         genetotx[curgene] = RefSeqId[refid]
+         gndon[curgene]  = don
+         gnacc[curgene]  = acc
+         gninfo[curgene] = GeneInfo(chrom,strand[1])
+         gntxst[curgene] = tuple(txS)
+         gntxen[curgene] = tuple(txE)
+         gnlen[curgene]  = txlen
+         gncnt[curgene]  = 1
+      end
+   end
+
+
    for l in eachline(fh)
 
       (l[1] == "#") && continue # ignore comment lines
@@ -230,32 +265,37 @@ function load_gtf( fh; txbool=true )
       genesym     = fetch_meta( "gene_name", metaspl )
 
       if tranid != curtran
-         # clean up tran
-         txinfo = TxInfo(curgene, minimum(tranacc),
-                                  minimum(trandon),
-                                  length(tranacc))
-
-         don = tuple(trandon[1:(end-1)]...)
-         acc = tuple(tranacc[2:end]...)
-
-         if txbool
-            txset[refid] = RefTx( txinfo, don, acc, txlen )
-         end
+         # add transcript and clean up
+         private_add_transcript!( curtran, curgene, trandon, tranacc, txlen )
 
          curtran = tranid
+         curgene = geneid
 
-         if geneid != curgene
-         # clean up gene
-
-            curgene = geneid
-         end
+         empty!(trandon)
+         empty!(tranacc)
+         txlen = 0
       end
  
       push!(tranacc, parse_coordint(st)) 
       push!(trandon, parse_coordint(en))
       txlen += trandon[end] - tranacc[end]
-
-
    end
+
+   private_add_transcript!( curtran, curgene, trandon, tranacc, txlen )
+   
+   for gene in keys(genetotx)
+      geneset[gene] = RefGene( gninfo[gene],
+                               gndon[gene],   gnacc[gene],
+                               gntxst[gene],  gntxen[gene],
+                               gnexons[gene],
+                               gnlen[gene] /  gncnt[gene] )
+   end
+
+   if !txbool
+      genetotx = Dict{GeneName,Vector{RefSeqId}}()
+      gc()
+   end
+
+   return RefSet( txset, geneset, genetotx )
 end
 
