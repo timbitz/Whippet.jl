@@ -172,10 +172,10 @@ function fetch_meta( var::String, meta; off=1 )
    val = "_" # empty
    for i in off:length(meta)
       if meta[i] == var && i <= length(meta)
-         return meta[i+1],i+1
+         return string(meta[i+1]),i+1
       end
    end
-   val,off
+   val,0
 end
 
 function load_gtf( fh; txbool=true )
@@ -206,7 +206,8 @@ function load_gtf( fh; txbool=true )
 
    tuppar( i; c=0 ) = tuple(convert(CoordInt, parse(Int, i)+c))
 
-   curtx = ""
+   curtran = ""
+   curgene = ""
 
    for l in eachline(fh)
 
@@ -219,12 +220,23 @@ function load_gtf( fh; txbool=true )
 
       (entry != "exon") && continue
 
-      metaspl = split(meta, ['\s','\;','\"'], keep=false)
-      geneid,pos  = fetch_meta( "gene_id" )
-      tranid,pos  = fetch_meta( "transcript_id", off=pos+1 )
-      genesym     = fetch_meta( "gene_name", off=pos+1 )
+      metaspl = split(meta, [' ',';','"'], keep=false)
 
-      
+      geneid,pos  = fetch_meta( "gene_id", metaspl )
+      tranid,pos  = fetch_meta( "transcript_id", metaspl )
+      genesym     = fetch_meta( "gene_name", metaspl )
+
+      if tranid != curtran
+         # clean up tran
+
+         curtran = tranid
+      end
+
+      if geneid != curgene
+         # celan up gene
+
+         curgene = geneid
+      end
    end
 end
 
