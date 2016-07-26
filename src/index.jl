@@ -72,7 +72,7 @@ end
 function build_chrom_dict( ref::RefSet )
    ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
    for g in keys(ref.geneset)
-      chrom = ref.geneset[g].info[1]
+      chrom = ref.geneset[g].info.name
       if !haskey(ret, chrom)
          ret[chrom] = Vector{GeneName}()
       end

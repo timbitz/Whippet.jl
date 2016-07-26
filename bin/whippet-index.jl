@@ -73,10 +73,10 @@ function main()
    if isgzipped( flat )
       fh = fh |> x->ZlibInflateInputStream(x, reset_on_end=true)
    end
-   @timer ref = annotype == "gtf" ? load_gtf : load_refflat(fh)
+   @timer ref = annotype == "gtf" ? load_gtf(fh) : load_refflat(fh)
 
    println(STDERR, "Indexing transcriptome...")
-   @timer graphome = fasta_to_index( fixpath( args["fasta"] ) , ref, kmer=args["kmer"] )
+   @timer graphome = fasta_to_index( fixpath( args["fasta"] ), ref, kmer=args["kmer"] )
 
    println(STDERR, "Saving Annotations...")
    open("$(args["index"])_anno.jls", "w+") do fh

@@ -30,7 +30,7 @@ immutable GeneInfo
    strand::Bool # pos is true, neg is false
 end
 
-GeneInfo( name::SeqName, strand::Char ) = GeneInfo( name, strand == '+' ? true : false )
+GeneInfo( name::AbstractString, strand::Char ) = GeneInfo( convert(SeqName, name), strand == '+' ? true : false )
 
 immutable TxInfo
    name::RefSeqId

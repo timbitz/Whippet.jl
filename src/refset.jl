@@ -14,8 +14,8 @@ immutable RefGene
    acc::CoordTuple 
    txst::CoordTuple
    txen::CoordTuple
-   orfst::CoordTuple
-   orfen::CoordTuple
+#   orfst::CoordTuple
+#   orfen::CoordTuple
    exons::CoordTree
    length::Float64
 end
@@ -39,7 +39,7 @@ end
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
 parse_splice( subarray; l=0, r=0, c=0 ) = tuple(map( x->convert(CoordInt,parse(Int,x)+c), subarray )...)[(1+l):(end-r)]
 parse_coordint( i ) = convert(CoordInt, parse(Int, i))
-parse_coordtup( i; c=0 ) = tuple(parse_coordint(i)+c)
+parse_coordtup( i; c=0 ) = tuple(parse_coordint(i)+CoordInt(c))
 
 unique_tuple( tup1::Tuple{}, tup2::Tuple{} ) = ()
 unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) = unique_tuple(tup1, tup1)
@@ -67,8 +67,8 @@ function load_refflat( fh; txbool=true )
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
    gntxen   = Dict{GeneName,CoordTuple}()
-   gnorfst  = Dict{GeneName,CoordTuple}()
-   gnorfen  = Dict{GeneName,CoordTuple}()
+#   gnorfst  = Dict{GeneName,CoordTuple}()
+#   gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
    gnlen    = Dict{GeneName,Float64}()
@@ -88,14 +88,14 @@ function load_refflat( fh; txbool=true )
 
    for l in eachline(fh)
 
-      (l[1] == "#") && continue # ignore comment lines
+      (l[1] == '#') && continue # ignore comment lines
       
       (refid,chrom,strand, # NM_001177644,chr3,+
        txS,txE, # Int,Int
        cdS,cdE, # Int,Int
        exCnt, # Int,
        accCom,donCom, # 'Int,Int,Int','Int,Int,Int'
-       _,gene) = split(l, '\t')
+       _,gene) = split(chomp(l), '\t')
 
       exCnt = parse(UInt16, exCnt)
 
@@ -171,7 +171,7 @@ end
 
 function fetch_meta( var::String, meta; off=1 )
    val = "_" # empty
-   for i in off:length(meta)
+   for i in off:2:length(meta)
       if meta[i] == var && i <= length(meta)
          return string(meta[i+1]),i+1
       end
@@ -187,8 +187,8 @@ function load_gtf( fh; txbool=true )
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
    gntxen   = Dict{GeneName,CoordTuple}()
-   gnorfst  = Dict{GeneName,CoordTuple}()
-   gnorfen  = Dict{GeneName,CoordTuple}()
+ #  gnorfst  = Dict{GeneName,CoordTuple}()
+ #  gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
    gnlen    = Dict{GeneName,Float64}()
@@ -207,26 +207,31 @@ function load_gtf( fh; txbool=true )
 
    curtran = ""
    curgene = ""
+   curchrom = ""
+   curstran = '+'
 
    trandon = Vector{CoordInt}()
    tranacc = Vector{CoordInt}()
    txlen   = 0
 
-   function private_add_transcript!( curtran, curgene, trandon, tranacc, txlen )
-      txS = minimum(tranacc)
-      txE = minimum(trandon)
+   function private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
+      sort!(trandon)
+      sort!(tranacc)
 
-      txinfo = TxInfo(curgene, txS, txE, length(tranacc))
+      txS = minimum(tranacc)
+      txE = maximum(trandon)
+
+      txinfo = TxInfo(curgene, txS, txE, UInt16(length(tranacc)))
 
       don = tuple(trandon[1:(end-1)]...)
       acc = tuple(tranacc[2:end]...)
 
       if txbool
-         txset[refid] = RefTx( txinfo, don, acc, txlen )
+         txset[curtran] = RefTx( txinfo, don, acc, txlen )
       end
 
       if haskey(genetotx, curgene)
-         chrom == gninfo[curgene].name || continue # can have only one chrom
+         curchrom == gninfo[curgene].name || return # can have only one chrom
          push!(genetotx[curgene], curtran)
          gndon[curgene]  = unique_tuple(gndon[curgene], don)
          gnacc[curgene]  = unique_tuple(gnacc[curgene], acc)
@@ -235,10 +240,10 @@ function load_gtf( fh; txbool=true )
          gnlen[curgene] += txlen
          gncnt[curgene] += 1
       else
-         genetotx[curgene] = RefSeqId[refid]
+         genetotx[curgene] = RefSeqId[curtran]
          gndon[curgene]  = don
          gnacc[curgene]  = acc
-         gninfo[curgene] = GeneInfo(chrom,strand[1])
+         gninfo[curgene] = GeneInfo(string(curchrom),curstran)
          gntxst[curgene] = tuple(txS)
          gntxen[curgene] = tuple(txE)
          gnlen[curgene]  = txlen
@@ -246,17 +251,16 @@ function load_gtf( fh; txbool=true )
       end
    end
 
-
    for l in eachline(fh)
 
-      (l[1] == "#") && continue # ignore comment lines
+      (l[1] == '#') && continue # ignore comment lines
 
       (chrom, src, entrytype,
        st, en, _, 
        strand, _,
-       meta) = split(l, '\t')
+       meta) = split(chomp(l), '\t')
 
-      (entrytype != "exon") || continue
+      (entrytype == "exon") || continue
 
       metaspl = split(meta, [' ',';','"'], keep=false)
 
@@ -266,22 +270,38 @@ function load_gtf( fh; txbool=true )
 
       if tranid != curtran
          # add transcript and clean up
-         private_add_transcript!( curtran, curgene, trandon, tranacc, txlen )
+         curtran != "" && private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
 
          curtran = tranid
          curgene = geneid
+         curchrom = chrom
+         curstran = strand[1]
 
          empty!(trandon)
          empty!(tranacc)
          txlen = 0
-      end
- 
-      push!(tranacc, parse_coordint(st)) 
-      push!(trandon, parse_coordint(en))
-      txlen += trandon[end] - tranacc[end]
+      end 
+
+      sval = parse_coordint(st)
+      eval = parse_coordint(en)
+
+      push!(tranacc, sval) 
+      push!(trandon, eval)
+      txlen += eval - sval
+
+      insval = Interval{CoordInt}(sval, eval)
+      if haskey(gnexons, curgene)
+         # make sure we are adding a unique value
+         if !haskey(gnexons[curgene], (sval, eval))
+            push!(gnexons[curgene], insval)
+         end
+      else
+         gnexons[curgene] = CoordTree()
+         push!(gnexons[curgene], insval)
+      end 
    end
 
-   private_add_transcript!( curtran, curgene, trandon, tranacc, txlen )
+   private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
    
    for gene in keys(genetotx)
       geneset[gene] = RefGene( gninfo[gene],
