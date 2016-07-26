@@ -24,3 +24,7 @@ end
 # TODO: filter isoforms with out txStart and End
 # TODO: find largest ORF
 # TODO: 
+
+function build_annotated_edges( graph::Nullable{PsiGraph}, sg::SpliceGraph, tx::RefTx )
+      
+end
