@@ -119,20 +119,12 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-# Deprecated 
-type PsiPath
-   psi::Float64
-   count::Float64
-   length::Float64
-   nodes::IntSet
-end # TODO: Delete PsiPath.
-
 
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
 # We also store the min and max node of all sets
 # Note: It did occur to me that a cleaner solution
-# is PsiGraph holding paths::Vector{PsiPath}
+# is PsiGraph holding paths::Vector{PsiPath} (deprecated)
 # but the current implementation was choosen for 
 # faster memory access w.r.t. stride.
 type PsiGraph
@@ -272,13 +264,6 @@ function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I;
    end
 end
 
-function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; 
-                                            value_bool=true, length=1.0 )
-   ppath.count  += (value_bool ? edg.value : 0.0)
-   ppath.length += (value_bool ? length : 0.0)
-   push!( ppath.nodes, edg.first )
-   push!( ppath.nodes, edg.last  )
-end
 
 type AmbigCounts
    paths::Vector{NodeInt}

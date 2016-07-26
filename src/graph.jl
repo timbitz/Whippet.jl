@@ -106,7 +106,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
    edgetype   = Vector{EdgeType}()
    seq        = sg""
 
-   strand = gene.info.strand
+   strand = gene.info.strand  # Bool
    
    # initialize iterators
    a,alen = 1,length(gene.acc)
@@ -126,12 +126,9 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
       indmin( retarr ), min( retarr... )
    end
 
-#   println(STDERR, gene)
-#   quit()
-   
    while( idx[1] <= alen || idx[2] <= dlen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
-      # left to right. '-' strand = rc unshift?
+      # left to right. '-' strand gets revcomp and unshift
       minidx,minval = getmin_ind_val( gene, idx )
       idx[minidx] += 1
       secidx,secval = getmin_ind_val( gene, idx )
@@ -231,3 +228,7 @@ function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
    end
 end
 
+# Functions for iso.jl annotated edges feature
+function build_annotated_edges( , sg::SpliceGraph, tx::RefTx )
+
+end

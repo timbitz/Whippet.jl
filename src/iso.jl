@@ -25,6 +25,3 @@ end
 # TODO: find largest ORF
 # TODO: 
 
-function build_annotated_edges( graph::Nullable{PsiGraph}, sg::SpliceGraph, tx::RefTx )
-      
-end
