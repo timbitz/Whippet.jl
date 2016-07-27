@@ -8,21 +8,21 @@ const SCALING_FACTOR = 1_000_000
 # as junction counts, which should always be at a lower level, e.g. bias < 1
 type SpliceGraphQuant
    node::Vector{Float64}
-   edge::IntervalMap{ExonMax,Float64}
-   circ::Dict{Tuple{ExonMax,ExonMax},Float64}
+   edge::IntervalMap{ExonInt,Float64}
+   circ::Dict{Tuple{ExonInt,ExonInt},Float64}
    leng::Vector{Float64}
    bias::Float64
 end
 
 # Default constructer
 SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(),
-                                       IntervalMap{ExonMax,Float64}(),
-                                       Dict{Tuple{ExonMax,ExonMax},Float64}(),
+                                       IntervalMap{ExonInt,Float64}(),
+                                       Dict{Tuple{ExonInt,ExonInt},Float64}(),
                                        Vector{Float64}(), 1.0 )
 
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
-                                                        IntervalMap{ExonMax,Float64}(),
-                                                        Dict{Tuple{ExonMax,ExonMax},Float64}(),
+                                                        IntervalMap{ExonInt,Float64}(),
+                                                        Dict{Tuple{ExonInt,ExonInt},Float64}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
 
@@ -112,7 +112,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
          lnode = align.path[n].node
          rnode = align.path[n+1].node
          if lnode < rnode
-            interv = Interval{ExonMax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val

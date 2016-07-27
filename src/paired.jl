@@ -146,7 +146,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          push!( used, lnode )
          push!( used, rnode )
          if lnode < rnode
-            interv = Interval{ExonMax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
@@ -172,7 +172,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          const rnode = rev.path[n+1].node
          (lnode in used && rnode in used) && continue
          if lnode < rnode
-            interv = Interval{ExonMax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val

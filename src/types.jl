@@ -10,9 +10,10 @@ end
 
 typealias CoordTuple Tuple{Vararg{CoordInt}}
 typealias CoordArray Vector{CoordInt}
-typealias CoordTree IntervalTree{CoordInt,Interval{CoordInt}}
+typealias CoordTree  IntervalTree{CoordInt,Interval{CoordInt}}
 
-typealias ExonMax    UInt16
+typealias ExonInt    UInt16
+typealias ExonTree   IntervalTree{ExonInt,Interval{ExonInt}}
 
 if VERSION < v"0.5.0-dev"
    typealias String ASCIIString

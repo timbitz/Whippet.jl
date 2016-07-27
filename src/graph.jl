@@ -90,6 +90,7 @@ end
 # All positive strand oriented sequences---> 
 # Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
 # Edge array:        1   2       3   4         5 6   7
+# Node coord:  chr   100 200     300 400      500 600 700
 
 # empty constructor
 SpliceGraph() = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
@@ -172,7 +173,6 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
       else # '-' strand
          seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
       end
-#      println("gene $gene, strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $(Int(pushval)), nodeseq: $nodeseq")
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
       stranded_push!(edgetype,  edge,     strand)
@@ -203,7 +203,7 @@ end
 
 # This function looks specifically for an intersection
 # between one interval, and the interval tree, such that
-# some interval in the tree full contains the sub interval
+# some interval in the tree fully contains the sub interval
 #  itree contains: (low,             high)
 #  subint must be:     (low+x, high-y)
 #  where x and y are >= 0
@@ -229,6 +229,35 @@ function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
 end
 
 # Functions for iso.jl annotated edges feature
-function build_annotated_edges( , sg::SpliceGraph, tx::RefTx )
+# Take a RefTx and produce an IntSet through the nodes of a SpliceGraph
+# returns: IntSet
+function build_annotated_path( nodecoord::Vector{CoordInt}, 
+                               nodelen::Vector{CoordInt}, 
+                               tx::RefTx, strand::Bool )
+   path = IntSet()
+   for i in 1:length(tx.acc)
+      ind = searchsortedlast( nodecoord, tx.acc[i] )
+      push!( path, ind )
+      cur = ind + (strand ? 1 : -1)
+      while 1 <= cur <= length(nodecoord) && 
+            nodecoord[cur] <= tx.don[i]
+         push!( path, cur )
+         cur = cur + (strand ? 1 : -1 )
+      end
+   end
+   path
+end
 
+# SpliceGraph now records annotated edges in an ExonTree where the intervals
+# are encoded as (1,2) for an annotated edge between nodes 1 and 2
+# returns: nothing
+function add_path_edges!( edges::ExonTree, path::IntSet )
+   s = start(path)
+   last,s = next( path, s )
+   while !done( path, s )
+      next,s = next( path, s )
+      interv = Interval{CoordInt}( last, next )
+      push!( edges, interv )
+      last = next
+   end
 end

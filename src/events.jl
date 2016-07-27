@@ -579,7 +579,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       push!( used_node, i )
       total_cnt += sgquant.node[i]
       if i > 1
-         interv = Interval{ExonMax}( i-1, i )
+         interv = Interval{ExonInt}( i-1, i )
          total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
       end
       i += 1
@@ -594,7 +594,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       # add node directly downstream (CE next to tandemUTR)
       push!( used_node, i )
       total_cnt += sgquant.node[i]
-      interv = Interval{ExonMax}( i-1, i )
+      interv = Interval{ExonInt}( i-1, i )
       total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
    end
 
