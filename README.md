@@ -28,9 +28,9 @@ julia dependencies.jl
 NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies.
 
 ## 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in refflat. A default example is supplied for hg19 in anno/refseq_hg19.flat.gz
+You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19 in anno/gencode_tsl1_hg19.flat.gz and anno/gencode_tsl1_hg19.gtf.gz
 ```bash
-$ julia whippet-index.jl --fasta hg19.fa.gz --flat refseq_hg19.flat.gz
+$ julia whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_tsl1_hg19.gtf.gz
 ```
 
 ## 4) Quantify FASTQ files.
