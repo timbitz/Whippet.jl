@@ -27,6 +27,7 @@ typealias GeneMeta   Tuple{GeneName, SeqName, Char}
 typealias BufOut BufferedStreams.BufferedOutputStream
 
 immutable GeneInfo
+   gene::GeneName
    name::SeqName
    strand::Bool # pos is true, neg is false
 end

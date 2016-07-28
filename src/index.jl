@@ -71,8 +71,8 @@ end
 
 function build_chrom_dict( ref::RefSet )
    ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
-   for g in keys(ref.geneset)
-      chrom = ref.geneset[g].info.name
+   for g in keys(ref)
+      chrom = ref[g].info.name
       if !haskey(ret, chrom)
          ret[chrom] = Vector{GeneName}()
       end
@@ -149,11 +149,11 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       println(STDERR, "Building Splice Graphs for $( r.name ).." )
       for g in seqdic[r.name]
          #println( STDERR, "Building $g Splice Graph..." )
-         curgraph = SpliceGraph( ref.geneset[g], sg )
+         curgraph = SpliceGraph( ref[g], sg )
          xcript  *= curgraph.seq
          push!(xgraph, curgraph)
          push!(xgenes, g)
-         push!(xinfo, ref.geneset[g].info )
+         push!(xinfo, ref[g].info )
          push!(xoffset, runoffset)
          runoffset += length(curgraph.seq) 
       end

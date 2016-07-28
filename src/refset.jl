@@ -17,24 +17,11 @@ immutable RefGene
 #   orfst::CoordTuple
 #   orfen::CoordTuple
    exons::CoordTree
-   # add reftx in here as vector.
+   reftx::Vector{RefTx}
    length::Float64
 end
 
-# Full Annotation Set
-type RefSet
-   txset::Dict{RefSeqId,RefTx}
-   geneset::Dict{GeneName,RefGene}
-   genetotx::Dict{GeneName,Vector{RefSeqId}}
-end
-
-
-function Base.show(io::Base.IO, ref::RefSet)
-   Base.show(io, ref.txset)
-   Base.show(io, ref.geneset)
-   Base.show(io, ref.genetotx)
-end
-
+typealias RefSet Dict{GeneName,RefGene}
 
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data
@@ -72,13 +59,12 @@ function load_refflat( fh; txbool=true )
 #   gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
+   gnreftx  = Dict{GeneName,Vector{RefTx}}()
    gnlen    = Dict{GeneName,Float64}()
    gncnt    = Dict{GeneName,Int}()
 
    # RefSet variables
-   txset    = Dict{RefSeqId,RefTx}()
    geneset  = Dict{GeneName,RefGene}()
-   genetotx = Dict{GeneName,Vector{RefSeqId}}()
 
 
    txnum = 75000
@@ -125,13 +111,9 @@ function load_refflat( fh; txbool=true )
       acc = acc[2:end] 
 
       # set values
-      txinfo = TxInfo(gene,parse(CoordInt, txS),
-                     parse(CoordInt, txE)-1,
-                     exCnt)
-
-      if txbool
-         txset[refid] = RefTx( txinfo, don, acc, txlen )      
-      end
+      txinfo = TxInfo(refid,parse(CoordInt, txS),
+                            parse(CoordInt, txE)-1,
+                            exCnt)
 
       if haskey(genetotx, gene)
          chrom == gninfo[gene].name || continue # can have only one chrom
@@ -142,15 +124,17 @@ function load_refflat( fh; txbool=true )
          gntxen[gene] = unique_tuple(gntxen[gene], parse_coordtup(txE))
          gnlen[gene] += txlen
          gncnt[gene] += 1
+         push!( gnreftx[gene], RefTx( txinfo, don, acc, txlen ) )
       else
          genetotx[gene] = RefSeqId[refid]
-         gndon[gene]  = don
-         gnacc[gene]  = acc
-         gninfo[gene] = GeneInfo(chrom,strand[1])
-         gntxst[gene] = parse_coordtup(txS, c=1)
-         gntxen[gene] = parse_coordtup(txE)
-         gnlen[gene]  = txlen
-         gncnt[gene]  = 1
+         gndon[gene]    = don
+         gnacc[gene]    = acc
+         gninfo[gene]   = GeneInfo(chrom,strand[1])
+         gntxst[gene]   = parse_coordtup(txS, c=1)
+         gntxen[gene]   = parse_coordtup(txE)
+         gnlen[gene]    = txlen
+         gncnt[gene]    = 1
+         gnreftx[gene]  = Vector{RefTx}()
       end
    end
    # now make RefSet and add genes.
@@ -162,12 +146,7 @@ function load_refflat( fh; txbool=true )
                                gnlen[gene] /  gncnt[gene] )
    end
 
-   if !txbool
-      genetotx = Dict{GeneName,Vector{RefSeqId}}()
-      gc()
-   end
-
-   return RefSet( txset, geneset, genetotx )
+   return geneset
 end
 
 function fetch_meta( var::String, meta; off=1 )
@@ -192,14 +171,12 @@ function load_gtf( fh; txbool=true )
  #  gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
+   gnreftx  = Dict{GeneName,Vector{RefTx}}()
    gnlen    = Dict{GeneName,Float64}()
    gncnt    = Dict{GeneName,Int}()
 
    # RefSet variables
-   txset    = Dict{RefSeqId,RefTx}()
    geneset  = Dict{GeneName,RefGene}()
-   genetotx = Dict{GeneName,Vector{RefSeqId}}()
-
 
    txnum = 75000
    sizehint!(txset, txnum)
@@ -227,10 +204,6 @@ function load_gtf( fh; txbool=true )
       don = tuple(trandon[1:(end-1)]...)
       acc = tuple(tranacc[2:end]...)
 
-      if txbool
-         txset[curtran] = RefTx( txinfo, don, acc, txlen )
-      end
-
       if haskey(genetotx, curgene)
          curchrom == gninfo[curgene].name || return # can have only one chrom
          push!(genetotx[curgene], curtran)
@@ -240,6 +213,7 @@ function load_gtf( fh; txbool=true )
          gntxen[curgene] = unique_tuple(gntxen[curgene], tuple(txE))
          gnlen[curgene] += txlen
          gncnt[curgene] += 1
+         push!( gnreftx[gene], RefTx( txinfo, don, acc, txlen ) )
       else
          genetotx[curgene] = RefSeqId[curtran]
          gndon[curgene]  = don
@@ -249,6 +223,7 @@ function load_gtf( fh; txbool=true )
          gntxen[curgene] = tuple(txE)
          gnlen[curgene]  = txlen
          gncnt[curgene]  = 1
+         gnreftx[gene]  = Vector{RefTx}()
       end
    end
 
@@ -312,11 +287,6 @@ function load_gtf( fh; txbool=true )
                                gnlen[gene] /  gncnt[gene] )
    end
 
-   if !txbool
-      genetotx = Dict{GeneName,Vector{RefSeqId}}()
-      gc()
-   end
-
-   return RefSet( txset, geneset, genetotx )
+   return geneset
 end
 

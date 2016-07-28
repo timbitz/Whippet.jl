@@ -269,5 +269,4 @@ end
 function build_path_edges( nodecoord::Vector{CoordInt},
                            nodelen::Vector{CoordInt},
                            gene::RefGene )
-   
 end

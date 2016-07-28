@@ -41,8 +41,8 @@ function GraphLibQuant( lib::GraphLib, ref::RefSet )
    quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
    for i in 1:length( lib.graphs )
       name = lib.names[i]
-      if haskey( ref.geneset, name )
-         len[i] = ref.geneset[name].length
+      if haskey( ref, name )
+         len[i] = ref[name].length
       end
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end
