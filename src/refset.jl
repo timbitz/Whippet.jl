@@ -17,6 +17,7 @@ immutable RefGene
 #   orfst::CoordTuple
 #   orfen::CoordTuple
    exons::CoordTree
+   # add reftx in here as vector.
    length::Float64
 end
 

@@ -85,6 +85,8 @@ immutable SpliceGraph
    edgetype::Vector{EdgeType}
    edgeleft::Vector{SGKmer}
    edgeright::Vector{SGKmer}
+   annopath::Vector{IntSet}
+   annoedge::CoordTree
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -189,6 +191,8 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
    eleft  = Vector{SGKmer}(length(edgetype))
    eright = Vector{SGKmer}(length(edgetype))
 
+   paths,edges = build_paths_edges( nodecoord, nodelen, gene )
+
    return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq )
 end
 
@@ -260,4 +264,10 @@ function add_path_edges!( edges::ExonTree, path::IntSet )
       push!( edges, interv )
       last = next
    end
+end
+
+function build_path_edges( nodecoord::Vector{CoordInt},
+                           nodelen::Vector{CoordInt},
+                           gene::RefGene )
+   
 end
