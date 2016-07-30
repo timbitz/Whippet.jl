@@ -52,7 +52,7 @@ istxstop(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true 
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
-function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Bool=true )
+function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Bool )
    if isnode
       ret = INDEX_TO_EDGETYPE_NODE[minidx,secidx]
    else
@@ -86,7 +86,7 @@ immutable SpliceGraph
    edgeleft::Vector{SGKmer}
    edgeright::Vector{SGKmer}
    annopath::Vector{IntSet}
-   annoedge::CoordTree
+   annoedge::ExonTree
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -193,7 +193,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
 
    paths,edges = build_paths_edges( nodecoord, nodelen, gene )
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq )
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, edges, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!
@@ -238,9 +238,12 @@ end
 function build_annotated_path( nodecoord::Vector{CoordInt}, 
                                nodelen::Vector{CoordInt}, 
                                tx::RefTx, strand::Bool )
-   path = IntSet()
+   const path = IntSet()
+   # this may be `poor form`, but 256 is too big for default!
+   path.bits  = zeros(UInt32,64>>>5)
+   path.limit = 64
    for i in 1:length(tx.acc)
-      ind = searchsortedlast( nodecoord, tx.acc[i] )
+      const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )
       cur = ind + (strand ? 1 : -1)
       while 1 <= cur <= length(nodecoord) && 
@@ -257,16 +260,24 @@ end
 # returns: nothing
 function add_path_edges!( edges::ExonTree, path::IntSet )
    s = start(path)
-   last,s = next( path, s )
+   lastv,s = next( path, s )
    while !done( path, s )
-      next,s = next( path, s )
-      interv = Interval{CoordInt}( last, next )
+      nextv,s = next( path, s )
+      const interv = Interval{ExonInt}( lastv, nextv )
       push!( edges, interv )
-      last = next
+      lastv = nextv
    end
 end
 
-function build_path_edges( nodecoord::Vector{CoordInt},
+function build_paths_edges( nodecoord::Vector{CoordInt},
                            nodelen::Vector{CoordInt},
                            gene::RefGene )
+   const paths = Vector{IntSet}()
+   const edges = ExonTree()
+   for tx in gene.reftx
+      const curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
+      push!( paths, curpath )
+      add_path_edges!( edges, curpath )
+   end
+   paths,edges
 end

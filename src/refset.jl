@@ -17,8 +17,8 @@ immutable RefGene
 #   orfst::CoordTuple
 #   orfen::CoordTuple
    exons::CoordTree
-   reftx::Vector{RefTx}
    length::Float64
+   reftx::Vector{RefTx}
 end
 
 typealias RefSet Dict{GeneName,RefGene}
@@ -68,10 +68,7 @@ function load_refflat( fh; txbool=true )
 
 
    txnum = 75000
-   sizehint!(txset, txnum)
    sizehint!(geneset, txnum >> 1)
-   sizehint!(genetotx, txnum)
-
 
    for l in eachline(fh)
 
@@ -111,13 +108,12 @@ function load_refflat( fh; txbool=true )
       acc = acc[2:end] 
 
       # set values
-      txinfo = TxInfo(refid,parse(CoordInt, txS),
-                            parse(CoordInt, txE)-1,
+      txinfo = TxInfo(refid,parse(CoordInt, txS)+1,
+                            parse(CoordInt, txE),
                             exCnt)
 
-      if haskey(genetotx, gene)
+      if haskey(gninfo, gene)
          chrom == gninfo[gene].name || continue # can have only one chrom
-         push!(genetotx[gene], refid)
          gndon[gene]  = unique_tuple(gndon[gene], don)
          gnacc[gene]  = unique_tuple(gnacc[gene], acc)
          gntxst[gene] = unique_tuple(gntxst[gene], parse_coordtup(txS, c=1))
@@ -126,10 +122,9 @@ function load_refflat( fh; txbool=true )
          gncnt[gene] += 1
          push!( gnreftx[gene], RefTx( txinfo, don, acc, txlen ) )
       else
-         genetotx[gene] = RefSeqId[refid]
          gndon[gene]    = don
          gnacc[gene]    = acc
-         gninfo[gene]   = GeneInfo(chrom,strand[1])
+         gninfo[gene]   = GeneInfo(gene, chrom, strand[1])
          gntxst[gene]   = parse_coordtup(txS, c=1)
          gntxen[gene]   = parse_coordtup(txE)
          gnlen[gene]    = txlen
@@ -138,12 +133,13 @@ function load_refflat( fh; txbool=true )
       end
    end
    # now make RefSet and add genes.
-   for gene in keys(genetotx)
+   for gene in keys(gninfo)
       geneset[gene] = RefGene( gninfo[gene],  
                                gndon[gene],   gnacc[gene],
                                gntxst[gene],  gntxen[gene], 
                                gnexons[gene], 
-                               gnlen[gene] /  gncnt[gene] )
+                               gnlen[gene] /  gncnt[gene], 
+                               gnreftx[gene] )
    end
 
    return geneset
@@ -179,9 +175,7 @@ function load_gtf( fh; txbool=true )
    geneset  = Dict{GeneName,RefGene}()
 
    txnum = 75000
-   sizehint!(txset, txnum)
    sizehint!(geneset, txnum >> 1)
-   sizehint!(genetotx, txnum)
 
    curtran = ""
    curgene = ""
@@ -199,31 +193,29 @@ function load_gtf( fh; txbool=true )
       txS = minimum(tranacc)
       txE = maximum(trandon)
 
-      txinfo = TxInfo(curgene, txS, txE, UInt16(length(tranacc)))
+      txinfo = TxInfo(curtran, txS, txE, UInt16(length(tranacc)))
 
       don = tuple(trandon[1:(end-1)]...)
       acc = tuple(tranacc[2:end]...)
 
-      if haskey(genetotx, curgene)
+      if haskey(gninfo, curgene)
          curchrom == gninfo[curgene].name || return # can have only one chrom
-         push!(genetotx[curgene], curtran)
          gndon[curgene]  = unique_tuple(gndon[curgene], don)
          gnacc[curgene]  = unique_tuple(gnacc[curgene], acc)
          gntxst[curgene] = unique_tuple(gntxst[curgene], tuple(txS))
          gntxen[curgene] = unique_tuple(gntxen[curgene], tuple(txE))
          gnlen[curgene] += txlen
          gncnt[curgene] += 1
-         push!( gnreftx[gene], RefTx( txinfo, don, acc, txlen ) )
+         push!( gnreftx[curgene], RefTx( txinfo, don, acc, txlen ) )
       else
-         genetotx[curgene] = RefSeqId[curtran]
          gndon[curgene]  = don
          gnacc[curgene]  = acc
-         gninfo[curgene] = GeneInfo(string(curchrom),curstran)
+         gninfo[curgene] = GeneInfo(curgene, string(curchrom), curstran)
          gntxst[curgene] = tuple(txS)
          gntxen[curgene] = tuple(txE)
          gnlen[curgene]  = txlen
          gncnt[curgene]  = 1
-         gnreftx[gene]  = Vector{RefTx}()
+         gnreftx[curgene]  = Vector{RefTx}()
       end
    end
 
@@ -263,7 +255,7 @@ function load_gtf( fh; txbool=true )
 
       push!(tranacc, sval) 
       push!(trandon, eval)
-      txlen += eval - sval
+      txlen += eval - sval + 1
 
       insval = Interval{CoordInt}(sval, eval)
       if haskey(gnexons, curgene)
@@ -279,12 +271,13 @@ function load_gtf( fh; txbool=true )
 
    private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
    
-   for gene in keys(genetotx)
+   for gene in keys(gninfo)
       geneset[gene] = RefGene( gninfo[gene],
                                gndon[gene],   gnacc[gene],
                                gntxst[gene],  gntxen[gene],
                                gnexons[gene],
-                               gnlen[gene] /  gncnt[gene] )
+                               gnlen[gene] /  gncnt[gene],
+                               gnreftx[gene] )
    end
 
    return geneset
