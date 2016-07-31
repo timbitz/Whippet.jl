@@ -49,6 +49,9 @@ chr0\tTEST\texon\t31\t40\t.\t+\t.\tgene_id \"one\"; transcript_id \"apa_alt5\";
 chr0\tTEST\texon\t54\t65\t.\t+\t.\tgene_id \"one\"; transcript_id \"apa_alt5\";
 chr0\tTEST\texon\t76\t90\t.\t+\t.\tgene_id \"one\"; transcript_id \"apa_alt5\";
 chr0\tTEST\texon\t11\t20\t.\t+\t.\tgene_id \"single\"; transcript_id \"ex1_single\";
+chr0\tTEST\texon\t11\t20\t.\t-\t.\tgene_id \"single_rev\"; transcript_id \"single_rev\";
+chr0\tTEST\texon\t11\t20\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss\";
+chr0\tTEST\texon\t21\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss\";
 ")
 
    flat = IOBuffer("# refflat file test (gtfToGenePred -genePredExt test.gtf test.flat)
@@ -63,7 +66,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Gene Annotation" begin
 
-      for gene in keys(gtfref)
+      for gene in keys(flatref)
          @test gtfref[gene].don    == flatref[gene].don
          @test gtfref[gene].acc    == flatref[gene].acc
          @test gtfref[gene].txst   == flatref[gene].txst
@@ -105,20 +108,29 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
                exon4 * sg"RS" * 
                apa * sg"RS"
 
+   graphseq_sin = sg"SLGCGGATTACARS"
+   graphseq_kis = sg"SLAAAAAAAAAALRTGTAATCCGCRS"
+
    graph_one = SpliceGraph( gtfref["one"], genome )
+   graph_sin = SpliceGraph( gtfref["single"], genome )
+   graph_rev = SpliceGraph( gtfref["single_rev"], genome)
+   graph_kis = SpliceGraph( gtfref["kissing"], genome )
+
+   println(graph_one)
+   println(graph_sin)
+   println(graph_rev)
+   println(graph_kis)
 
    @testset "Graph Building" begin
       @test graph_one.seq == graphseq_one
+      @test graph_sin.seq == graphseq_sin
+      @test graph_kis.seq == graphseq_kis
    end
-   @testset "Edge Types" begin 
- 
-   end
-   @testset "Building graph" begin
 
-   end
    @testset "Kmer Edges" begin
 
    end
+
    @testset "Alignment" begin
 
    end

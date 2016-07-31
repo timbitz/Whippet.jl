@@ -59,7 +59,7 @@ function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Bool )
       ret = INDEX_TO_EDGETYPE[minidx,secidx]
    end
    ret = EdgeType(ret)
-   if strand
+   if !strand
       ret = invert_edgetype( ret )
    end
    ret
