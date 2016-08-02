@@ -86,7 +86,6 @@ immutable SpliceGraph
    edgeleft::Vector{SGKmer}
    edgeright::Vector{SGKmer}
    annopath::Vector{IntSet}
-   annoedge::ExonTree
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -190,9 +189,9 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
    eleft  = Vector{SGKmer}(length(edgetype))
    eright = Vector{SGKmer}(length(edgetype))
 
-   paths,edges = build_paths_edges( nodecoord, nodelen, gene )
+   paths = build_paths_edges( nodecoord, nodelen, gene )
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, edges, seq )
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!
@@ -243,6 +242,7 @@ function build_annotated_path( nodecoord::Vector{CoordInt},
    path.limit = 64
    for i in 1:length(tx.acc)
       const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
+#      println("node $ind nodecoord: $(nodecoord[ind]) matches $(tx.acc[i]) $i")
       push!( path, ind )
       cur = ind + (strand ? 1 : -1)
       while 1 <= cur <= length(nodecoord) && 
@@ -254,29 +254,13 @@ function build_annotated_path( nodecoord::Vector{CoordInt},
    path
 end
 
-# SpliceGraph now records annotated edges in an ExonTree where the intervals
-# are encoded as (1,2) for an annotated edge between nodes 1 and 2
-# returns: nothing
-function add_path_edges!( edges::ExonTree, path::IntSet )
-   s = start(path)
-   lastv,s = next( path, s )
-   while !done( path, s )
-      nextv,s = next( path, s )
-      const interv = Interval{ExonInt}( lastv, nextv )
-      push!( edges, interv )
-      lastv = nextv
-   end
-end
-
 function build_paths_edges( nodecoord::Vector{CoordInt},
                            nodelen::Vector{CoordInt},
                            gene::RefGene )
    const paths = Vector{IntSet}()
-   const edges = ExonTree()
    for tx in gene.reftx
       const curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
       push!( paths, curpath )
-      add_path_edges!( edges, curpath )
    end
-   paths,edges
+   paths
 end

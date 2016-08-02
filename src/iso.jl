@@ -24,6 +24,19 @@ end
 # TODO: filter isoforms with out txStart and End
 # TODO: find largest ORF
 
+# SpliceGraph now records annotated edges in an ExonTree where the intervals
+# are encoded as (1,2) for an annotated edge between nodes 1 and 2
+# returns: nothing
+function add_path_edges!( edges::ExonTree, path::IntSet )
+   s = start(path)
+   lastv,s = next( path, s )
+   while !done( path, s )
+      nextv,s = next( path, s )
+      const interv = Interval{ExonInt}( lastv, nextv )
+      push!( edges, interv )
+      lastv = nextv
+   end
+end
 
 # Build minimal set of paths to explain graph
 # Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3

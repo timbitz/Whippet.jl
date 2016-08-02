@@ -86,16 +86,16 @@ function load_refflat( fh; txbool=true )
       txlen = 0
 
       # get donor and acceptor splice sites, adjust for 0-based coords 
-      don = split(donCom, '\,', keep=false) |> s->parse_splice(s, r=0)
-      acc = split(accCom, '\,', keep=false) |> s->parse_splice(s, l=0, c=1)
+      trandon = split(donCom, '\,', keep=false) |> s->parse_splice(s, r=0)
+      tranacc = split(accCom, '\,', keep=false) |> s->parse_splice(s, l=0, c=1)
 
       # Add original exons to interval tree-->
-      for i in 1:length(don)
-         insval = Interval{CoordInt}(acc[i],don[i])
-         txlen += don[i] - acc[i] + 1
+      for i in 1:length(trandon)
+         insval = Interval{CoordInt}(tranacc[i],trandon[i])
+         txlen += trandon[i] - tranacc[i] + 1
          if haskey(gnexons, gene)
             # make sure we are adding a unique value
-            if !haskey(gnexons[gene], (acc[i],don[i]))
+            if !haskey(gnexons[gene], (tranacc[i],trandon[i]))
                push!(gnexons[gene], insval)
             end
          else
@@ -104,8 +104,8 @@ function load_refflat( fh; txbool=true )
          end
       end
 
-      don = don[1:(end-1)] #ignore txStart and end
-      acc = acc[2:end] 
+      don = trandon[1:(end-1)] #ignore txStart and end
+      acc = tranacc[2:end] 
 
       # set values
       txinfo = TxInfo(refid,parse(CoordInt, txS)+1,
@@ -120,7 +120,7 @@ function load_refflat( fh; txbool=true )
          gntxen[gene] = unique_tuple(gntxen[gene], parse_coordtup(txE))
          gnlen[gene] += txlen
          gncnt[gene] += 1
-         push!( gnreftx[gene], RefTx( txinfo, don, acc, txlen ) )
+         push!( gnreftx[gene], RefTx( txinfo, trandon, tranacc, txlen ) )
       else
          gndon[gene]    = don
          gnacc[gene]    = acc
@@ -129,7 +129,7 @@ function load_refflat( fh; txbool=true )
          gntxen[gene]   = parse_coordtup(txE)
          gnlen[gene]    = txlen
          gncnt[gene]    = 1
-         gnreftx[gene]  = Vector{RefTx}()
+         gnreftx[gene]  = RefTx[ RefTx( txinfo, trandon, tranacc, txlen ) ]
       end
    end
    # now make RefSet and add genes.
@@ -206,7 +206,7 @@ function load_gtf( fh; txbool=true )
          gntxen[curgene] = unique_tuple(gntxen[curgene], tuple(txE))
          gnlen[curgene] += txlen
          gncnt[curgene] += 1
-         push!( gnreftx[curgene], RefTx( txinfo, don, acc, txlen ) )
+         push!( gnreftx[curgene], RefTx( txinfo, tuple(trandon...), tuple(tranacc...), txlen ) )
       else
          gndon[curgene]  = don
          gnacc[curgene]  = acc
@@ -215,7 +215,7 @@ function load_gtf( fh; txbool=true )
          gntxen[curgene] = tuple(txE)
          gnlen[curgene]  = txlen
          gncnt[curgene]  = 1
-         gnreftx[curgene]  = Vector{RefTx}()
+         gnreftx[curgene]  = RefTx[ RefTx( txinfo, tuple(trandon...), tuple(tranacc...), txlen ) ]
       end
    end
 

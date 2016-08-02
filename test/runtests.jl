@@ -81,6 +81,12 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
          @test gtfref[gene].txst   == flatref[gene].txst
          @test gtfref[gene].txen   == flatref[gene].txen
          @test gtfref[gene].length == flatref[gene].length
+         for i in 1:length(flatref[gene].reftx)
+            flattx = flatref[gene].reftx[i]
+            gtftx  = gtfref[gene].reftx[i]
+            @test flattx.don == gtftx.don
+            @test flattx.acc == gtftx.acc
+         end
       end
 
    end
@@ -125,20 +131,18 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    graph_rev = SpliceGraph( gtfref["single_rev"], genome)
    graph_kis = SpliceGraph( gtfref["kissing"], genome )
 
-   println(graph_one)
-   println(graph_sin)
-   println(graph_rev)
-   println(graph_kis)
-
    @testset "Graph Building" begin
       @test graph_one.seq == graphseq_one
       @test graph_sin.seq == graphseq_sin
       @test graph_kis.seq == graphseq_kis
 
-      
+      @test length(graph_one.annopath) == length(gtfref["one"].reftx)
+      @test graph_one.annopath[1] == IntSet([1,3,5,7]) #def
+      @test graph_one.annopath[2] == IntSet([1,2,3,4,5,7]) # int1_alt3
+      @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # apa_alt5
    end
 
-   kmer_size = 4 # good test size
+   kmer_size = 1 # good test size
 
    # Build Index (from index.jl)
    xcript  = sg""
@@ -166,7 +170,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
-      
+      println(lib.edges.left)
+      println(lib.edges.right)
    end
 
    @testset "Alignment" begin

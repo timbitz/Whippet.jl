@@ -13,10 +13,12 @@ immutable Edges{K}
    right::Vector{SGNodeSet}
 end
 
-Base.(:<)( a::SGNode, b::SGNode ) = <( a.gene, b.gene )
-Base.(:>)( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
-Base.(:(<=))( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
-Base.(:(>=))( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
+Base.(:<)( a::SGNode, b::SGNode ) = a.gene == b.gene ? <( a.node, b.node ) : <( a.gene, b.gene )
+Base.(:>)( a::SGNode, b::SGNode ) = a.gene == b.gene ? >( a.node, b.node ) : >( a.gene, b.gene )
+Base.(:(<=))( a::SGNode, b::SGNode ) = a.gene == b.gene ? <=( a.node, b.node ) : <=( a.gene, b.gene )
+Base.(:(>=))( a::SGNode, b::SGNode ) = a.gene == b.gene ? >=( a.node, b.node ) : >=( a.gene, b.gene )
+
+Base.isless( a::SGNode, b::SGNode ) = a < b
 
 Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 
@@ -91,7 +93,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
          kmers[ind] = SGNodeSet()
       end
       push!(kmers[ind], entry)
-      kmers[ind] = sort(kmers[ind], by=x->x.gene) |> unique
+      kmers[ind] = sort(kmers[ind]) |> unique
    end
    UInt64(max(0, ind-1))
 end

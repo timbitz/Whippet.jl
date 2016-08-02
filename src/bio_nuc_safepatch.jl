@@ -1177,7 +1177,7 @@ Base.read{T <: Bio.Seq.QualityEncoding}(io::Base.TCPSocket, t::Type{T}) = conver
 # k-mer based quantification in DEPRECATED-Seq, etc that rely on manipulating many
 # short sequences as efficiently (space and time) as possible.
 
-bitstype 64 Kmer{T<:Nucleotide, K}
+bitstype 64 Kmer{T <: Nucleotide, K}
 
 typealias SGKmer{K} Kmer{SGNucleotide, K}
 
