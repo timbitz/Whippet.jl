@@ -139,12 +139,11 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
       # last coordinate in the gene:
       # if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
       if secval == Inf
-         termedge = EdgeType(0x03)
+         termedge = strand ? EdgeType(0x03) : EdgeType(0x00)
          stranded_push!(edgetype, termedge, strand)
          if strand
             seq *= SGSequence(termedge)
          else
-            termedge = invert_edgetype( termedge )
             seq = SGSequence(termedge) * seq
          end
          break

@@ -33,7 +33,15 @@ include("../src/diff.jl")
    @test typeof(sg"GATGCA") == NucleotideSequence{SGNucleotide}
    @test reverse_complement(sg"GATGCA") == sg"TGCATC"
    @test reverse_complement(sg"LRS")    == sg"SRL" 
-   
+   fullset = sg"ACGTNLRS"
+   fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
+   for n in 0:(length(fullset)-1)
+      i = n+1
+      @test fullset[i] == fullarr[i]
+      @test convert(UInt8, fullset[i]) == UInt8(n)
+      @test convert(SGNucleotide, UInt8(n)) == fullset[i]
+   end
+   @test sg"AT" * sg"TA" == sg"ATTA"
 end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
@@ -52,6 +60,7 @@ chr0\tTEST\texon\t11\t20\t.\t+\t.\tgene_id \"single\"; transcript_id \"ex1_singl
 chr0\tTEST\texon\t11\t20\t.\t-\t.\tgene_id \"single_rev\"; transcript_id \"single_rev\";
 chr0\tTEST\texon\t11\t20\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss\";
 chr0\tTEST\texon\t21\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss\";
+chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss\";
 ")
 
    flat = IOBuffer("# refflat file test (gtfToGenePred -genePredExt test.gtf test.flat)
@@ -109,7 +118,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
                apa * sg"RS"
 
    graphseq_sin = sg"SLGCGGATTACARS"
-   graphseq_kis = sg"SLAAAAAAAAAALRTGTAATCCGCRS"
+   graphseq_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
 
    graph_one = SpliceGraph( gtfref["one"], genome )
    graph_sin = SpliceGraph( gtfref["single"], genome )
@@ -125,10 +134,39 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test graph_one.seq == graphseq_one
       @test graph_sin.seq == graphseq_sin
       @test graph_kis.seq == graphseq_kis
+
+      
    end
 
-   @testset "Kmer Edges" begin
+   kmer_size = 4 # good test size
 
+   # Build Index (from index.jl)
+   xcript  = sg""
+   xoffset = Vector{UInt64}()
+   xgenes  = Vector{GeneName}()
+   xinfo   = Vector{GeneInfo}()
+   xgraph  = Vector{SpliceGraph}()
+
+   runoffset = 0
+
+   for g in keys(gtfref)
+      curgraph = SpliceGraph( gtfref[g], genome )
+      xcript  *= curgraph.seq
+      push!(xgraph, curgraph)
+      push!(xgenes, g)
+      push!(xinfo, gtfref[g].info )
+      push!(xoffset, runoffset)
+      runoffset += length(curgraph.seq)   
+   end
+
+   fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true)
+
+   edges = build_edges( xgraph, kmer_size )
+
+   lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
+
+   @testset "Kmer Edges" begin
+      
    end
 
    @testset "Alignment" begin
