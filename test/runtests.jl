@@ -142,7 +142,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # apa_alt5
    end
 
-   kmer_size = 1 # good test size
+   kmer_size = 2 # good test size
 
    # Build Index (from index.jl)
    xcript  = sg""
@@ -170,12 +170,30 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
-      println(lib.edges.left)
-      println(lib.edges.right)
+      left  = [sg"CA", sg"AG", sg"AG", sg"TC", sg"AA"]
+      right = [sg"GC", sg"CC", sg"CT", sg"TT", sg"TG"]
+      lkmer = map( x->kmer_index(SGKmer(x)), left )
+      rkmer = map( x->kmer_index(SGKmer(x)), right )
+      for i in 1:4^kmer_size
+         if i in lkmer
+            @test isdefined(edges.left, i)
+            @test typeof(edges.left[i][1]) == SGNode
+            @test issorted(edges.left[i])
+         else
+            @test !isdefined(edges.left, i)
+         end
+         if i in rkmer
+            @test isdefined(edges.right, i)
+            @test typeof(edges.right[i][1]) == SGNode
+            @test issorted(edges.right[i])
+         else
+            @test !isdefined(edges.right, i)
+         end
+      end
    end
 
    @testset "Alignment" begin
-
+            
    end
    
 end
