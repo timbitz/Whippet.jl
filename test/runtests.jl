@@ -194,31 +194,42 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Alignment" begin
       # reads
-      fastq = IOBuffer("# reads
-@ exon1
+      fastq = IOBuffer("@exon1
 NGCGGATTACA
 +
 #BBBBBBBBBB
-@ exon3def
+@exon3def
 NCTATGCTAG
 +
 #BBBBBBBBB
-@ exon3full
+@exon3full
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
-@ exon1-exon2
+@exon1-exon2
 NTAGAAGGCATTA
 +
 #BBBBBBBBBBBB
 ")
 
-      param = AlignParam( 0, 2, 2, 4, 4, 4, 1, 1, 1000, 5, 5,
+      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, 5, 5,
                         false, false, true, false, true )
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
 
-      
+      fqparse = open( fastq, FASTQ )
+      reads  = allocate_chunk( fqparse, size=10 )
+      read_chunk!( reads, fqparse )
+
+      @test length(reads) == 4
+      for r in reads
+         align = ungapped_align( param, lib, r )
+         println(r)
+         @test !isnull( align )
+         @test length( align.value ) == 1
+         @test align.value[1].isvalid
+         println( align.value[1] )
+      end 
    end
 
    @testset "Quantification" begin
