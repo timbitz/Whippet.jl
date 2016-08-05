@@ -213,12 +213,12 @@ NTAGAAGGCATTA
 #BBBBBBBBBBBB
 ")
 
-    param = AlignParam( 0, 2, 2, 4, 4, 4, 1, 1, 1000, 5, 5,
+      param = AlignParam( 0, 2, 2, 4, 4, 4, 1, 1, 1000, 5, 5,
                         false, false, true, false, true )
-    quant = GraphLibQuant( lib, gtfref )
-    multi = Vector{Multimap}()
+      quant = GraphLibQuant( lib, gtfref )
+      multi = Vector{Multimap}()
 
-
+      
    end
 
    @testset "Quantification" begin
