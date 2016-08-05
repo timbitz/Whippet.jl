@@ -68,6 +68,7 @@ Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
 Base.(:(>=))( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
 Base.(:(<=))( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
+Base.isless( a::SGAlignment, b::SGAlignment ) = a < b
 
 # add prob of being accurate base to mismatch, rather than integer.
 @inline phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)

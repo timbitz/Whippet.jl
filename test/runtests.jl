@@ -114,7 +114,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    genome = fwd * rev
 
-   graphseq_one = sg"SL" * utr5 * exon1 * sg"LL" * 
+   expected_one = sg"SL" * utr5 * exon1 * sg"LL" * 
                int1 * sg"RR" *
                exon2 * sg"LR" * 
                exon3alt3 * sg"RR" * 
@@ -123,8 +123,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
                exon4 * sg"RS" * 
                apa * sg"RS"
 
-   graphseq_sin = sg"SLGCGGATTACARS"
-   graphseq_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
+   expected_sin = sg"SLGCGGATTACARS"
+   expected_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
 
    graph_one = SpliceGraph( gtfref["one"], genome )
    graph_sin = SpliceGraph( gtfref["single"], genome )
@@ -132,14 +132,14 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    graph_kis = SpliceGraph( gtfref["kissing"], genome )
 
    @testset "Graph Building" begin
-      @test graph_one.seq == graphseq_one
-      @test graph_sin.seq == graphseq_sin
-      @test graph_kis.seq == graphseq_kis
+      @test graph_one.seq == expected_one
+      @test graph_sin.seq == expected_sin
+      @test graph_kis.seq == expected_kis
 
       @test length(graph_one.annopath) == length(gtfref["one"].reftx)
-      @test graph_one.annopath[1] == IntSet([1,3,5,7]) #def
-      @test graph_one.annopath[2] == IntSet([1,2,3,4,5,7]) # int1_alt3
-      @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # apa_alt5
+      @test graph_one.annopath[1] == IntSet([1,3,5,7]) # path of def
+      @test graph_one.annopath[2] == IntSet([1,2,3,4,5,7]) # path of int1_alt3
+      @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # path of apa_alt5
    end
 
    kmer_size = 2 # good test size
@@ -177,14 +177,14 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       for i in 1:4^kmer_size
          if i in lkmer
             @test isdefined(edges.left, i)
-            @test typeof(edges.left[i][1]) == SGNode
+            @test typeof(edges.left[i]) == Vector{SGNode}
             @test issorted(edges.left[i])
          else
             @test !isdefined(edges.left, i)
          end
          if i in rkmer
             @test isdefined(edges.right, i)
-            @test typeof(edges.right[i][1]) == SGNode
+            @test typeof(edges.right[i]) == Vector{SGNode}
             @test issorted(edges.right[i])
          else
             @test !isdefined(edges.right, i)
@@ -193,7 +193,35 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    end
 
    @testset "Alignment" begin
-            
+      # reads
+      fastq = IOBuffer("# reads
+@ exon1
+NGCGGATTACA
++
+#BBBBBBBBBB
+@ exon3def
+NCTATGCTAG
++
+#BBBBBBBBB
+@ exon3full
+NCCTCTATGCTAGTTC
++
+#BBBBBBBBBBBBBBB
+@ exon1-exon2
+NTAGAAGGCATTA
++
+#BBBBBBBBBBBB
+")
+
+    param = AlignParam( 0, 2, 2, 4, 4, 4, 1, 1, 1000, 5, 5,
+                        false, false, true, false, true )
+    quant = GraphLibQuant( lib, gtfref )
+    multi = Vector{Multimap}()
+
+
    end
-   
+
+   @testset "Quantification" begin
+      
+   end
 end
