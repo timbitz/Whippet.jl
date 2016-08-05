@@ -167,6 +167,9 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    edges = build_edges( xgraph, kmer_size )
 
+   println(edges.left)
+   println(edges.right)
+
    lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
@@ -174,22 +177,28 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       right = [sg"GC", sg"CC", sg"CT", sg"TT", sg"TG"]
       lkmer = map( x->kmer_index(SGKmer(x)), left )
       rkmer = map( x->kmer_index(SGKmer(x)), right )
+      println(lkmer[1])
+      println(rkmer[1])
       for i in 1:4^kmer_size
          if i in lkmer
             @test isdefined(edges.left, i)
             @test typeof(edges.left[i]) == Vector{SGNode}
-            @test issorted(edges.left[i])
+            @test issorted(edges.left[i], lt=sortlt)
          else
             @test !isdefined(edges.left, i)
          end
          if i in rkmer
             @test isdefined(edges.right, i)
             @test typeof(edges.right[i]) == Vector{SGNode}
-            @test issorted(edges.right[i])
+            @test issorted(edges.right[i], lt=sortlt)
          else
             @test !isdefined(edges.right, i)
          end
       end
+      exon1_lind = lkmer[1]
+      exon2_rind = rkmer[1]
+      @test intersect( edges.left[exon1_lind], edges.right[exon2_rind] ) == edges.right[exon2_rind]
+      @test edges.left[exon1_lind] ∩ edges.right[exon2_rind] == edges.right[exon2_rind]
    end
 
    @testset "Alignment" begin
@@ -207,9 +216,9 @@ NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
 @exon1-exon2
-NTAGAAGGCATTA
+NGCGGATTACAGCATTAGAAG
 +
-#BBBBBBBBBBBB
+#BBBBBBBBBBBBBBBBBBBB
 ")
 
       param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, 5, 5,
@@ -226,9 +235,9 @@ NTAGAAGGCATTA
          align = ungapped_align( param, lib, r )
          println(r)
          @test !isnull( align )
-         @test length( align.value ) == 1
+         @test length( align.value ) >= 1
          @test align.value[1].isvalid
-         println( align.value[1] )
+         println( align.value )
       end 
    end
 

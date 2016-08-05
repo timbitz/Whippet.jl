@@ -161,21 +161,23 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
 
    res      = Nullable{Vector{SGAlignment}}()
    maxscore = 0.0
-#   for s in FMIndexes.LocationIterator( seed, lib.index ) # rm extra malloc
+
    for sidx in 1:length(seed)
       const s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
       #println("$(read.seq[readloc:(readloc+75)])\n$(lib.graphs[geneind].seq[(s-lib.offset[geneind]):(s-lib.offset[geneind])+50])")
       #@bp
 
       const align = _ungapped_align( p, lib, read, s, readloc, ispos=ispos )
+      const scvar = score(align)
 
       if align.isvalid
          if isnull( res )
             res = Nullable(SGAlignment[ align ])
+            maxscore = scvar
          else
             # new best score
-            const scvar = score(align)
             if scvar > maxscore
+               println(STDERR, "VERBOSE: $scvar is greater than $maxscore for $align")
                # better than threshold for all of the previous scores
                if scvar - maxscore > p.score_range
                   length( res.value ) >= 1 && empty!( res.value )
@@ -185,20 +187,16 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
                maxscore = scvar
                push!( res.value, align )
             else # new score is lower than previously seen
+               println(STDERR, "VERBOSE: $scvar is less than $maxscore for $align")
                if maxscore - scvar <= p.score_range # but tolerable
                   push!( res.value, align )
                end
             end # end score vs maxscore
          end # end isnull 
-      end # end isvalid 
+      end # end isvalid
+
+      println(STDERR, "VERBOSE: CURRENT ALIGN: $res")
    end
-   # if !stranded and no valid alignments, run reverse complement
-   #=if ispos && !p.is_stranded && isnull( res )
-#      read.seq = Bio.Seq.unsafe_complement!(Bio.Seq.reverse( read.seq ))
-      reverse_complement!( read.seq )
-      reverse!( read.metadata.quality )
-      res = ungapped_align( p, lib, read, ispos=false, anchor_left=!anchor_left )
-   end =#
    res
 end
 
@@ -220,6 +218,8 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
 
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
+   println(STDERR, "VERBOSE: FWD EXTENSION")
+
    while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
       if read.seq[ridx] == sg.seq[sgidx]
          # match
@@ -236,6 +236,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                # This is a std exon-exon junction, if the read is an inclusion read
                # then we simply jump ahead, otherwise lets try to find a compatible right
                # node
+               println(STDERR, "VERBOSE: LR[1]")
                const rseq = read.seq[ridx:(ridx+p.kmer_size-1)]
                Bio.Seq.hasn( rseq ) && break
                const rkmer = DNAKmer{p.kmer_size}( rseq )
@@ -257,6 +258,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                # of potential edges we pass along the way.  When the alignment
                # dies if we have not had sufficient matches we then explore
                # those edges. 
+               println(STDERR, "VERBOSE: LR || LL")
                if isnull(passed_edges) # now we have to malloc
                   passed_edges = Nullable(Vector{UInt32}())
                end
@@ -310,6 +312,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
          rev_cumarray!(ext_len)
          #@bp
          for c in length(get(passed_edges)):-1:1  #most recent edge first
+            println(STDERR, "VERBOSE: PASSED_EDGES - $c")
             if ext_len[c] >= p.kmer_size
                align.isvalid = true
                break
@@ -326,7 +329,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                const rkmer = DNAKmer{p.kmer_size}( rseq ) 
                res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], 
                                                read, cur_ridx, rkmer, align )
-                  #println("$res_align")
+               println(STDERR, "VERBOSE: RECURSIVE ALIGNMENT RESULT $res_align > $align $(res_align > align)")
                if length(res_align.path) > length(align.path) # we added a valid node
                   align = res_align > align ? res_align : align
                end
@@ -343,6 +346,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
    if score(align) >= p.score_min && length(align.path) == 1  
       align.isvalid = true 
    end
+   println(STDERR, "VERBOSE: RETURNING $align")
    align
 end
 
@@ -358,6 +362,8 @@ function spliced_fwd_extend{T,K}( p::AlignParam, lib::GraphLib, geneind::CoordIn
    const left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
    isdefined( lib.edges.left, left_kmer_ind ) || return align
    const right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ kmer_index(rkmer) ]
+
+   println(STDERR, "VERBOSE: SPLICED_EXTENSION, $(kmer_index(lib.graphs[geneind].edgeleft[edgeind])) ∩ $(kmer_index(rkmer)) = $right_nodes")
 
    for rn in right_nodes
       rn.gene == align.path[1].gene || continue

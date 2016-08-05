@@ -64,13 +64,15 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
             fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
             rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )
 
+            @fastmath const scvar = score(fwd_aln) + score(rev_aln)
+
             if fwd_aln.isvalid || rev_aln.isvalid
                if isnull( fwd_res ) || isnull( rev_res )
                   fwd_res = Nullable(SGAlignment[ fwd_aln ])
                   rev_res = Nullable(SGAlignment[ rev_aln ])
+                  maxscore = scvar
                else
                # new best score
-                  @fastmath const scvar = score(fwd_aln) + score(rev_aln)
                   if scvar > maxscore
                      # better than threshold for all of the previous scores
                      if scvar - maxscore > p.score_range
