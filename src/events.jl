@@ -728,8 +728,8 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    while i < length(sg.edgetype)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       motif == NONE_MOTIF && (i += 1; continue)
-      println(motif)
-      println(sg)
+      #println(motif)
+      #println(sg)
       if isobligate( motif ) # is utr event
          psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )
