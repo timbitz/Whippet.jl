@@ -215,6 +215,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
                      total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta, bias )
 
+   sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene
    tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true ) #coord
@@ -269,6 +270,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
 end
 
 function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int, info::GeneMeta )
+   sg.nodelen[node] == 0 && return
    tab_write( io, info[1] )
    tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )

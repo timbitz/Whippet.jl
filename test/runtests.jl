@@ -167,8 +167,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    edges = build_edges( xgraph, kmer_size )
 
-   println(edges.left)
-   println(edges.right)
+   #println(edges.left)
+   #println(edges.right)
 
    lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
 
@@ -177,8 +177,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       right = [sg"GC", sg"CC", sg"CT", sg"TT", sg"TG"]
       lkmer = map( x->kmer_index(SGKmer(x)), left )
       rkmer = map( x->kmer_index(SGKmer(x)), right )
-      println(lkmer[1])
-      println(rkmer[1])
+      #println(lkmer[1])
+      #println(rkmer[1])
       for i in 1:4^kmer_size
          if i in lkmer
             @test isdefined(edges.left, i)
@@ -211,7 +211,7 @@ NGCGGATTACA
 NCTATGCTAG
 +
 #BBBBBBBBB
-@exon3full
+@alt3-exon3-alt5
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
@@ -219,9 +219,36 @@ NCCTCTATGCTAGTTC
 NGCGGATTACAGCATTAGAAG
 +
 #BBBBBBBBBBBBBBBBBBBB
+@exon1trunc-exon2trunc
+TTACAGCATTA
++
+BBBBBBBBBB#
+@exon1-exon3def
+GCGGATTACACTATGCTAGA
++
+BBBBBBBBBBBBBBBBBBB#
+@exon1-exon3def:rc
+CTAGCATAGTGTAATCCGCA
++
+BBBBBBBBBBBBBBBBBBB#
+@exon1-exon4full
+GCGGATTACATTAGACAAGAA
++
+BBBBBBBBBBBBBBBBBBBB#
+@exon1-exon4_2bp
+GCGGATTACATTN
++
+IIIIIIIIIIII#
+@exon1_2bp-exon4:rc
+TCTTGTCTAATG
++
+IIIIIIIIIIII
 ")
+## NOTE: CURRENT FASTQ QUALITY INFERENCE IS SOMETIMES WRONG!
+## THIS IS FIXED IN BIO v0.2+ AND IS CURRENTLY UNSTABLE IN v0.1.
 
-      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, 5, 5,
+      score_range = 5
+      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 5,
                         false, false, true, false, true )
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
@@ -230,18 +257,58 @@ NGCGGATTACAGCATTAGAAG
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
-      @test length(reads) == 4
+      @test length(reads) == 10
       for r in reads
+         #println(r)
+         #println(r.metadata)
          align = ungapped_align( param, lib, r )
-         println(r)
+         #println(align)
+
+         #flush(STDERR)
          @test !isnull( align )
          @test length( align.value ) >= 1
-         @test align.value[1].isvalid
-         println( align.value )
-      end 
-   end
+         @test all(map( x->x.isvalid, align.value))
+         scores = map( score, align.value )
+         @test maximum(scores) - minimum(scores) <= score_range
 
-   @testset "Quantification" begin
-      
+         if length(search(r.name, ":rc")) > 0
+            @test align.value[1].strand == false
+         else
+            @test align.value[1].strand == true
+         end
+
+         ex_num = length(split(r.name, '-', keep=false))
+         @test length(align.value[1].path) == ex_num
+
+         count!( quant, align.value[1] )
+      end 
+   
+      @testset "Quantification" begin
+         calculate_tpm!( quant, readlen=20 )
+
+         #println(quant)
+      end
+
+      @testset "Event Building" begin
+         out = IOBuffer(true,true)
+         bs  = BufferedOutputStream(out)
+         for g in 1:length(lib.graphs)
+            name = lib.names[g]
+            chr  = lib.info[g].name
+            strand = lib.info[g].strand ? '+' : '-'
+            _process_events( bs, lib.graphs[g], quant.quant[g], (name,chr,strand), isnodeok=false )
+         end
+         flush(bs)
+         seek(out,0)
+         for l in eachline(out)
+            spl = split( l, '\t' )
+            @test length(spl) == 12
+            print(STDERR,l)
+         end
+      end
+
+      @testset "SAM Output" begin
+         
+      end
    end
 end
