@@ -1,17 +1,34 @@
 
-function make_fqparser( filename; forcegzip=false )
+# this is an alternative to tryread! from Bio.Seq that doesn't
+# create any new objects to return.
+function tryread_bool!(parser::Bio.Seq.AbstractParser, output)
+   T = eltype(parser)
+   try
+      read!(parser, output)
+      return true
+   catch ex
+      if isa(ex, EOFError)
+         return false
+      end
+      rethrow()
+   end
+   false
+end
+
+function make_fqparser( filename; forcegzip=false, encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING )
    if isgzipped( filename ) || forcegzip
       fopen = open( filename, "r" ) 
       to_open = ZlibInflateInputStream( fopen, reset_on_end=true )
    else
       to_open = filename
    end 
-   open( to_open, FASTQ )
+   open( to_open, FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
 end
 
+# modified for Bio v0.2 with tryread_bool!
 function read_chunk!( chunk, parser )
    i = 1
-   while i <= length(chunk) && read!( parser, chunk[i] )
+   while i <= length(chunk) && tryread_bool!( parser, chunk[i] )
       i += 1
    end
    while i <= length(chunk)

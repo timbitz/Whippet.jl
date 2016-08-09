@@ -253,14 +253,14 @@ IIIIIIIIIIII
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
 
-      fqparse = open( fastq, FASTQ )
+      fqparse = open( fastq, FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
       @test length(reads) == 10
       for r in reads
-         #println(r)
-         #println(r.metadata)
+         println(r)
+         println(r.metadata)
          align = ungapped_align( param, lib, r )
          #println(align)
 

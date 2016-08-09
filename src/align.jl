@@ -108,7 +108,7 @@ end
       #println(STDERR, "VERBOSE: SEED $sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
       if cnt == 0 || cnt > p.seed_tolerate
          if both_strands
-            reverse_complement!(curseq)
+            Bio.Seq.reverse_complement!(curseq)
             const rev_sa = FMIndexes.sa_range( curseq, index )
             const rev_cnt = length(rev_sa)
             if 0 < rev_cnt <= p.seed_tolerate
@@ -154,7 +154,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
    const seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
 
    if !pos
-      reverse_complement!( read.seq )
+      Bio.Seq.reverse_complement!( read.seq )
       reverse!( read.metadata.quality )
       ispos = false
    end
@@ -230,7 +230,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                # node
                #println(STDERR, "VERBOSE: LR[1]")
                const rseq = read.seq[ridx:(ridx+p.kmer_size-1)]
-               Bio.Seq.hasn( rseq ) && break
+               Bio.Seq.find_next_ambiguous( rseq, 0 ) > 0 && break
                const rkmer = DNAKmer{p.kmer_size}( rseq )
                if sg.edgeright[curedge] == rkmer
                   align.matches += p.kmer_size
@@ -265,7 +265,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                 readlen - ridx + 1   >= p.kmer_size
                # obligate spliced_extension
                const rseq = read.seq[ridx:(ridx+p.kmer_size-1)]
-               Bio.Seq.hasn( rseq ) && break
+               Bio.Seq.find_next_ambiguous( rseq, 0 ) > 0 && break
                const rkmer = DNAKmer{p.kmer_size}( rseq )
                align = spliced_fwd_extend( p, lib, geneind, curedge, read, ridx, rkmer, align )
                break
@@ -314,7 +314,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
             
                #lkmer = DNAKmer{p.kmer_size}(read.seq[(ridx-p.kmer_size):(ridx-1)])
                const rseq  = read.seq[cur_ridx:(cur_ridx+p.kmer_size-1)]
-               Bio.Seq.hasn( rseq ) && continue
+               Bio.Seq.find_next_ambiguous( rseq, 0 ) > 0 && continue
                const rkmer = DNAKmer{p.kmer_size}( rseq ) 
                res_align = spliced_fwd_extend( p, lib, geneind, get(passed_edges)[c], 
                                                read, cur_ridx, rkmer, align )
@@ -404,7 +404,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                                 ridx >= p.kmer_size 
                 
                const rseq  = read.seq[(ridx-p.kmer_size+1):ridx]
-               Bio.Seq.hasn( rseq ) && break 
+               Bio.Seq.find_next_ambiguous( rseq, 0 ) > 0 && break 
                const lkmer = DNAKmer{p.kmer_size}( rseq )
                if sg.edgeleft[nodeidx] == lkmer
                   align.matches += p.kmer_size
@@ -434,7 +434,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                                 ridx >= p.kmer_size
                # obligate spliced_extension
                const rseq  = read.seq[(ridx-p.kmer_size+1):ridx]
-               Bio.Seq.hasn( rseq ) && break
+               Bio.Seq.find_next_ambiguous( rseq, 0 ) > 0 && break
                const lkmer = DNAKmer{p.kmer_size}( rseq )
                align = spliced_rev_extend( p, lib, geneind, convert(UInt32,nodeidx), read, ridx, lkmer, align )
                break
@@ -479,7 +479,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
                (cur_ridx - p.kmer_size) > 0 || continue
             
                const rseq  = read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)]
-               Bio.Seq.hasn( rseq ) && continue
+               Bio.Seq.find_next_ambiguous( rseq, 0 ) > 0 && continue
                const lkmer = DNAKmer{p.kmer_size}( rseq )
                res_align = spliced_rev_extend( p, lib, geneind, get(passed_edges)[c], 
                                                   read, cur_ridx-1, lkmer, align )
