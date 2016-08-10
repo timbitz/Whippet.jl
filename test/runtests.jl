@@ -20,6 +20,7 @@ include("../src/bio_nuc_safepatch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
+include("../src/ski.jl")
 include("../src/index.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
@@ -253,7 +254,7 @@ IIIIIIIIIIII
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
 
-      fqparse = open( fastq, FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING )
+      fqparse = open( fastq, FASTQ ) #, Bio.Seq.ILLUMINA18_QUAL_ENCODING )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 

@@ -21,6 +21,7 @@ include("$dir/bio_nuc_safepatch.jl")
 include("$dir/refset.jl")
 include("$dir/graph.jl")
 include("$dir/edges.jl")
+include("$dir/ski.jl")
 include("$dir/index.jl")
 include("$dir/timer.jl")
 

@@ -20,6 +20,7 @@ immutable GraphLib <: SeqLibrary
    graphs::Vector{SpliceGraph}
    edges::Edges
    index::FMIndex
+   sindex::SeedIndex
    sorted::Bool
    kmer::Int64
 end
@@ -140,7 +141,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    runoffset = 0
    for r in fhIter
       haskey(seqdic, r.name) || continue
-      Bio.Seq.immutable!(r.seq)
+      #Bio.Seq.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
       r.seq = dna""
@@ -160,6 +161,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    end
    println( STDERR, "Building full sg-index.." )
    @time fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true) 
+   @time sidx = SeedIndex( xcript, 18 )
 
    # clean up
    xcript = sg""
@@ -168,7 +170,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    println( STDERR, "Building edges.." ) 
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
-   GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer )
+   GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, sidx, true, kmer )
 end
 
 fixpath( str::String ) = abspath( expanduser( str ) )
@@ -188,7 +190,7 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
       to_open = filename
    end
    # iterate through fasta entries
-   index = @time trans_index!(open( to_open, FASTA ), ref, kmer=kmer)
+   index = @time trans_index!(open( to_open, FASTA, Bio.Seq.ReferenceSequence ), ref, kmer=kmer)
    index
 end
 
