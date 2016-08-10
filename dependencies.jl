@@ -18,7 +18,9 @@ end
 
 clones = [ "https://github.com/dcjones/Switch.jl.git",
            "https://github.com/BioJulia/IndexableBitVectors.jl.git",
-           "https://github.com/quinnj/SuffixArrays.jl.git" ]
+           "https://github.com/quinnj/SuffixArrays.jl.git",
+           "https://github.com/BioJulia/BufferedStreams.jl.git",
+           "https://github.com/BioJulia/Bio.jl.git" ]
 
 
 adds = [ "DataStructures",
@@ -26,19 +28,19 @@ adds = [ "DataStructures",
          "FMIndexes", 
          "IntArrays",
          "IntervalTrees",
-         "BufferedStreams",
          "Libz",
-         "Bio",
          "StatsBase",
          "Distributions",
-         "Glob" ]
+         "Glob",
+         "FactCheck"]
 
 Pkg.update()
-map( x->check_and_install(x,clone=true), clones )
 map( check_and_install, adds )
+map( x->check_and_install(x,clone=true), clones )
 
 Pkg.pin("Bio", v"0.1")
 Pkg.pin("BufferedStreams", v"0.0.3")
+Pkg.pin("Libz", v"0.0.2")
 
 using DataStructures
 using Switch

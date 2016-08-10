@@ -119,20 +119,12 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-# Deprecated 
-type PsiPath
-   psi::Float64
-   count::Float64
-   length::Float64
-   nodes::IntSet
-end # TODO: Delete PsiPath.
-
 
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
 # We also store the min and max node of all sets
 # Note: It did occur to me that a cleaner solution
-# is PsiGraph holding paths::Vector{PsiPath}
+# is PsiGraph holding paths::Vector{PsiPath} (deprecated)
 # but the current implementation was choosen for 
 # faster memory access w.r.t. stride.
 type PsiGraph
@@ -272,13 +264,6 @@ function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I;
    end
 end
 
-function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; 
-                                            value_bool=true, length=1.0 )
-   ppath.count  += (value_bool ? edg.value : 0.0)
-   ppath.length += (value_bool ? length : 0.0)
-   push!( ppath.nodes, edg.first )
-   push!( ppath.nodes, edg.last  )
-end
 
 type AmbigCounts
    paths::Vector{NodeInt}
@@ -594,7 +579,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       push!( used_node, i )
       total_cnt += sgquant.node[i]
       if i > 1
-         interv = Interval{Exonmax}( i-1, i )
+         interv = Interval{ExonInt}( i-1, i )
          total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
       end
       i += 1
@@ -609,7 +594,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       # add node directly downstream (CE next to tandemUTR)
       push!( used_node, i )
       total_cnt += sgquant.node[i]
-      interv = Interval{Exonmax}( i-1, i )
+      interv = Interval{ExonInt}( i-1, i )
       total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
    end
 
@@ -730,6 +715,7 @@ function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok
    close(io)
 end
 
+# TODO: make single exon gene safe.
 function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; isnodeok=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
@@ -742,6 +728,8 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    while i < length(sg.edgetype)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       motif == NONE_MOTIF && (i += 1; continue)
+      #println(motif)
+      #println(sg)
       if isobligate( motif ) # is utr event
          psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )

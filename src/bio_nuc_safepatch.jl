@@ -596,7 +596,7 @@ Base.convert{T<:SGNucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [
 
 # Convert from/to Strings
 Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
-Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(ASCIIString, [convert(Char, x) for x in seq])
+Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
 
 # Convert between DNA/RNA and SG
 Base.convert(::Type{SGSequence}, seq::Bio.Seq.NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
@@ -1177,7 +1177,7 @@ Base.read{T <: Bio.Seq.QualityEncoding}(io::Base.TCPSocket, t::Type{T}) = conver
 # k-mer based quantification in DEPRECATED-Seq, etc that rely on manipulating many
 # short sequences as efficiently (space and time) as possible.
 
-bitstype 64 Kmer{T<:Nucleotide, K}
+bitstype 64 Kmer{T <: Nucleotide, K}
 
 typealias SGKmer{K} Kmer{SGNucleotide, K}
 

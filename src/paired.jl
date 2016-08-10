@@ -57,20 +57,22 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
       const dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
       if dist < p.seed_pair_range # inside allowable pair distance
 
-         const geneind = convert( Coordint, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
+         const geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
          const inc = geneind < length(lib.offset) ? 1 : 0
          if lib.offset[geneind] <= rev_sorted[ridx] < lib.offset[geneind+inc]
 
             fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
             rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )
 
+            @fastmath const scvar = score(fwd_aln) + score(rev_aln)
+
             if fwd_aln.isvalid || rev_aln.isvalid
                if isnull( fwd_res ) || isnull( rev_res )
                   fwd_res = Nullable(SGAlignment[ fwd_aln ])
                   rev_res = Nullable(SGAlignment[ rev_aln ])
+                  maxscore = scvar
                else
                # new best score
-                  @fastmath const scvar = score(fwd_aln) + score(rev_aln)
                   if scvar > maxscore
                      # better than threshold for all of the previous scores
                      if scvar - maxscore > p.score_range
@@ -146,7 +148,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          push!( used, lnode )
          push!( used, rnode )
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
@@ -172,7 +174,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          const rnode = rev.path[n+1].node
          (lnode in used && rnode in used) && continue
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val

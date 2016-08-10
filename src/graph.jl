@@ -52,14 +52,14 @@ istxstop(  edge::EdgeType ) = edge == EDGETYPE_SR || edge == EDGETYPE_RS ? true 
 
 # Function takes coordinate types for node boundaries
 # and returns an EdgeType
-function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Char='+' )
+function get_edgetype( minidx::Int, secidx::Int, isnode::Bool, strand::Bool )
    if isnode
       ret = INDEX_TO_EDGETYPE_NODE[minidx,secidx]
    else
       ret = INDEX_TO_EDGETYPE[minidx,secidx]
    end
    ret = EdgeType(ret)
-   if strand != '+'
+   if !strand
       ret = invert_edgetype( ret )
    end
    ret
@@ -79,34 +79,36 @@ end
 # This holds a representation of the splice graph
 # which is a directed multigraph
 immutable SpliceGraph
-   nodeoffset::Vector{Coordint} # SG offset
-   nodecoord::Vector{Coordint}  # Genome offset
-   nodelen::Vector{Coordint}
+   nodeoffset::Vector{CoordInt} # SG offset
+   nodecoord::Vector{CoordInt}  # Genome offset
+   nodelen::Vector{CoordInt}
    edgetype::Vector{EdgeType}
    edgeleft::Vector{SGKmer}
    edgeright::Vector{SGKmer}
+   annopath::Vector{IntSet}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
 # Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
 # Edge array:        1   2       3   4         5 6   7
+# Node coord:  chr   100 200     300 400      500 600 700
 
 # empty constructor
-SpliceGraph() = SpliceGraph( Vector{Coordint}(), Vector{Coordint}(),
-                             Vector{Coordint}(),  Vector{EdgeType}(),
-                             Vector{SGKmer}(), Vector{SGKmer}(), sg"" )
+SpliceGraph() = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
+                             Vector{CoordInt}(), Vector{EdgeType}(),
+                             Vector{SGKmer}(),   Vector{SGKmer}(), sg"" )
 
 # Main constructor
 # Build splice graph here.
-function SpliceGraph( gene::Refgene, genome::SGSequence )
+function SpliceGraph( gene::RefGene, genome::SGSequence )
    # splice graph variables
-   nodeoffset = Vector{Coordint}()
-   nodecoord  = Vector{Coordint}()
-   nodelen    = Vector{Coordint}()
+   nodeoffset = Vector{CoordInt}()
+   nodecoord  = Vector{CoordInt}()
+   nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
    seq        = sg""
 
-   strand = gene.info[2]
+   strand = gene.info.strand  # Bool
    
    # initialize iterators
    a,alen = 1,length(gene.acc)
@@ -118,7 +120,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
 
    # return a tuple containing the min coordinate's idx,val
    # each of 4 categories, txstart, donor, acceptor, txend
-   function getmin_ind_val( gene::Refgene, idx; def=Inf )
+   function getmin_ind_val( gene::RefGene, idx; def=Inf )
       retarr = [ get(gene.txen, idx[1], def),
                  get(gene.acc,  idx[2], def),
                  get(gene.don,  idx[3], def),
@@ -128,7 +130,7 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
 
    while( idx[1] <= alen || idx[2] <= dlen || idx[3] <= slen || idx[4] <= plen )    
       # iterate through donors, and acceptors
-      # left to right. '-' strand = rc unshift?
+      # left to right. '-' strand gets revcomp and unshift
       minidx,minval = getmin_ind_val( gene, idx )
       idx[minidx] += 1
       secidx,secval = getmin_ind_val( gene, idx )
@@ -136,19 +138,18 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
       # last coordinate in the gene:
       # if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
       if secval == Inf
-         termedge = EdgeType(0x03)
+         termedge = strand ? EdgeType(0x03) : EdgeType(0x00)
          stranded_push!(edgetype, termedge, strand)
-         if strand == '+'
+         if strand
             seq *= SGSequence(termedge)
          else
-            termedge = invert_edgetype( termedge )
             seq = SGSequence(termedge) * seq
          end
          break
       end
       
       # now should we make a node?
-      if issubinterval( gene.exons, Interval{Coordint}(minval,secval) )
+      if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) )
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
          nodesize = Int(secval - minval) - leftadj - rightadj + 1
@@ -167,12 +168,11 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
          pushval  = secval
       end
 
-      if strand == '+'
+      if strand
          seq *= SGSequence(edge) * nodeseq
       else # '-' strand
          seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
       end
-     # println("strand: $strand, minidx: $minidx, secidx: $secidx, thridx: $thridx, nodesize: $nodesize, edgetype: $edge, pushval: $(Int(pushval)), nodeseq: $nodeseq")
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
       stranded_push!(edgetype,  edge,     strand)
@@ -189,12 +189,14 @@ function SpliceGraph( gene::Refgene, genome::SGSequence )
    eleft  = Vector{SGKmer}(length(edgetype))
    eright = Vector{SGKmer}(length(edgetype))
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, seq )
+   paths = build_paths_edges( nodecoord, nodelen, gene )
+
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!
-function stranded_push!( collection, value, strand::Char )
-   if strand == '+'
+function stranded_push!( collection, value, strand::Bool )
+   if strand
       push!( collection, value )
    else # '-' strand
       unshift!( collection, value )
@@ -203,7 +205,7 @@ end
 
 # This function looks specifically for an intersection
 # between one interval, and the interval tree, such that
-# some interval in the tree full contains the sub interval
+# some interval in the tree fully contains the sub interval
 #  itree contains: (low,             high)
 #  subint must be:     (low+x, high-y)
 #  where x and y are >= 0
@@ -228,3 +230,37 @@ function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
    end
 end
 
+# Functions for iso.jl annotated edges feature
+# Take a RefTx and produce an IntSet through the nodes of a SpliceGraph
+# returns: IntSet
+function build_annotated_path( nodecoord::Vector{CoordInt}, 
+                               nodelen::Vector{CoordInt}, 
+                               tx::RefTx, strand::Bool )
+   const path = IntSet()
+   # this may be `poor form`, but 256 is too big for default!
+   path.bits  = zeros(UInt32,64>>>5)
+   path.limit = 64
+   for i in 1:length(tx.acc)
+      const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
+#      println("node $ind nodecoord: $(nodecoord[ind]) matches $(tx.acc[i]) $i")
+      push!( path, ind )
+      cur = ind + (strand ? 1 : -1)
+      while 1 <= cur <= length(nodecoord) && 
+            nodecoord[cur] <= tx.don[i]
+         push!( path, cur )
+         cur = cur + (strand ? 1 : -1 )
+      end
+   end
+   path
+end
+
+function build_paths_edges( nodecoord::Vector{CoordInt},
+                           nodelen::Vector{CoordInt},
+                           gene::RefGene )
+   const paths = Vector{IntSet}()
+   for tx in gene.reftx
+      const curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
+      push!( paths, curpath )
+   end
+   paths
+end

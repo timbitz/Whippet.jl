@@ -22,7 +22,7 @@ using Distributions
 include("types.jl")
 include("timer.jl")
 include("bio_nuc_safepatch.jl")
-include("refflat.jl")
+include("refset.jl")
 include("graph.jl")
 include("edges.jl") 
 include("index.jl")
@@ -44,6 +44,7 @@ export SpliceGraph,
        GraphLib,
        GraphLibQuant,
        GeneInfo,
+       TxInfo,
        SGNode,
        Edges,
        EdgeType,
@@ -60,13 +61,14 @@ export SpliceGraph,
        SGNucleotideSequence,
        @sg_str,
        NucleotideSequence,
-       Refset, Reftx, Refgene,
+       RefSet, RefTx, RefGene,
        Multimap,
        AlignParam,
        ungapped_align,
        make_fqparser,
        isgzipped,
        load_refflat,
+       load_gtf,
        fasta_to_index,
        process_reads!,
        process_paired_reads!,

@@ -18,7 +18,7 @@ using ArgParse
 
 include("$dir/types.jl")
 include("$dir/bio_nuc_safepatch.jl")
-include("$dir/refflat.jl")
+include("$dir/refset.jl")
 include("$dir/graph.jl")
 include("$dir/edges.jl")
 include("$dir/index.jl")
@@ -34,15 +34,17 @@ function parse_cmd()
       default  = 9
     "--fasta"
       help = "File containg the genome in fasta, one entry per chromosome [.gz]"
-      arg_type = ASCIIString
+      arg_type = String
       required = true
     "--flat"
       help = "Gene annotation file in RefFlat format"
-      arg_type = ASCIIString
-      required = true
+      arg_type = String
+    "--gtf"
+      help = "Gene anotation file in GTF format"
+      arg_type = String
     "--index"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
-      arg_type = ASCIIString
+      arg_type = String
       default = "$dir/../index/graph"
   end
   return parse_args(s)
@@ -54,16 +56,27 @@ function main()
    
    println(STDERR, " $( round( toq(), 6 ) ) seconds." )
 
-   println(STDERR, "Loading Refflat file...")
-   flat = fixpath( args["flat"] )
+   if args["gtf"] == nothing && args["flat"] == nothing
+      println(STDERR, "ERROR: Must supply gene annotation file using `--gtf` or `--flat`!!")
+      exit(1)
+   elseif args["gtf"] != nothing
+      annotype = "gtf"
+      annotxt  = "GTF"
+   else
+      annotype = "flat"
+      annotxt  = "Refflat"
+   end
+
+   println(STDERR, "Loading $annotxt file...")
+   flat = fixpath( args[annotype] )
    fh = open( flat , "r")
    if isgzipped( flat )
       fh = fh |> x->ZlibInflateInputStream(x, reset_on_end=true)
    end
-   @timer ref = load_refflat(fh)
+   @timer ref = annotype == "gtf" ? load_gtf(fh) : load_refflat(fh)
 
    println(STDERR, "Indexing transcriptome...")
-   @timer graphome = fasta_to_index( fixpath( args["fasta"] ) , ref, kmer=args["kmer"] )
+   @timer graphome = fasta_to_index( fixpath( args["fasta"] ), ref, kmer=args["kmer"] )
 
    println(STDERR, "Saving Annotations...")
    open("$(args["index"])_anno.jls", "w+") do fh

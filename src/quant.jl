@@ -8,21 +8,21 @@ const SCALING_FACTOR = 1_000_000
 # as junction counts, which should always be at a lower level, e.g. bias < 1
 type SpliceGraphQuant
    node::Vector{Float64}
-   edge::IntervalMap{Exonmax,Float64}
-   circ::Dict{Tuple{Exonmax,Exonmax},Float64}
+   edge::IntervalMap{ExonInt,Float64}
+   circ::Dict{Tuple{ExonInt,ExonInt},Float64}
    leng::Vector{Float64}
    bias::Float64
 end
 
 # Default constructer
 SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(),
-                                       IntervalMap{Exonmax,Float64}(),
-                                       Dict{Tuple{Exonmax,Exonmax},Float64}(),
+                                       IntervalMap{ExonInt,Float64}(),
+                                       Dict{Tuple{ExonInt,ExonInt},Float64}(),
                                        Vector{Float64}(), 1.0 )
 
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
-                                                        IntervalMap{Exonmax,Float64}(),
-                                                        Dict{Tuple{Exonmax,Exonmax},Float64}(),
+                                                        IntervalMap{ExonInt,Float64}(),
+                                                        Dict{Tuple{ExonInt,ExonInt},Float64}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
 
@@ -34,15 +34,15 @@ immutable GraphLibQuant
    quant::Vector{SpliceGraphQuant}
 end
 
-function GraphLibQuant( lib::GraphLib, ref::Refset )
+function GraphLibQuant( lib::GraphLib, ref::RefSet )
    tpm    = zeros( length(lib.graphs) )
    count  = zeros( length(lib.graphs) )
    len    =  ones( length(lib.graphs) )
    quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
    for i in 1:length( lib.graphs )
       name = lib.names[i]
-      if haskey( ref.geneset, name )
-         len[i] = ref.geneset[name].length
+      if haskey( ref, name )
+         len[i] = ref[name].length
       end
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end
@@ -112,7 +112,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
          lnode = align.path[n].node
          rnode = align.path[n+1].node
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
