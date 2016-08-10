@@ -75,6 +75,12 @@ function parse_cmd()
     "--rev-pair"
       help     = "Is the second mate the reverse complement of the first? If so, increase speed with this flag"
       action   = :store_true
+    "--phred-33" 
+      help     = "Qual string is encoded in Phred+33 integers (default)"
+      action   = :store_true
+    "--phred-64"
+      help     = "Qual string is encoded in Phred+64 integers"
+      action   = :store_true
     "--no-circ"
       help     = "Do not allow back/circular splicing"
       action   = :store_false
@@ -107,9 +113,11 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), forcegzip=args["force-gz"] )
+   const enc = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
+
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), forcegzip=args["force-gz"] )
+      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1

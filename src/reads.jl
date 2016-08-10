@@ -15,7 +15,7 @@ function tryread_bool!(parser::Bio.Seq.AbstractParser, output)
    false
 end
 
-function make_fqparser( filename; forcegzip=false, encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING )
+function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
    if isgzipped( filename ) || forcegzip
       fopen = open( filename, "r" ) 
       to_open = ZlibInflateInputStream( fopen, reset_on_end=true )

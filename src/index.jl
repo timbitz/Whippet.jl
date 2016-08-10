@@ -20,7 +20,6 @@ immutable GraphLib <: SeqLibrary
    graphs::Vector{SpliceGraph}
    edges::Edges
    index::FMIndex
-   #sindex::SeedIndex
    sorted::Bool
    kmer::Int64
 end
@@ -161,7 +160,6 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    end
    println( STDERR, "Building full sg-index.." )
    @time fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true) 
-  # @time sidx = SeedIndex( xcript, 18 )
 
    # clean up
    xcript = sg""

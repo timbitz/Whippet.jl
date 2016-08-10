@@ -20,7 +20,6 @@ include("../src/bio_nuc_safepatch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
-include("../src/ski.jl")
 include("../src/index.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
@@ -245,8 +244,6 @@ TCTTGTCTAATG
 +
 IIIIIIIIIIII
 ")
-## NOTE: CURRENT FASTQ QUALITY INFERENCE IS SOMETIMES WRONG!
-## THIS IS FIXED IN BIO v0.2+ AND IS CURRENTLY UNSTABLE IN v0.1.
 
       score_range = 5
       param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 5,
@@ -254,14 +251,14 @@ IIIIIIIIIIII
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
 
-      fqparse = open( BufferedInputStream(fastq), FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING )
+      fqparse = open( BufferedInputStream(fastq), FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
       @test length(reads) == 10
       for r in reads
-         println(r)
-         println(r.metadata)
+#         println(r)
+#         println(r.metadata)
          align = ungapped_align( param, lib, r )
          #println(align)
 
