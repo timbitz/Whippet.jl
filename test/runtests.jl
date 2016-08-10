@@ -254,7 +254,7 @@ IIIIIIIIIIII
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
 
-      fqparse = open( fastq, FASTQ ) #, Bio.Seq.ILLUMINA18_QUAL_ENCODING )
+      fqparse = open( BufferedInputStream(fastq), FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
