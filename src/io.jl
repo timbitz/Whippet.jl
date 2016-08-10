@@ -102,12 +102,12 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar # this shouldn't happen
             curpos = sg.nodeoffset[ nexti ]
-            const next_edge_coord = strand ? sg.nodecoord[nexti] : sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
-            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) : Int(adjacent_edge_coord) - Int(next_edge_coord)
+            const next_edge_coord = strand ? sg.nodecoord[nexti] : 
+                                             sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
+            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) : 
+                                    Int(adjacent_edge_coord) - Int(next_edge_coord)
             if intron > 1
                matches_to_add = min( cur_matches, readlen - total )
-              # if matches_to_add < 0 || intron > 1_000_000_000
-              #    error("$(align), $cigar, $matches_to_add, $intron, $i->$adjacent_edge_coord, $nexti->$next_edge_coord\t$strand\n$(sg.edgetype[i])\t$(sg.edgetype[nexti])")
               # end
                cigar *= string( matches_to_add ) * "M" * string( intron ) * "N"
                total += cur_matches
@@ -152,7 +152,7 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
 end
 
 function write_sam_header( io::BufOut, lib::GraphLib )
-   refs = Dict{ASCIIString,Int}()
+   refs = Dict{String,Int}()
    for gind in 1:length(lib.graphs)
       name = lib.info[gind].name
       len  = max( lib.graphs[gind].nodecoord... )
@@ -184,7 +184,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       tab_write( io, string(n) )
       coord_write( io, info[2], sg.nodecoord[n], sg.nodecoord[n]+sg.nodelen[n]-1, tab=true )
       tab_write( io, info[3] )
-      tab_write( io, convert(ASCIIString, motif) )
+      tab_write( io, convert(String, motif) )
       if empty # had to add this flag since we iterate through the TS/TE nodes
          write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
          i += 1
@@ -215,11 +215,12 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
                      total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta, bias )
 
+   sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene
    tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true ) #coord
    tab_write( io, info[3] )
-   tab_write( io, convert(ASCIIString, motif) )
+   tab_write( io, convert(String, motif) )
    if !isnull( inc ) && !isnull( exc )
       complex_write( io, complexity( inc.value, exc.value ), tab=true )
    else
@@ -269,11 +270,12 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
 end
 
 function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int, info::GeneMeta )
+   sg.nodelen[node] == 0 && return
    tab_write( io, info[1] )
    tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
    tab_write( io, info[3] )
-   tab_write( io, convert(ASCIIString, motif) )
+   tab_write( io, convert(String, motif) )
    write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 

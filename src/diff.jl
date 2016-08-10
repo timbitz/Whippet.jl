@@ -51,7 +51,7 @@ function open_stream( filename )
    stream
 end
 
-function open_streams( files::Vector{ASCIIString} )
+function open_streams( files::Vector{String} )
    buf = Vector{BufferedStreams.BufferedInputStream}(length(files))
    for i in 1:length(files)
       buf[i] = open_stream( files[i] )
@@ -59,7 +59,7 @@ function open_streams( files::Vector{ASCIIString} )
    buf
 end
 
-function parse_psi_line( line::ASCIIString; min_num=5, size=1000 )
+function parse_psi_line( line::String; min_num=5, size=1000 )
    res  = split( line, '\t' )
    psi  = res[7] != "NA" && res[7] != "Psi" ? parse(Float64, res[7]) : 0.0
    num  = res[10] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[10]) : 0.0
@@ -74,8 +74,8 @@ function parse_psi_line( line::ASCIIString; min_num=5, size=1000 )
 end
 
 type PosteriorEvent
-   event::Vector{SubString{ASCIIString}}
-   complexity::ASCIIString
+   event::Vector{SubString{String}}
+   complexity::String
    a::PosteriorPsi
    b::PosteriorPsi
 end
