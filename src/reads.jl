@@ -73,11 +73,13 @@ end
 
 process_reads!( parser, param::AlignParam, lib::GraphLib,
                 quant::GraphLibQuant, multi::Vector{Multimap}; 
-                bufsize=50, sam=false) = _process_reads!( parser, param, lib, quant,
-                                                          multi, bufsize=bufsize, sam=sam )
+                bufsize=50, sam=false, qualoffset=33 ) = _process_reads!( 
+                                                                parser, param, lib, quant,
+                                                                multi, bufsize=bufsize, sam=sam,
+                                                                qualoffset=qualoffset )
 
 function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=50, sam=false )
+                         multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33 )
   
    const reads  = allocate_chunk( parser, size=bufsize )
    mean_readlen = 0.0
@@ -97,7 +99,7 @@ function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::Graph
                push!( multi, Multimap( align.value ) )
             else
                count!( quant, align.value[1] )
-               sam && write_sam( stdbuf, reads[i], align.value[1], lib )
+               sam && write_sam( stdbuf, reads[i], align.value[1], lib, qualoffset=qualoffset )
             end
             mapped += 1
             @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / mapped
@@ -113,11 +115,13 @@ end
 # paired end version
 process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib,
                 quant::GraphLibQuant, multi::Vector{Multimap}; 
-                bufsize=50, sam=false) = _process_paired_reads!( fwd_parser, rev_parser, param, lib, quant,
-                                                                 multi, bufsize=bufsize, sam=sam )
+                bufsize=50, sam=false, qualoffset=33 ) = _process_paired_reads!( 
+                                                                 fwd_parser, rev_parser, param, lib, quant,
+                                                                 multi, bufsize=bufsize, sam=sam, 
+                                                                 qualoffset=qualoffset )
 
 function _process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                                 multi::Vector{Multimap}; bufsize=50, sam=false )
+                                 multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33 )
 
    const fwd_reads  = allocate_chunk( fwd_parser, size=bufsize )
    const rev_reads  = allocate_chunk( rev_parser, size=bufsize )
@@ -141,9 +145,11 @@ function _process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib:
             else
                count!( quant, fwd_aln.value[1], rev_aln.value[1] )
                sam && write_sam( stdbuf, fwd_reads[i], fwd_aln.value[1], lib, 
-                                 paired=true, fwd_mate=true, is_pair_rc=param.is_pair_rc )
+                                 paired=true, fwd_mate=true, is_pair_rc=param.is_pair_rc, 
+                                 qualoffset=qualoffset )
                sam && write_sam( stdbuf, rev_reads[i], rev_aln.value[1], lib, 
-                                 paired=true, fwd_mate=false, is_pair_rc=param.is_pair_rc )
+                                 paired=true, fwd_mate=false, is_pair_rc=param.is_pair_rc, 
+                                 qualoffset=qualoffset )
             end
             mapped += 1
             @fastmath mean_readlen += (length(fwd_reads[i].seq) - mean_readlen) / mapped

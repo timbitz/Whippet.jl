@@ -113,7 +113,8 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   const enc = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
+   const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
+   const enc_offset = args["phred-64"] ? 64 : 33
 
    const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
@@ -129,11 +130,13 @@ function main()
    else
       println(STDERR, "Processing reads...")
       if ispaired
-         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, sam=args["sam"] )
+         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
+                                                              sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
-         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
+         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
+                                                       sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
