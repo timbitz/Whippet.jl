@@ -102,6 +102,10 @@ end
          continue
       end
       const curseq = read.seq[curpos:(curpos+p.seed_length-1)]
+      if Bio.Seq.hasambiguity(curseq)
+         curpos += increment_sm
+         continue
+      end
       const sa = FMIndexes.sa_range( curseq, index )
       const cnt = length(sa)
       ctry += 1

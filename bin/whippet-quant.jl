@@ -61,7 +61,7 @@ function parse_cmd()
     "--mismatches", "-X"
       help     = "Allowable number of mismatches in alignment"
       arg_type = Int
-      default  = 2
+      default  = 3
     "--score-min", "-S"
       help     = "Minimum alignment score (matches - mismatches)"
       arg_type = Int
