@@ -1,20 +1,14 @@
-#  This is a port of the source code from https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
-#  This file is written almost entirely by the authors of BioJulia/Bio.jl
+#  This is a port of the deprecated source code formerly at
+#   https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
+#  This file is written largely by the authors of BioJulia/Bio.jl
 #  It has been altered here to include new types containing masked nucleotides 
 #  'L' for donor upstream splice site
 #  'R' for acceptor downstream splice site, and 
 #  'S' for transcription start/stop site.  
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
-#@everywhere using Bio
-#using Bio.Seq
-
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.reverse
-
-#abstract Sequence
-# Nucleotides
-# ===========
 
 
 # Single nucleotides are represented in bytes using just the two low-order bits
