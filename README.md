@@ -67,6 +67,7 @@ $ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.ps
 ### Output Format
 
 
+
 ### Advanced Index Building
 
 If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effectively as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
@@ -75,10 +76,10 @@ If you are building an index for a non-model organism or an index for a custom p
   * Choose a Kmer size appropriate for the node size and number in the transcriptome and the read length you plan to align.
 
 ```bash
-$ bin/whippet-index.jl -h
-Whippet v0.1-rc4 loading and compiling... 
-usage: whippet-index.jl [-k KMER] --fasta FASTA --flat FLAT
-                        [--index INDEX] [-h]
+$ julia whippet-index.jl -h
+Whippet v0.2.1 loading and compiling... 
+usage: whippet-index.jl [-k KMER] --fasta FASTA [--flat FLAT]
+                        [--gtf GTF] [--index INDEX] [-h]
 
 optional arguments:
   -k, --kmer KMER  Kmer size to use for exon-exon junctions (default
@@ -86,6 +87,7 @@ optional arguments:
   --fasta FASTA    File containg the genome in fasta, one entry per
                    chromosome [.gz]
   --flat FLAT      Gene annotation file in RefFlat format
+  --gtf GTF        Gene anotation file in GTF format
   --index INDEX    Output prefix for saving index 'dir/prefix'
                    (default Whippet/index/graph) (default:
                    "/Users/timsw/Documents/git/Whippet/src/../index/graph")
@@ -96,13 +98,14 @@ optional arguments:
 
 ```bash
 
-$ julia bin/whippet-quant.jl -h
-Whippet v0.1-rc4 loading and compiling... 
+$ julia whippet-quant.jl -h
+Whippet v0.2.1 loading and compiling... 
 usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
                         [-S SCORE-MIN] [-j] [--stranded] [--rev-pair]
-                        [--no-circ] [--no-tpm] [--force-gz] [-h]
+                        [--phred-33] [--phred-64] [--no-circ]
+                        [--no-tpm] [--force-gz] [-h]
                         filename.fastq[.gz] [paired_mate.fastq[.gz]]
 
 positional arguments:
@@ -138,7 +141,7 @@ optional arguments:
                         2500)
   -X, --mismatches MISMATCHES
                         Allowable number of mismatches in alignment
-                        (type: Int64, default: 2)
+                        (type: Int64, default: 3)
   -S, --score-min SCORE-MIN
                         Minimum alignment score (matches - mismatches)
                         (type: Int64, default: 45)
@@ -149,6 +152,9 @@ optional arguments:
   --rev-pair            Is the second mate the reverse complement of
                         the first? If so, increase speed with this
                         flag
+  --phred-33            Qual string is encoded in Phred+33 integers
+                        (default)
+  --phred-64            Qual string is encoded in Phred+64 integers
   --no-circ             Do not allow back/circular splicing
   --no-tpm              Should tpm file be sent to
                         output/prefix.tpm.gz? (default on)
