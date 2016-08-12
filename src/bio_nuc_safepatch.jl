@@ -1,20 +1,14 @@
-#  This is a port of the source code from https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
-#  This file is written almost entirely by the authors of BioJulia/Bio.jl
+#  This is a port of the deprecated source code formerly at
+#   https://github.com/BioJulia/Bio.jl/blob/master/src/seq/nucleotide.jl
+#  This file is written largely by the authors of BioJulia/Bio.jl
 #  It has been altered here to include new types containing masked nucleotides 
 #  'L' for donor upstream splice site
 #  'R' for acceptor downstream splice site, and 
 #  'S' for transcription start/stop site.  
 #  These can then be encoded with 'N' and 'A','T','C','G' into 3-bits
 
-#@everywhere using Bio
-#using Bio.Seq
-
 using Base.Intrinsics
 import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.reverse
-
-#abstract Sequence
-# Nucleotides
-# ===========
 
 
 # Single nucleotides are represented in bytes using just the two low-order bits
@@ -600,8 +594,8 @@ Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(String, 
 
 # Convert between DNA/RNA and SG
 Base.convert(::Type{SGSequence}, seq::Bio.Seq.NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
-
-
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.BioSequence) = SGSequence( convert(AbstractString, seq) )
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.ReferenceSequence) = SGSequence( convert(AbstractString, seq) )
 
 # Basic Functions
 # ---------------
@@ -1236,13 +1230,11 @@ function Base.convert{T, K}(::Type{Kmer{T,K}}, seq::NucleotideSequence{T})
     @assert length(seq) == K error("Cannot construct a $(K)-mer from a NucleotideSequence of length $(length(seq))")
 
     x     = UInt64(0)
-    shift = 0
     for (i, nt) in enumerate(seq)
         if nt == nnucleotide(T) || nt == lnucleotide(T) || nt == rnucleotide(T) || nt == snucleotide(T)
             error("A K-mer may not contain an N,L,R,S in its sequence")
         end
-        x |= convert(UInt64, nt) << shift
-        shift += 2
+        x = x << 2 | convert(UInt64, nt)
     end
     return convert(Kmer{T, K}, x)
 end

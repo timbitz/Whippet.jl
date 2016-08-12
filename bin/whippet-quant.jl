@@ -61,7 +61,7 @@ function parse_cmd()
     "--mismatches", "-X"
       help     = "Allowable number of mismatches in alignment"
       arg_type = Int
-      default  = 2
+      default  = 3
     "--score-min", "-S"
       help     = "Minimum alignment score (matches - mismatches)"
       arg_type = Int
@@ -74,6 +74,12 @@ function parse_cmd()
       action   = :store_true
     "--rev-pair"
       help     = "Is the second mate the reverse complement of the first? If so, increase speed with this flag"
+      action   = :store_true
+    "--phred-33" 
+      help     = "Qual string is encoded in Phred+33 integers (default)"
+      action   = :store_true
+    "--phred-64"
+      help     = "Qual string is encoded in Phred+64 integers"
       action   = :store_true
     "--no-circ"
       help     = "Do not allow back/circular splicing"
@@ -107,9 +113,12 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), forcegzip=args["force-gz"] )
+   const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
+   const enc_offset = args["phred-64"] ? 64 : 33
+
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), forcegzip=args["force-gz"] )
+      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -121,11 +130,13 @@ function main()
    else
       println(STDERR, "Processing reads...")
       if ispaired
-         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, sam=args["sam"] )
+         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
+                                                              sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
-         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
+         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
+                                                       sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end

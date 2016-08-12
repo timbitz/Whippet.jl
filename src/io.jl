@@ -43,7 +43,7 @@ function seq_write( io::BufOut, read::SeqRecord; tab=false )
    tab && write( io, '\t' )
 end
 
-function qual_write( io::BufOut, read::SeqRecord, qualoffset=64; tab=false )
+function qual_write( io::BufOut, read::SeqRecord; qualoffset=33, tab=false )
    for i in read.metadata.quality
       write( io, convert(Char, i+qualoffset) )
    end
@@ -132,7 +132,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 end
 
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
-                    mapq=0, paired=false, fwd_mate=true, is_pair_rc=true )
+                    mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33 )
    const geneind = align.path[1].gene
    const nodeind = align.path[1].node
    align.path[end].node < nodeind && return # TODO: allow circular SAM output
@@ -147,7 +147,7 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    tab_write( io, '0' )
    tab_write( io, '0' )
    seq_write( io, read, tab=true )
-   qual_write( io, read )
+   qual_write( io, read, qualoffset=qualoffset )
    write( io, '\n' )
 end
 

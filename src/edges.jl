@@ -58,6 +58,22 @@ end
 kmer_index{T,K}( kmer::Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 
+kmer_index( seq::BioSequence ) = _kmer_index( seq )
+kmer_index( seq::SGSequence  ) = _kmer_index( seq )
+
+function _kmer_index( seq )
+   x     = UInt64(0)
+   for nt in seq
+      ntint = convert(UInt8, nt)
+      if ntint > 0x03
+         return 0
+      else
+         x = x << 2 | ntint
+      end
+   end
+   Int(x) + 1
+end
+
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
                                                   entry::SGNode )
