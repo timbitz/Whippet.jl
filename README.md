@@ -77,7 +77,7 @@ If you are building an index for a non-model organism or an index for a custom p
 
 ```bash
 $ julia whippet-index.jl -h
-Whippet v0.2.1 loading and compiling... 
+Whippet v0.3 loading and compiling... 
 usage: whippet-index.jl [-k KMER] --fasta FASTA [--flat FLAT]
                         [--gtf GTF] [--index INDEX] [-h]
 
@@ -99,7 +99,7 @@ optional arguments:
 ```bash
 
 $ julia whippet-quant.jl -h
-Whippet v0.2.1 loading and compiling... 
+Whippet v0.3 loading and compiling... 
 usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
