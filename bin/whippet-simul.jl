@@ -27,8 +27,8 @@ function parse_cmd()
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
       default  = fixpath( "$(dir)/../simul" )
-    "--max-complexity", "-c"
-      help = "Max complexity CMax allowed per gene (random C for each gene between C1:CMax)?"
+    "--max-complexity", "-k"
+      help = "Max complexity KMax allowed per gene (random K for each gene between K1:KMax)?"
       arg_type = Int64
       default  = 8
     "--num-genes", "-n"
@@ -128,7 +128,7 @@ function simulate_transcripts!( simul::SimulGene, sg::SpliceGraph )
 end
 
 function output_transcripts( stream, simul::SimulGene, sg::SpliceGraph )
-   prefix = simul.gene * "_C" * string(simul.complexity) * "_"
+   prefix = simul.gene * "_K" * string(simul.complexity) * "_"
    used = Set()
    for t in simul.trans
       name = prefix * join( t.nodes, "-" )
