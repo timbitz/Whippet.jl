@@ -19,7 +19,7 @@ function coord_write( io::BufOut, chr, first, last, strand; tab=false )
 end
 
 function complex_write( io::BufOut, complex::Int; tab=false )
-   write( io, 'C' )
+   write( io, COMPLEX_CHAR )
    write( io, string(complex) )
    tab && write( io, '\t' )
 end
@@ -186,13 +186,15 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       tab_write( io, info[3] )
       tab_write( io, convert(String, motif) )
       if empty # had to add this flag since we iterate through the TS/TE nodes
-         write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
+         write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
          i += 1
          continue
       end
       if !isnull( pgraph )
          complex_write( io, complexity( pgraph.value ), tab=true )
+         tab_write( io, string( signif( shannon_index( pgraph.value ), 3 ) ) )
       else
+         tab_write( io, "NA" )
          tab_write( io, "NA" )
       end
       tab_write( io, string(psi[i]) )
@@ -223,8 +225,10 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
    tab_write( io, convert(String, motif) )
    if !isnull( inc ) && !isnull( exc )
       complex_write( io, complexity( inc.value, exc.value ), tab=true )
+      tab_write( io, string( signif( shannon_index( inc.value, exc.value ), 3 ) ) )
    else
-          tab_write( io, "NA" )
+      tab_write( io, "NA" )
+      tab_write( io, "NA" )
    end
    tab_write( io, string(psi) )
 
@@ -259,7 +263,8 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
          tab_write( io, info[3] )
          tab_write( io, "BS" )
-         tab_write( io, "C1" )
+         tab_write( io, "NA" )
+         tab_write( io, "NA" )
          tab_write( io, string(psi) )
          conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
          conf_int_write( io, conf_int, tab=true, width=true)
@@ -276,7 +281,7 @@ function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int,
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
    tab_write( io, info[3] )
    tab_write( io, convert(String, motif) )
-   write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
+   write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 
 function count_write( io::BufOut, nodestr, countstr, lengstr; tab=false )
@@ -299,7 +304,7 @@ end
 
 function output_psi_header( io::BufOut )
    tab_write( io, "Gene\tNode\tCoord\tStrand" )
-   tab_write( io, "Type\tComplexity\tPsi\tCI_Width\tCI_Lo,Hi" )
+   tab_write( io, "Type\tComplexity\tEntropy\tPsi\tCI_Width\tCI_Lo,Hi" )
    write( io, "Total_Reads\tInc_Paths\tExc_Paths\n" )
 end
 
@@ -316,7 +321,7 @@ function output_diff( io::BufOut, event, complex::Int, psi_a::Float64, psi_b::Fl
    for i in 1:length(event)
       tab_write( io, event[i] )
    end
-   write( io, 'C' )
+   write( io, COMPLEX_CHAR )
    tab_write( io, string(complex) )
    tab_write( io, string(signif(psi_a, sig)) )
    tab_write( io, string(signif(psi_b, sig)) )

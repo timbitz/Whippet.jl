@@ -1,4 +1,6 @@
 
+const COMPLEX_CHAR = 'S'
+
 bitstype 8 EdgeMotif
 
 Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = box(EdgeMotif, unbox(UInt8, motif ))
@@ -186,6 +188,31 @@ complexity( one::PsiGraph ) = complexity(length(one.nodes))
 # This function calculates complexity of a splicing event
 # as the ceil log2 number of paths through the graph
 complexity( num_paths::Int ) = @fastmath Int(ceil(log2( num_paths )))
+
+# Calculate Shannon's Entropy, -Sum( Pi * log2( Pi ) )
+function shannon_index( probs::Vector{Float64} )
+   index = 0.0
+   for i in 1:length(probs)
+      index += probs[i] * log2(probs[i])
+   end
+   index * -1
+end
+
+shannon_index( one::PsiGraph ) = shannon_index( one.psi )
+
+# The Psi vectors in these two PsiGraphs need to sum to one!
+# this does not assert this!
+function shannon_index( one::PsiGraph, two::PsiGraph )
+   index = 0.0
+   for i in 1:length(one.psi)
+      index += one.psi[i] * log2(one.psi[i])
+   end
+   for j in 1:length(two.psi)
+      index += two.psi[j] * log2(two.psi[j])
+   end
+   index * -1
+end
+
 
 # Build minimal set of paths to explain graph
 # Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3

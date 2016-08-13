@@ -61,8 +61,8 @@ end
 
 function parse_psi_line( line::String; min_num=5, size=1000 )
    res  = split( line, '\t' )
-   psi  = res[7] != "NA" && res[7] != "Psi" ? parse(Float64, res[7]) : 0.0
-   num  = res[10] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[10]) : 0.0
+   psi  = res[8] != "NA" && res[7] != "Psi" ? parse(Float64, res[8]) : 0.0
+   num  = res[11] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[11]) : 0.0
    if psi < 0 || num < min_num
       post = PosteriorPsi()
       bool = false
@@ -80,7 +80,7 @@ type PosteriorEvent
    b::PosteriorPsi
 end
 
-parse_complexity( c::AbstractString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
+parse_complexity( c::AbstractString ) = split( c, COMPLEX_CHAR, keep=false )[1] |> x->parse(Int,x)
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5, size=1000 )
    postvec = Vector{PosteriorPsi}()
