@@ -245,8 +245,8 @@ TCTTGTCTAATG
 IIIIIIIIIIII
 ")
 
-      score_range = 5
-      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 5,
+      score_range = 0.05
+      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                         false, false, true, false, true )
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
@@ -266,7 +266,7 @@ IIIIIIIIIIII
          @test !isnull( align )
          @test length( align.value ) >= 1
          @test all(map( x->x.isvalid, align.value))
-         scores = map( score, align.value )
+         scores = map( x->identity(x, length(r.seq)), align.value )
          @test maximum(scores) - minimum(scores) <= score_range
 
          if length(search(r.name, ":rc")) > 0

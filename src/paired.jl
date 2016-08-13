@@ -1,4 +1,6 @@
 
+@inline score{A <: UngappedAlignment}( one::A, two::A  ) = @fastmath score( one ) + score( two )
+@inline identity{A <: UngappedAlignment}( one::A, two::A, onelen::Int, twolen::Int ) = @fastmath score( one, two ) / ( onelen + twolen )
 
 @inline function sorted_offsets( sa::UnitRange, index::FMIndexes.FMIndex )
    res = Vector{Int}(length(sa))
@@ -15,7 +17,19 @@ end
 function splice_by_score!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A}, threshold, buffer )
    i = 1
    while i <= length( one )
-      if threshold - (score( one[i] ) + score( two[i] )) > buffer
+      if threshold - score( one[i], two[i] ) > buffer
+         splice!( one, i )
+         splice!( two, i )
+         i -= 1
+      end
+      i += 1
+   end
+end
+
+function splice_by_identity!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A}, threshold, buffer, onelen, twolen )
+   i = 1
+   while i <= length( one )
+      if threshold - identity( one[i], two[i], onelen, twolen ) > buffer
          splice!( one, i )
          splice!( two, i )
          i -= 1
@@ -36,6 +50,8 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    else
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left, both_strands=false)
    end
+   const fwd_len = length(fwd.seq)
+   const rev_len = length(rev.seq)
 
    if !strand
       Bio.Seq.reverse_complement!(fwd.seq)
@@ -64,7 +80,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
             fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
             rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )
 
-            @fastmath const scvar = score(fwd_aln) + score(rev_aln)
+            @fastmath const scvar = identity( fwd_aln, rev_aln, fwd_len, rev_len )
 
             if fwd_aln.isvalid || rev_aln.isvalid
                if isnull( fwd_res ) || isnull( rev_res )
@@ -81,7 +97,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
                            empty!( rev_res.value )
                         end
                      else # keep at least one previous score
-                        splice_by_score!( fwd_res.value, rev_res.value, scvar, p.score_range )
+                        splice_by_identity!( fwd_res.value, rev_res.value, scvar, p.score_range, fwd_len, rev_len )
                      end
                      maxscore = scvar
                      push!( fwd_res.value, fwd_aln )

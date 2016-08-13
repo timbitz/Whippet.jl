@@ -41,7 +41,7 @@ function parse_cmd()
     "--seed-try", "-M"
       help     = "Number of failed seeds to try before giving up"
       arg_type = Int
-      default  = 3
+      default  = 4
     "--seed-tol", "-T"
       help     = "Number of seed hits to tolerate"
       arg_type = Int
@@ -59,15 +59,15 @@ function parse_cmd()
       arg_type = Int
       default  = 2500
     "--mismatches", "-X"
-      help     = "Allowable number of mismatches in alignment"
+      help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
       arg_type = Int
       default  = 3
     "--score-min", "-S"
-      help     = "Minimum alignment score (matches - mismatches)"
-      arg_type = Int
-      default  = 45
-    "--junc-only", "-j"
-      help     = "Only use junction reads, no internal exon reads will be considered."
+      help     = "Minimum percent matching (matches - mismatches) / read_length"
+      arg_type = Float64
+      default  = 0.6
+    "--psi-body-read"
+      help     = "Allow exon-body reads in quantification of PSI values"
       action   = :store_true
     "--stranded"
       help     = "Is the data strand specific? If so, increase speed with this flag"
@@ -122,9 +122,6 @@ function main()
    end
 
    if nprocs() > 1
-      #include("align_parallel.jl")
-      # Load Fastq files in chunks
-      # Parallel reduction loop through fastq chunks
       println(STDERR, "Whippet does not currrently support nprocs() > 1")
       return #TODO: first implementation was too slow, ie too much communication overhead
    else
@@ -157,11 +154,11 @@ function main()
    @timer assign_ambig!( quant, multi, ispaired=ispaired )
 
    println(STDERR, "Calculating effective lengths...")
-   @timer effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
+   @timer effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
    @timer bias_ave,bias_var = global_bias( quant )
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"] )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"] )
    println(STDERR, "Whippet $ver done." )
 end
 

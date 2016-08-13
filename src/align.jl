@@ -15,8 +15,8 @@ immutable AlignParam
    seed_buffer::Int     # Ignore first and last _ bases
    seed_inc::Int        # Incrementation for subsequent seed searches
    seed_pair_range::Int # Seeds for paired-end reads must match within _ nt of each other
-   score_range::Int     # Scoring range to be considered repetitive
-   score_min::Int       # Minimum score for a valid alignment
+   score_range::Float64 # Identity scoring range to be considered repetitive
+   score_min::Float64   # Minimum percent identity score for a valid alignment
    is_stranded::Bool    # Is input data + strand only?
    is_paired::Bool      # Paired end data?
    is_pair_rc::Bool     # Is mate 2 the reverse complement of mate 1
@@ -24,9 +24,9 @@ immutable AlignParam
    is_circ_ok::Bool     # Do we allow back edges
 end
 
-AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 2500, 25, 45, 
+AlignParam( ispaired = false ) = ispaired ? AlignParam( 3, 9, 2, 4, 4, 18, 5, 18, 2500, 0.05, 0.7, 
                                                         false, true, true, false, true ) :
-                                            AlignParam( 2, 9, 2, 4, 4, 18, 5, 18, 1000, 10, 45, 
+                                            AlignParam( 3, 9, 2, 4, 4, 18, 5, 18, 1000, 0.05, 0.7, 
                                                         false, false, true, false, true )
 
 # load from command line args
@@ -37,7 +37,7 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 2, 9, 2, 4, 4, 18, 5, 18
                            args["seed-len"],
                            args["seed-buf"],
                            args["seed-inc"],
-                           args["pair-range"], 10,
+                           args["pair-range"], 0.05,
                            args["score-min"],
                            args["stranded"], ispaired,
                            args["rev-pair"], false,
@@ -56,13 +56,14 @@ type SGAlignment <: UngappedAlignment
    isvalid::Bool
 end
 
-SGAlignment() = SGAlignment(0, 0, 0, SGNode[], true, false)
+SGAlignment() = SGAlignment(0, 0.0, 0, SGNode[], true, false)
 
 typealias SGAlignVec Nullable{Vector{SGAlignment}}
 
-const DEF_ALIGN = SGAlignment(0, 0, 0, SGNode[], true, false)
+const DEF_ALIGN = SGAlignment(0, 0.0, 0, SGNode[], true, false)
 
-@inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.matches - align.mismatches 
+@inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.matches - align.mismatches
+@inline identity{A <: UngappedAlignment}( align::A, readlen::Int ) = @fastmath score( align ) / readlen
 
 Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -75,7 +76,7 @@ Base.isless( a::SGAlignment, b::SGAlignment ) = a < b
 
 function Base.empty!( align::SGAlignment ) 
    align.matches = 0 
-   align.mistmatches = 0 
+   align.mismatches = 0.0
    align.offset = 0 
    empty!( align.path ) 
    align.strand = true 
@@ -84,6 +85,7 @@ end
 
 @inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left=true, both_strands=true )
    const def_sa = 2:1
+   const readlen = length(read.seq)
    ctry = 1
    ispos = true
    if offset_left
@@ -93,9 +95,9 @@ end
    else
       const increment = -p.seed_inc
       const increment_sm = -1
-      curpos = length(read.seq) - p.seed_length - p.seed_buffer
+      curpos = readlen - p.seed_length - p.seed_buffer
    end
-   const maxright = length(read.seq) - p.seed_length - p.seed_buffer
+   const maxright = readlen - p.seed_length - p.seed_buffer
    while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
       if minimum( read.metadata.quality[curpos:(curpos+p.seed_length-1)] ) <= p.seed_min_qual
          curpos += increment_sm
@@ -116,7 +118,7 @@ end
             const rev_sa = FMIndexes.sa_range( curseq, index )
             const rev_cnt = length(rev_sa)
             if 0 < rev_cnt <= p.seed_tolerate
-               const rev_pos = length(read.seq)-(curpos+p.seed_length-1)+1
+               const rev_pos = readlen - (curpos+p.seed_length-1)+1
                return rev_sa,rev_pos,false
             end
          end
@@ -132,6 +134,17 @@ function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, bu
    i = 1
    while i <= length( arr )
       if threshold - score( arr[i] ) > buffer
+         splice!( arr, i )
+         i -= 1
+      end
+      i += 1
+   end
+end
+
+function splice_by_identity!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer, readlen )
+   i = 1
+   while i <= length( arr )
+      if threshold - identity( arr[i], readlen ) > buffer
          splice!( arr, i )
          i -= 1
       end
@@ -156,6 +169,7 @@ end
 
 function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=true, anchor_left=true )
    const seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
+   const readlen = length(read.seq)
 
    if !pos
       Bio.Seq.reverse_complement!( read.seq )
@@ -170,7 +184,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
       const s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
 
       const align = _ungapped_align( p, lib, read, s, readloc, ispos=ispos )
-      const scvar = score(align)
+      const scvar = identity(align, readlen)
 
       if align.isvalid
          if isnull( res )
@@ -183,7 +197,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos=tr
                if scvar - maxscore > p.score_range
                   length( res.value ) >= 1 && empty!( res.value )
                else # keep at least one previous score
-                  splice_by_score!( res.value, scvar, p.score_range ) 
+                  splice_by_identity!( res.value, scvar, p.score_range, readlen ) 
                end
                maxscore = scvar
                push!( res.value, align )
@@ -333,7 +347,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
    #TODO alignments that hit the end of the read but < p.kmer_size beyond an
    # exon-exon junction should still be valid no?  Even if they aren't counted
    # as junction spanning reads.  Currently they would not be.
-   if score(align) >= p.score_min && length(align.path) == 1  
+   if identity(align, readlen) >= p.score_min && length(align.path) == 1  
       align.isvalid = true 
    end
    #println(STDERR, "VERBOSE: RETURNING $align")
@@ -494,7 +508,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, s
    #TODO alignments that hit the end of the read but < p.kmer_size beyond an
    # exon-exon junction should still be valid no?  Even if they aren't counted
    # as junction spanning reads.  Currently they would not be.
-   if score(align) >= p.score_min && length(align.path) == 1  
+   if identity(align, readlen) >= p.score_min && length(align.path) == 1  
       align.isvalid = true 
    end
    if sgidx < align.offset
