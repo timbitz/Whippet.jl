@@ -1,5 +1,5 @@
 
-const COMPLEX_CHAR = 'S'
+const COMPLEX_CHAR = 'K'
 
 bitstype 8 EdgeMotif
 
