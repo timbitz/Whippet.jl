@@ -48,9 +48,9 @@ end
 abstract UngappedAlignment
 
 type SGAlignment <: UngappedAlignment
-   matches::Int
-   mismatches::Float64
-   offset::Int
+   matches::UInt16
+   mismatches::Float32
+   offset::UInt32
    path::Vector{SGNode}
    strand::Bool
    isvalid::Bool
