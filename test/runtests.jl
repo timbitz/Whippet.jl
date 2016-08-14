@@ -290,6 +290,7 @@ IIIIIIIIIIII
       @testset "Event Building" begin
          out = IOBuffer(true,true)
          bs  = BufferedOutputStream(out)
+         output_psi_header( bs )
          for g in 1:length(lib.graphs)
             name = lib.names[g]
             chr  = lib.info[g].name
