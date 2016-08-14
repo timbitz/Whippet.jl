@@ -1,17 +1,17 @@
 # Whippet
 ##### Ultra fast & lightweight quantification of gene expression and event-specific splicing levels from RNA-seq.
 
-### Why use Whippet?
-
 ### Features
 - High performance PolyA+ Spliced Read Alignment
+  - Repetitive read assignment for gene families
 - Robust quantification of the expression and transcriptome structure of model and non-model organisms
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Accurate splice graph representations of high complexity event types (splicing and alt-3'/5' end usage)
   - Pseudo _de novo_ event discovery
+  - Entropic measurements of Splicing-event Complexity
   - Circular splicing discovery
-- Accurate repetitive read assignment for gene families
+
 
 ### How to use Whippet
 
@@ -28,9 +28,9 @@ julia dependencies.jl
 NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies.
 
 ## 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19 in anno/gencode_tsl1_hg19.flat.gz and anno/gencode_tsl1_hg19.gtf.gz
+You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
 ```bash
-$ julia whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_tsl1_hg19.gtf.gz
+$ julia whippet-index.jl --fasta hg19.fa.gz --flat anno/refseq_hg19.flat.gz
 ```
 
 ## 4) Quantify FASTQ files.
@@ -66,6 +66,24 @@ $ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.ps
 
 ### Output Format
 
+The output format for `whippet-quant.jl` is saved into two files a `.psi.gz` and a `.tpm.gz`.
+
+The `.tpm.gz` file contains a simple format compatible with many downstream tools:
+
+Gene | TpM | Read Counts
+---- | --- | -----------
+NFIA | 2897.11 | 24657.0
+
+Meanwhile the `.psi.gz` file is a bit more complex and requires more explanation:
+
+Gene | Node | Coord | Strand | Type | Psi | CI Width | CI Lo,Hi | Total Reads | Complexity | Entropy | Inc Paths | Exc Paths
+---- | ---- | ----- | ------ | ---- | --- | -------- | -------- | ----------- | ---------- | ------- | --------- | ---------
+NFIA | 2 | chr1:61547534-61547719 | + | AF | 0.782 | 0.191 | 0.669,0.86 | 49.0 | K1 | 0.756 | IntSet([2, 4, 5]) | IntSet([1, 5])
+NFIA | 4 | chr1:61548433-61548490 | + | CE | 0.8329 | 0.069 | 0.795,0.864 | 318.0 | K2 | 1.25 | IntSet([2, 4, 5]),IntSet([3, 4, 5]) | IntSet([1, 5])
+NFIA | 5 | chr1:61553821-61554352 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
+NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
+
+Some splicing quantification programs define statically typed 'events', where each event's coordinates represent entire exons, and therefore to catalogue more complex alternative events, an event annotation set has to contain multiple overlapping or redundant events. In contrast, Whippet instead allows for dynamic quantification of observed splicing patterns.  Therfore in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
 
 
 ### Advanced Index Building
@@ -97,15 +115,14 @@ optional arguments:
 ### Custom Alignment Parameters
 
 ```bash
-
 $ julia whippet-quant.jl -h
 Whippet v0.3 loading and compiling... 
 usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
-                        [-S SCORE-MIN] [-j] [--stranded] [--rev-pair]
-                        [--phred-33] [--phred-64] [--no-circ]
-                        [--no-tpm] [--force-gz] [-h]
+                        [-S SCORE-MIN] [--psi-body-read] [--stranded]
+                        [--rev-pair] [--phred-33] [--phred-64]
+                        [--no-circ] [--no-tpm] [--force-gz] [-h]
                         filename.fastq[.gz] [paired_mate.fastq[.gz]]
 
 positional arguments:
@@ -118,14 +135,13 @@ optional arguments:
                         (default Whippet/index/graph) (default:
                         "/Users/timsw/Documents/git/Whippet/index/graph")
   -o, --out OUT         Where should the gzipped output go
-                        'dir/prefix'? (default:
-                        "/Users/timsw/Documents/git/Whippet/output")
+                        'dir/prefix'? (default: "./output")
   -s, --sam             Should SAM format be sent to stdout?
   -L, --seed-len SEED-LEN
                         Seed length (type: Int64, default: 18)
   -M, --seed-try SEED-TRY
                         Number of failed seeds to try before giving up
-                        (type: Int64, default: 3)
+                        (type: Int64, default: 4)
   -T, --seed-tol SEED-TOL
                         Number of seed hits to tolerate (type: Int64,
                         default: 4)
@@ -141,12 +157,14 @@ optional arguments:
                         2500)
   -X, --mismatches MISMATCHES
                         Allowable number of mismatches in alignment
-                        (type: Int64, default: 3)
+                        (counted as 1-10^(-phred/10)) (type: Int64,
+                        default: 3)
   -S, --score-min SCORE-MIN
-                        Minimum alignment score (matches - mismatches)
-                        (type: Int64, default: 45)
-  -j, --junc-only       Only use junction reads, no internal exon
-                        reads will be considered.
+                        Minimum percent matching (matches -
+                        mismatches) / read_length (type: Float64,
+                        default: 0.6)
+  --psi-body-read       Allow exon-body reads in quantification of PSI
+                        values
   --stranded            Is the data strand specific? If so, increase
                         speed with this flag
   --rev-pair            Is the second mate the reverse complement of
@@ -163,11 +181,3 @@ optional arguments:
   -h, --help            show this help message and exit
 
 ```
-
-You can alter alignment parameters to match your needs based on read length and average quality etc.
-For example: In order to align very short reads (lets say 35nt reads), the default --score-min/-S is 45 so nothing will match. So we can change this to 30 and adjust the seed increment to something more reasonable (10 from default of 18)
-```bash
-$ julia whippet-quant.jl SRR2080801.fastq.gz -x ../genomes/Strongylocentrotus/Strongylocentrotus -S 25 -I 10 -o SRR2080801
-```
-
-
