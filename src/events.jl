@@ -1,4 +1,6 @@
 
+const COMPLEX_CHAR = 'K'
+
 bitstype 8 EdgeMotif
 
 Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = box(EdgeMotif, unbox(UInt8, motif ))
@@ -119,20 +121,12 @@ function unique_push!{T}( arr::Vector{T}, el::T )
    end
 end
 
-# Deprecated 
-type PsiPath
-   psi::Float64
-   count::Float64
-   length::Float64
-   nodes::IntSet
-end # TODO: Delete PsiPath.
-
 
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
 # We also store the min and max node of all sets
 # Note: It did occur to me that a cleaner solution
-# is PsiGraph holding paths::Vector{PsiPath}
+# is PsiGraph holding paths::Vector{PsiPath} (deprecated)
 # but the current implementation was choosen for 
 # faster memory access w.r.t. stride.
 type PsiGraph
@@ -194,6 +188,31 @@ complexity( one::PsiGraph ) = complexity(length(one.nodes))
 # This function calculates complexity of a splicing event
 # as the ceil log2 number of paths through the graph
 complexity( num_paths::Int ) = @fastmath Int(ceil(log2( num_paths )))
+
+# Calculate Shannon's Entropy, -Sum( Pi * log2( Pi ) )
+function shannon_index( probs::Vector{Float64} )
+   index = 0.0
+   for i in 1:length(probs)
+      index += probs[i] * log2(probs[i])
+   end
+   index * -1
+end
+
+shannon_index( one::PsiGraph ) = shannon_index( one.psi )
+
+# The Psi vectors in these two PsiGraphs need to sum to one!
+# this does not assert this!
+function shannon_index( one::PsiGraph, two::PsiGraph )
+   index = 0.0
+   for i in 1:length(one.psi)
+      index += one.psi[i] * log2(one.psi[i])
+   end
+   for j in 1:length(two.psi)
+      index += two.psi[j] * log2(two.psi[j])
+   end
+   index * -1
+end
+
 
 # Build minimal set of paths to explain graph
 # Explanation: If we have 3 edges for example 1-2, 2-3, and 1-3
@@ -272,13 +291,6 @@ function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I;
    end
 end
 
-function Base.push!{I <: AbstractInterval}( ppath::PsiPath, edg::I; 
-                                            value_bool=true, length=1.0 )
-   ppath.count  += (value_bool ? edg.value : 0.0)
-   ppath.length += (value_bool ? length : 0.0)
-   push!( ppath.nodes, edg.first )
-   push!( ppath.nodes, edg.last  )
-end
 
 type AmbigCounts
    paths::Vector{NodeInt}
@@ -594,7 +606,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       push!( used_node, i )
       total_cnt += sgquant.node[i]
       if i > 1
-         interv = Interval{Exonmax}( i-1, i )
+         interv = Interval{ExonInt}( i-1, i )
          total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
       end
       i += 1
@@ -609,7 +621,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       # add node directly downstream (CE next to tandemUTR)
       push!( used_node, i )
       total_cnt += sgquant.node[i]
-      interv = Interval{Exonmax}( i-1, i )
+      interv = Interval{ExonInt}( i-1, i )
       total_cnt += get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value
    end
 
@@ -730,6 +742,7 @@ function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok
    close(io)
 end
 
+# TODO: make single exon gene safe.
 function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; isnodeok=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
@@ -742,6 +755,8 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    while i < length(sg.edgetype)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       motif == NONE_MOTIF && (i += 1; continue)
+      #println(motif)
+      #println(sg)
       if isobligate( motif ) # is utr event
          psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )

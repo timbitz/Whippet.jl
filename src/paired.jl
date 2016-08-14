@@ -1,4 +1,6 @@
 
+@inline score{A <: UngappedAlignment}( one::A, two::A  ) = @fastmath score( one ) + score( two )
+@inline identity{A <: UngappedAlignment}( one::A, two::A, onelen::Int, twolen::Int ) = @fastmath score( one, two ) / ( onelen + twolen )
 
 @inline function sorted_offsets( sa::UnitRange, index::FMIndexes.FMIndex )
    res = Vector{Int}(length(sa))
@@ -15,7 +17,19 @@ end
 function splice_by_score!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A}, threshold, buffer )
    i = 1
    while i <= length( one )
-      if threshold - (score( one[i] ) + score( two[i] )) > buffer
+      if threshold - score( one[i], two[i] ) > buffer
+         splice!( one, i )
+         splice!( two, i )
+         i -= 1
+      end
+      i += 1
+   end
+end
+
+function splice_by_identity!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A}, threshold, buffer, onelen, twolen )
+   i = 1
+   while i <= length( one )
+      if threshold - identity( one[i], two[i], onelen, twolen ) > buffer
          splice!( one, i )
          splice!( two, i )
          i -= 1
@@ -30,15 +44,17 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    const fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
    
    if p.is_pair_rc && strand
-      reverse_complement!(rev.seq)
+      Bio.Seq.reverse_complement!(rev.seq)
       reverse!(rev.metadata.quality)
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
    else
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left, both_strands=false)
    end
+   const fwd_len = length(fwd.seq)
+   const rev_len = length(rev.seq)
 
    if !strand
-      reverse_complement!(fwd.seq)
+      Bio.Seq.reverse_complement!(fwd.seq)
       reverse!(fwd.metadata.quality)
       ispos = false
    end
@@ -57,20 +73,22 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
       const dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
       if dist < p.seed_pair_range # inside allowable pair distance
 
-         const geneind = convert( Coordint, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
+         const geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
          const inc = geneind < length(lib.offset) ? 1 : 0
          if lib.offset[geneind] <= rev_sorted[ridx] < lib.offset[geneind+inc]
 
             fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
             rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )
 
+            @fastmath const scvar = identity( fwd_aln, rev_aln, fwd_len, rev_len )
+
             if fwd_aln.isvalid || rev_aln.isvalid
                if isnull( fwd_res ) || isnull( rev_res )
                   fwd_res = Nullable(SGAlignment[ fwd_aln ])
                   rev_res = Nullable(SGAlignment[ rev_aln ])
+                  maxscore = scvar
                else
                # new best score
-                  @fastmath const scvar = score(fwd_aln) + score(rev_aln)
                   if scvar > maxscore
                      # better than threshold for all of the previous scores
                      if scvar - maxscore > p.score_range
@@ -79,7 +97,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
                            empty!( rev_res.value )
                         end
                      else # keep at least one previous score
-                        splice_by_score!( fwd_res.value, rev_res.value, scvar, p.score_range )
+                        splice_by_identity!( fwd_res.value, rev_res.value, scvar, p.score_range, fwd_len, rev_len )
                      end
                      maxscore = scvar
                      push!( fwd_res.value, fwd_aln )
@@ -146,7 +164,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          push!( used, lnode )
          push!( used, rnode )
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
@@ -172,7 +190,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          const rnode = rev.path[n+1].node
          (lnode in used && rnode in used) && continue
          if lnode < rnode
-            interv = Interval{Exonmax}( lnode, rnode )
+            interv = Interval{ExonInt}( lnode, rnode )
             sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
          elseif lnode >= rnode
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val

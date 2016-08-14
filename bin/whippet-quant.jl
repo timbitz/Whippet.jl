@@ -30,7 +30,7 @@ function parse_cmd()
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
-      default  = fixpath( "$(dir)/../output" )
+      default  = fixpath( "./output" )
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
@@ -41,7 +41,7 @@ function parse_cmd()
     "--seed-try", "-M"
       help     = "Number of failed seeds to try before giving up"
       arg_type = Int
-      default  = 3
+      default  = 4
     "--seed-tol", "-T"
       help     = "Number of seed hits to tolerate"
       arg_type = Int
@@ -59,21 +59,27 @@ function parse_cmd()
       arg_type = Int
       default  = 2500
     "--mismatches", "-X"
-      help     = "Allowable number of mismatches in alignment"
+      help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
       arg_type = Int
-      default  = 2
+      default  = 3
     "--score-min", "-S"
-      help     = "Minimum alignment score (matches - mismatches)"
-      arg_type = Int
-      default  = 45
-    "--junc-only", "-j"
-      help     = "Only use junction reads, no internal exon reads will be considered."
+      help     = "Minimum percent matching (matches - mismatches) / read_length"
+      arg_type = Float64
+      default  = 0.6
+    "--psi-body-read"
+      help     = "Allow exon-body reads in quantification of PSI values"
       action   = :store_true
     "--stranded"
       help     = "Is the data strand specific? If so, increase speed with this flag"
       action   = :store_true
     "--rev-pair"
       help     = "Is the second mate the reverse complement of the first? If so, increase speed with this flag"
+      action   = :store_true
+    "--phred-33" 
+      help     = "Qual string is encoded in Phred+33 integers (default)"
+      action   = :store_true
+    "--phred-64"
+      help     = "Qual string is encoded in Phred+64 integers"
       action   = :store_true
     "--no-circ"
       help     = "Do not allow back/circular splicing"
@@ -107,25 +113,27 @@ function main()
    const quant = GraphLibQuant( lib, anno )
    const multi = Vector{Multimap}()
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), forcegzip=args["force-gz"] )
+   const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
+   const enc_offset = args["phred-64"] ? 64 : 33
+
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), forcegzip=args["force-gz"] )
+      const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), encoding=enc, forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
-      #include("align_parallel.jl")
-      # Load Fastq files in chunks
-      # Parallel reduction loop through fastq chunks
       println(STDERR, "Whippet does not currrently support nprocs() > 1")
       return #TODO: first implementation was too slow, ie too much communication overhead
    else
       println(STDERR, "Processing reads...")
       if ispaired
-         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, sam=args["sam"] )
+         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
+                                                              sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
-         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, sam=args["sam"] )
+         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
+                                                       sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
@@ -146,11 +154,11 @@ function main()
    @timer assign_ambig!( quant, multi, ispaired=ispaired )
 
    println(STDERR, "Calculating effective lengths...")
-   @timer effective_lengths!( lib, quant, readlen - 19, min(readlen - param.score_min, 9-1) )
+   @timer effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
    @timer bias_ave,bias_var = global_bias( quant )
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=!args["junc-only"] )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"] )
    println(STDERR, "Whippet $ver done." )
 end
 

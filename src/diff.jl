@@ -51,7 +51,7 @@ function open_stream( filename )
    stream
 end
 
-function open_streams( files::Vector{ASCIIString} )
+function open_streams( files::Vector{String} )
    buf = Vector{BufferedStreams.BufferedInputStream}(length(files))
    for i in 1:length(files)
       buf[i] = open_stream( files[i] )
@@ -59,10 +59,12 @@ function open_streams( files::Vector{ASCIIString} )
    buf
 end
 
-function parse_psi_line( line::ASCIIString; min_num=5, size=1000 )
+parse_float_omit_text( str::AbstractString, header::AbstractString ) = str != "NA" && str != header ? parse(Float64, str) : 0.0
+
+function parse_psi_line( line::String; min_num=5, size=1000 )
    res  = split( line, '\t' )
-   psi  = res[7] != "NA" && res[7] != "Psi" ? parse(Float64, res[7]) : 0.0
-   num  = res[10] != "NA" && res[10] != "Total_Reads" ? parse(Float64, res[10]) : 0.0
+   psi  = parse_float_omit_text( res[6], "Psi" )
+   num  = parse_float_omit_text( res[9], "Total_Reads" )
    if psi < 0 || num < min_num
       post = PosteriorPsi()
       bool = false
@@ -70,22 +72,23 @@ function parse_psi_line( line::ASCIIString; min_num=5, size=1000 )
       post = PosteriorPsi( psi, num, size=size )
       bool = true
    end
-   res[1:6],post,bool
+   res,post,bool
 end
 
 type PosteriorEvent
-   event::Vector{SubString{ASCIIString}}
-   complexity::ASCIIString
+   event::Vector{SubString{String}}
+   complexity::String
    a::PosteriorPsi
    b::PosteriorPsi
 end
 
-parse_complexity( c::AbstractString ) = split( c, 'C', keep=false )[1] |> x->parse(Int,x)
+parse_complexity( c::AbstractString ) = split( c, COMPLEX_CHAR, keep=false )[1] |> x->parse(Int,x)
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5, size=1000 )
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
+   entropy = 0.0
    i = 1
    while i <= length(streams)
       line = readline( streams[i] )
@@ -96,11 +99,13 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
          event[5] == "BS" && (i -= 1; continue)
          !isok && continue
          push!( postvec, post )
-         parcomplex = parse_complexity( par[6] )
+         parcomplex = parse_complexity( par[10] )
+         parentropy = parse_float_omit_text( par[11], "Entropy" )
          complex = parcomplex > complex ? parcomplex : complex
+         entropy = parentropy > entropy ? parentropy : entropy
       end
    end
-   event,complex,postvec
+   event,complex,entropy,postvec
 end
 
 function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStream}, 
@@ -110,12 +115,13 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
    stream = ZlibDeflateOutputStream( io )
    output_diff_header( stream )
    while true # go through all lines until we hit eof
-      a_event,a_complex,a_post = process_psi_line( a, min_reads=min_reads, size=size )
-      b_event,b_complex,b_post = process_psi_line( b, min_reads=min_reads, size=size )
+      a_event,a_complex,a_entropy,a_post = process_psi_line( a, min_reads=min_reads, size=size )
+      b_event,b_complex,b_entropy,b_post = process_psi_line( b, min_reads=min_reads, size=size )
       if a_event == split( "", "" ) || b_event == split( "", "" )
          break # eof
       end
       complex = a_complex > b_complex ? a_complex : b_complex
+      entropy = a_entropy > b_entropy ? a_entropy : b_entropy
       @assert( a_event == b_event, "Incorrect events matched!!" )
       if length(a_post) >= min_samp && length(b_post) >= min_samp
          a_post   = PosteriorPsi( a_post ) # fit new posterior
@@ -126,7 +132,7 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
          psi_a    = mean(a_post.beta)
          psi_b    = mean(b_post.beta)
          deltapsi = psi_a - psi_b
-         output_diff( stream, a_event, complex, psi_a, psi_b, deltapsi, prob )
+         output_diff( stream, a_event, complex, entropy, psi_a, psi_b, deltapsi, prob )
       end
    end
    close(stream)

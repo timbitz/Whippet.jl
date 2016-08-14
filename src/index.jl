@@ -6,16 +6,16 @@ abstract SeqLibrary
 
 immutable SeqLib <: SeqLibrary
    seq::NucleotideSequence
-   offset::Vector{Coordint}
-   names::Vector{Genename}
+   offset::Vector{CoordInt}
+   names::Vector{GeneName}
    info::Vector{GeneInfo}
    index::FMIndex
    sorted::Bool
 end
 
 immutable GraphLib <: SeqLibrary
-   offset::Vector{Coordint}
-   names::Vector{Genename}
+   offset::Vector{CoordInt}
+   names::Vector{GeneName}
    info::Vector{GeneInfo}
    graphs::Vector{SpliceGraph}
    edges::Edges
@@ -36,9 +36,9 @@ end
    end
 end
 
-offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, Coordint(offset), lower=true) )
+offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, CoordInt(offset), lower=true) )
 
-function name_to_offset( seqlib::SeqLibrary, name::Genename )
+function name_to_offset( seqlib::SeqLibrary, name::GeneName )
    if seqlib.sorted
       ind = search_sorted( seqlib.names, name, true )
       ret = seqlib.names[ind]
@@ -48,7 +48,7 @@ function name_to_offset( seqlib::SeqLibrary, name::Genename )
    ret
 end
 
-function brute_getoffset( seqlib::SeqLibrary, name::Genename )
+function brute_getoffset( seqlib::SeqLibrary, name::GeneName )
    ret = -1
    for n in 1:length(seqlib.names)
      if seqlib.names[n] == name
@@ -69,12 +69,12 @@ function build_offset_dict{I <: Integer,
    ret
 end
 
-function build_chrom_dict( ref::Refset )
-   ret = Dict{Seqname,Vector{Genename}}() # refgenomeseq->geneid[]
-   for g in keys(ref.geneset)
-      chrom = ref.geneset[g].info[1]
+function build_chrom_dict( ref::RefSet )
+   ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
+   for g in keys(ref)
+      chrom = ref[g].info.name
       if !haskey(ret, chrom)
-         ret[chrom] = Vector{Genename}()
+         ret[chrom] = Vector{GeneName}()
       end
       push!(ret[chrom], g)
    end
@@ -109,7 +109,7 @@ end
 function load_fasta( fhIter; verbose=false )
    seq = SGSequence(mutable=false)
    offset = Int[]
-   names = Seqname[]
+   names = SeqName[]
    for r in fhIter
       immutable!(r.seq)
       push!(names, r.name)
@@ -129,18 +129,18 @@ function single_genome_index!( fhIter; verbose=false )
 end
 
 
-function trans_index!( fhIter, ref::Refset; kmer=9 )
+function trans_index!( fhIter, ref::RefSet; kmer=9 )
    seqdic  = build_chrom_dict( ref )
    xcript  = sg""
    xoffset = Vector{UInt64}()
-   xgenes  = Vector{Genename}()
+   xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
    xgraph  = Vector{SpliceGraph}()
    # set up splice graphs
    runoffset = 0
    for r in fhIter
       haskey(seqdic, r.name) || continue
-      Bio.Seq.immutable!(r.seq)
+      #Bio.Seq.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
       r.seq = dna""
@@ -149,11 +149,11 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
       println(STDERR, "Building Splice Graphs for $( r.name ).." )
       for g in seqdic[r.name]
          #println( STDERR, "Building $g Splice Graph..." )
-         curgraph = SpliceGraph( ref.geneset[g], sg )
+         curgraph = SpliceGraph( ref[g], sg )
          xcript  *= curgraph.seq
          push!(xgraph, curgraph)
          push!(xgenes, g)
-         push!(xinfo, GeneInfo( ref.geneset[g].info... ))
+         push!(xinfo, ref[g].info )
          push!(xoffset, runoffset)
          runoffset += length(curgraph.seq) 
       end
@@ -171,15 +171,15 @@ function trans_index!( fhIter, ref::Refset; kmer=9 )
    GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer )
 end
 
-fixpath( str::ASCIIString ) = abspath( expanduser( str ) )
+fixpath( str::String ) = abspath( expanduser( str ) )
 
-function isgzipped( filename::ASCIIString )
+function isgzipped( filename::String )
    restr = "\.gz\$"
    re = match(Regex(restr), filename)
    return re == nothing ? false : true
 end
 
-function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
+function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
    if isgzipped( filename )
       println(STDERR, "Decompressing and Indexing $filename...")
       to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
@@ -188,7 +188,7 @@ function fasta_to_index( filename::ASCIIString, ref::Refset; kmer=9 )
       to_open = filename
    end
    # iterate through fasta entries
-   index = @time trans_index!(open( to_open, FASTA ), ref, kmer=kmer)
+   index = @time trans_index!(open( to_open, FASTA, Bio.Seq.ReferenceSequence ), ref, kmer=kmer)
    index
 end
 

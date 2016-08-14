@@ -29,7 +29,7 @@ function parse_cmd()
     "--out", "-o"
       help     = "Core file name to send .diff.gz output to!"
       arg_type = ASCIIString
-      default  = fixpath( "$(dir)/../output" )
+      default  = fixpath( "./output" )
     "--directory", "-d"
       help     = "Directory to search for file patterns or list in -a and -b"
       arg_type = ASCIIString

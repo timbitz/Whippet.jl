@@ -18,6 +18,8 @@ Base.(:>)( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
 Base.(:(<=))( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
 Base.(:(>=))( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
 
+sortlt( a::SGNode, b::SGNode ) = a.gene == b.gene ? <( a.node, b.node ) : <( a.gene, b.gene )
+
 Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 
 # Is the EdgeType a connecting edge between two nodes?
@@ -56,6 +58,22 @@ end
 kmer_index{T,K}( kmer::Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 
+kmer_index( seq::BioSequence ) = _kmer_index( seq )
+kmer_index( seq::SGSequence  ) = _kmer_index( seq )
+
+function _kmer_index( seq )
+   x     = UInt64(0)
+   for nt in seq
+      ntint = convert(UInt8, nt)
+      if ntint > 0x03
+         return 0
+      else
+         x = x << 2 | ntint
+      end
+   end
+   Int(x) + 1
+end
+
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
                                                   entry::SGNode )
@@ -91,7 +109,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
          kmers[ind] = SGNodeSet()
       end
       push!(kmers[ind], entry)
-      kmers[ind] = sort(kmers[ind], by=x->x.gene) |> unique
+      kmers[ind] = sort( kmers[ind], lt=sortlt ) |> unique
    end
    UInt64(max(0, ind-1))
 end

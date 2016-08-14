@@ -26,25 +26,22 @@ adds = [ "DataStructures",
          "FMIndexes", 
          "IntArrays",
          "IntervalTrees",
-         "BufferedStreams",
          "Libz",
-         "Bio",
          "StatsBase",
          "Distributions",
-         "Glob" ]
+         "Glob",
+         "Bio",
+         "BaseTestNext" ]
 
 Pkg.update()
-map( x->check_and_install(x,clone=true), clones )
 map( check_and_install, adds )
+map( x->check_and_install(x,clone=true), clones )
 
-Pkg.pin("Bio", v"0.1")
-Pkg.pin("BufferedStreams", v"0.0.3")
 
 using DataStructures
 using Switch
 using ArgParse
 using Bio
-using SuffixArrays
 using FMIndexes
 using IntArrays
 using IntervalTrees
@@ -53,3 +50,4 @@ using Libz
 using StatsBase
 using Distributions
 using Glob
+using SuffixArrays
