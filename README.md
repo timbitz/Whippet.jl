@@ -1,7 +1,7 @@
 # Whippet
 ##### Ultra fast & lightweight quantification of gene expression and event-specific splicing levels from RNA-seq.
 
-### Features
+## Features
 - High performance PolyA+ Spliced Read Alignment
   - Repetitive read assignment for gene families
 - Robust quantification of the expression and transcriptome structure of model and non-model organisms
@@ -13,12 +13,12 @@
   - Circular splicing discovery
 
 
-### How to use Whippet
+## How to use Whippet
 
-## 1) Install 
+### 1) Install 
 Install most recent [julia release here](http://julialang.org/downloads/), which must be v0.4.x! (v0.5 will be supported in future releases).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
-## 2) Clone Whippet
+### 2) Clone Whippet
 Make sure dependencies are satisfied. Executables are in bin/
 ```
 git clone https://github.com/timbitz/Whippet.git
@@ -27,13 +27,13 @@ julia dependencies.jl
 ```
 NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies.
 
-## 3) Build an index.  
+### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
 ```bash
 $ julia whippet-index.jl --fasta hg19.fa.gz --flat anno/refseq_hg19.flat.gz
 ```
 
-## 4) Quantify FASTQ files.
+### 4) Quantify FASTQ files.
 ```bash
 $ julia whippet-quant.jl file.fastq.gz
 ```
@@ -53,7 +53,7 @@ It is also possible to pool fastq files at runtime using shell commands, and the
 $ julia whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
 ```
 
-## 5) Compare multiple psi files
+### 5) Compare multiple psi files
 ```bash
 $ ls *.psi.gz
 sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
@@ -64,7 +64,7 @@ $ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.ps
 
 ---
 
-### Output Format
+## Output Formats
 
 The output format for `whippet-quant.jl` is saved into two files a `.psi.gz` and a `.tpm.gz`.
 
@@ -83,10 +83,22 @@ NFIA | 4 | chr1:61548433-61548490 | + | CE | 0.8329 | 0.069 | 0.795,0.864 | 318.
 NFIA | 5 | chr1:61553821-61554352 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
 NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
 
-Some splicing quantification programs define statically typed 'events', where each event's coordinates represent entire exons, and therefore to catalogue more complex alternative events, an event annotation set has to contain multiple overlapping or redundant events. In contrast, Whippet instead allows for dynamic quantification of observed splicing patterns.  Therfore in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
+In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns.  Therfore in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
 
 
-### Advanced Index Building
+Type | Interpretation
+---- | --------------
+ CE  | Core exon, which may be bounded by one or more alternative AA/AD nodes
+ AA  | Alternative Acceptor splice site
+ AD  | Alternative Donor splice site
+ TS  | Tandem transcription start site
+ TE  | Tandem alternative polyadenylation site
+ AF  | Alternative First exon
+ AL  | Alternative Last exon
+ 
+Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
+
+## Advanced Index Building
 
 If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effectively as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
   * Increase the number of true splice sites that `whippet index` is given. 
@@ -112,7 +124,7 @@ optional arguments:
   -h, --help       show this help message and exit
 ```
 
-### Custom Alignment Parameters
+## Custom Alignment Parameters
 
 ```bash
 $ julia whippet-quant.jl -h
