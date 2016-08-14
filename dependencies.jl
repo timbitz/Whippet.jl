@@ -42,7 +42,6 @@ using DataStructures
 using Switch
 using ArgParse
 using Bio
-using SuffixArrays
 using FMIndexes
 using IntArrays
 using IntervalTrees
@@ -51,3 +50,4 @@ using Libz
 using StatsBase
 using Distributions
 using Glob
+using SuffixArrays
