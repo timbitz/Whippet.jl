@@ -97,6 +97,7 @@ function _process_reads!( parser, param::AlignParam, lib::GraphLib, quant::Graph
          if !isnull( align )
             if length( align.value ) > 1
                push!( multi, Multimap( align.value ) )
+               sam && write_sam( stdbuf, reads[i], align.value, lib, qualoffset=qualoffset )
             else
                count!( quant, align.value[1] )
                sam && write_sam( stdbuf, reads[i], align.value[1], lib, qualoffset=qualoffset )
@@ -142,6 +143,8 @@ function _process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib:
             if length( fwd_aln.value ) > 1
                push!( multi, Multimap( fwd_aln.value ) )
                push!( multi, Multimap( rev_aln.value ) )
+               sam && write_sam( stdbuf, fwd_reads[i], rev_reads[i], fwd_aln.value, rev_aln.value, lib,
+                                 paired=true, is_pair_rc=param.is_pair_rc, qualoffset=qualoffset )
             else
                count!( quant, fwd_aln.value[1], rev_aln.value[1] )
                sam && write_sam( stdbuf, fwd_reads[i], fwd_aln.value[1], lib, 

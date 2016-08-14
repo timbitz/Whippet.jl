@@ -50,7 +50,7 @@ function qual_write( io::BufOut, read::SeqRecord; qualoffset=33, tab=false )
    tab && write( io, '\t' )
 end
 
-function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pair_rc )
+function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pair_rc, is_supplemental )
    flag = UInt16(0)
    if paired
       flag |= 0x01
@@ -66,6 +66,7 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
    else
       lib.info[ ind ].strand || (flag |= 0x10)
    end
+   is_supplemental && (flag |= 0x100)
    flag   
 end
 
@@ -131,14 +132,16 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
    cigar
 end
 
+# Write single SAM entry for one SGAlignment
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
-                    mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33 )
+                    mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33,
+                    supplemental=false )
    const geneind = align.path[1].gene
    const nodeind = align.path[1].node
    align.path[end].node < nodeind && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
    tab_write( io, read.name )
-   tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc) ) )
+   tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
    tab_write( io, string(mapq) )
@@ -150,6 +153,73 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    qual_write( io, read, qualoffset=qualoffset )
    write( io, '\n' )
 end
+
+# Efficient version for write_sam with multiple supplementary alignments
+function indmax_score( vec::Vector{SGAlignment} )
+   ind = 1
+   max = score(vec[1])
+   for i in 2:length(vec)
+      const cur = score(vec[i])
+      if cur > max
+         max = cur
+         ind = i
+      end
+   end
+   ind
+end
+
+function indmax_score( fwd::Vector{SGAlignment}, rev::Vector{SGAlignment} )
+   ind = 1
+   max = score(fwd[1], rev[1])
+   for i in 2:length(fwd)
+      const cur = score(fwd[i], rev[i])
+      if cur > max
+         max = cur
+         ind = i
+      end
+   end
+   ind
+end
+
+# Write multiple SAM entries for a Vector of SGAlignment, highest score gets regular entry
+# others get supplementary entries.
+function write_sam( io::BufOut, read::SeqRecord, alignvec::Vector{SGAlignment}, lib::GraphLib;
+                    paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33 )
+
+   best = indmax_score( alignvec )
+   mapq_val = 10 * length(alignvec)
+   write_sam( io, read, alignvec[best], lib, mapq=mapq_val, paired=paired, fwd_mate=fwd_mate, 
+                        is_pair_rc=is_pair_rc, qualoffset=qualoffset, supplemental=false )
+   for i in 1:length(alignvec)
+      if i != best
+         write_sam( io, read, alignvec[i], lib, mapq=mapq_val, paired=paired, fwd_mate=fwd_mate,
+                        is_pair_rc=is_pair_rc, qualoffset=qualoffset, supplemental=true )
+
+      end
+   end
+end
+
+# Write multiple SAM entries for two vectors of SGAlignments for paired-end reads
+function write_sam( io::BufOut, fwd::SeqRecord, rev::SeqRecord,
+                    fwd_vec::Vector{SGAlignment}, rev_vec::Vector{SGAlignment}, lib::GraphLib;
+                    paired=true, fwd_mate=true, is_pair_rc=true, qualoffset=33 )
+
+   best = indmax_score( fwd_vec, rev_vec )
+   mapq_val = 10 * length(fwd_vec)
+   write_sam( io, fwd, fwd_vec[best], lib,  mapq=mapq_val, paired=paired, fwd_mate=fwd_mate, is_pair_rc=is_pair_rc,
+                                      qualoffset=qualoffset, supplemental=false )
+   write_sam( io, rev, rev_vec[best], lib, mapq=mapq_val, paired=paired, fwd_mate=!fwd_mate, is_pair_rc=is_pair_rc,
+                                      qualoffset=qualoffset, supplemental=false )
+   for i in 1:length(fwd_vec)
+      if i != best
+         write_sam( io, fwd, fwd_vec[i], lib, mapq=mapq_val, paired=paired, fwd_mate=fwd_mate, is_pair_rc=is_pair_rc,
+                                         qualoffset=qualoffset, supplemental=true )
+         write_sam( io, rev, rev_vec[i], lib, mapq=mapq_val, paired=paired, fwd_mate=fwd_mate, is_pair_rc=is_pair_rc,
+                                         qualoffset=qualoffset, supplemental=true )
+      end
+   end
+end
+
 
 function write_sam_header( io::BufOut, lib::GraphLib )
    refs = Dict{String,Int}()
