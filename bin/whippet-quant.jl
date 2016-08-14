@@ -30,7 +30,7 @@ function parse_cmd()
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = ASCIIString
-      default  = fixpath( "$(dir)/../output" )
+      default  = fixpath( "./output" )
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
