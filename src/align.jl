@@ -63,7 +63,7 @@ typealias SGAlignVec Nullable{Vector{SGAlignment}}
 const DEF_ALIGN = SGAlignment(0, 0.0, 0, SGNode[], true, false)
 
 @inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.matches - align.mismatches
-@inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = @fastmath convert(Float32, ( align.matches - align.mismatches ) / readlen)
+@inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath ( align.matches - align.mismatches ) / readlen)
 
 Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -85,9 +85,9 @@ end
 
 @inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left::Bool=true, both_strands::Bool=true )
    const def_sa = 2:1
-   const readlen = length(read.seq)
+   const readlen = convert(UInt16, length(read.seq))
    ctry = 1
-   ispos = true
+   #ispos = true
    if offset_left
       const increment = p.seed_inc
       const increment_sm = 1
@@ -178,7 +178,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos::B
    end
 
    res      = Nullable{Vector{SGAlignment}}()
-   maxscore = 0.0
+   maxscore = zero(Float32)
 
    for sidx in 1:length(seed)
       const s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
