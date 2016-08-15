@@ -32,12 +32,9 @@ adds = [ "DataStructures",
          "BaseTestNext" ]
 
 Pkg.update()
-#check_and_install("https://github.com/BioJulia/IndexableBitVectors.jl.git", clone=true, checkout=true )
-#check_and_install("https://github.com/quinnj/SuffixArrays.jl.git", clone=true, checkout=true )
+map( check_and_install, adds )
 check_and_install("SuffixArrays", checkout=true)
 check_and_install("IndexableBitVectors", checkout=true)
-map( check_and_install, adds )
-
 
 using DataStructures
 using ArgParse
