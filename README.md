@@ -24,7 +24,7 @@ git clone https://github.com/timbitz/Whippet.git
 cd Whippet
 julia dependencies.jl
 ```
-NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies. It should finish cleanly if you run it a second time.
+NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies. 
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
@@ -91,6 +91,7 @@ Type | Interpretation
  CE  | Core exon, which may be bounded by one or more alternative AA/AD nodes
  AA  | Alternative Acceptor splice site
  AD  | Alternative Donor splice site
+ RI  | Retained intron
  TS  | Tandem transcription start site
  TE  | Tandem alternative polyadenylation site
  AF  | Alternative First exon
