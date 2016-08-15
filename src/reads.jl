@@ -28,7 +28,8 @@ end
 # modified for Bio v0.2 with tryread_bool!
 function read_chunk!( chunk, parser )
    i = 1
-   while i <= length(chunk) && tryread_bool!( parser, chunk[i] )
+   while i <= length(chunk) && !eof(parser)
+      read!( parser, chunk[i] )
       i += 1
    end
    while i <= length(chunk)

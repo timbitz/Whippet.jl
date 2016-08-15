@@ -41,7 +41,7 @@ function parse_cmd()
     "--seed-try", "-M"
       help     = "Number of failed seeds to try before giving up"
       arg_type = Int
-      default  = 4
+      default  = 3
     "--seed-tol", "-T"
       help     = "Number of seed hits to tolerate"
       arg_type = Int
