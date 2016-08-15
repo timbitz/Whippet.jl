@@ -26,7 +26,7 @@ function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, for
 end
 
 # modified for Bio v0.2 with tryread_bool!
-function read_chunk!( chunk, parser )
+@inline function read_chunk!( chunk, parser )
    i = 1
    while i <= length(chunk) && !eof(parser)
       read!( parser, chunk[i] )
