@@ -31,10 +31,13 @@ adds = [ "DataStructures",
          "Bio",
          "BaseTestNext" ]
 
+tic()
 Pkg.update()
-map( check_and_install, adds )
 check_and_install("SuffixArrays", checkout=true)
 check_and_install("IndexableBitVectors", checkout=true)
+map( check_and_install, adds )
+
+println( STDERR, "INFO: Loading and precompiling... " )
 
 using DataStructures
 using ArgParse
@@ -48,3 +51,8 @@ using StatsBase
 using Distributions
 using Glob
 using SuffixArrays
+
+const dir = abspath( splitdir(@__FILE__)[1] )
+push!( LOAD_PATH, dir * "/src" )
+using SpliceGraphs
+toc()
