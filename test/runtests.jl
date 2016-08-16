@@ -31,17 +31,33 @@ include("../src/diff.jl")
 
 @testset "Bio.Seq Patch" begin
    @test typeof(sg"GATGCA") == NucleotideSequence{SGNucleotide}
-   @test reverse_complement(sg"GATGCA") == sg"TGCATC"
-   @test reverse_complement(sg"LRS")    == sg"SRL" 
    fullset = sg"ACGTNLRS"
    fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
+   for nt in fullset
+      @test typeof(nt) == SGNucleotide
+   end
    for n in 0:(length(fullset)-1)
       i = n+1
       @test fullset[i] == fullarr[i]
       @test convert(UInt8, fullset[i]) == UInt8(n)
       @test convert(SGNucleotide, UInt8(n)) == fullset[i]
    end
+   @test fullset[1:4] == sg"ACGT"
+   @test fullset.data == fullset[1:4].data
+   @test reverse_complement(sg"GATGCA") == sg"TGCATC"
+   @test reverse_complement(sg"LRS")    == sg"SRL"
    @test sg"AT" * sg"TA" == sg"ATTA"
+   @test sg"AT" ^ 2 == sg"ATAT"
+   @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
+   @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
+   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide)
+   dnaset = dna"ACGT" # from Bio.Seq
+   sgset  = sg"ACGT"
+   # Make sure the encodings are consistent
+   for i in 1:length(dnaset)
+      @test UInt8(dnaset[i]) == UInt8(sgset[i])
+   end
+   println(STDERR, sgset)
 end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
