@@ -41,7 +41,7 @@ function parse_cmd()
     "--seed-try", "-M"
       help     = "Number of failed seeds to try before giving up"
       arg_type = Int
-      default  = 4
+      default  = 3
     "--seed-tol", "-T"
       help     = "Number of seed hits to tolerate"
       arg_type = Int
@@ -70,10 +70,10 @@ function parse_cmd()
       help     = "Allow exon-body reads in quantification of PSI values"
       action   = :store_true
     "--stranded"
-      help     = "Is the data strand specific? If so, increase speed with this flag"
+      help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag"
       action   = :store_true
-    "--rev-pair"
-      help     = "Is the second mate the reverse complement of the first? If so, increase speed with this flag"
+    "--pair-same-strand"
+      help     = "Whippet by default tries to align fwd/rev pairs, if your data is fwd/fwd or rev/rev set this flag"
       action   = :store_true
     "--phred-33" 
       help     = "Qual string is encoded in Phred+33 integers (default)"

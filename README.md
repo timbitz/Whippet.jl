@@ -1,4 +1,7 @@
 # Whippet
+
+[![Build Status](https://travis-ci.com/timbitz/Whippet.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet)
+
 ##### Ultra fast & lightweight quantification of gene expression and event-specific splicing levels from RNA-seq.
 
 ## Features
@@ -24,7 +27,7 @@ git clone https://github.com/timbitz/Whippet.git
 cd Whippet
 julia dependencies.jl
 ```
-NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies.
+NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies. 
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
@@ -91,6 +94,7 @@ Type | Interpretation
  CE  | Core exon, which may be bounded by one or more alternative AA/AD nodes
  AA  | Alternative Acceptor splice site
  AD  | Alternative Donor splice site
+ RI  | Retained intron
  TS  | Tandem transcription start site
  TE  | Tandem alternative polyadenylation site
  AF  | Alternative First exon
@@ -100,7 +104,7 @@ Each node is defined by a type (above) and has a corresponding value for `Psi` o
 
 ## Advanced Index Building
 
-If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effectively as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
+If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effective as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
   * Increase the number of true splice sites that `whippet index` is given. 
   * Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering for valid splice sites first.
   * Choose a Kmer size appropriate for the node size and number in the transcriptome and the read length you plan to align.
@@ -120,7 +124,7 @@ optional arguments:
   --gtf GTF        Gene anotation file in GTF format
   --index INDEX    Output prefix for saving index 'dir/prefix'
                    (default Whippet/index/graph) (default:
-                   "/Users/timsw/Documents/git/Whippet/src/../index/graph")
+                   "/path/to/Whippet/src/../index/graph")
   -h, --help       show this help message and exit
 ```
 
@@ -133,7 +137,7 @@ usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
                         [-S SCORE-MIN] [--psi-body-read] [--stranded]
-                        [--rev-pair] [--phred-33] [--phred-64]
+                        [--pair-same-strand] [--phred-33] [--phred-64]
                         [--no-circ] [--no-tpm] [--force-gz] [-h]
                         filename.fastq[.gz] [paired_mate.fastq[.gz]]
 
@@ -145,15 +149,16 @@ positional arguments:
 optional arguments:
   -x, --index INDEX     Output prefix for saving index 'dir/prefix'
                         (default Whippet/index/graph) (default:
-                        "/Users/timsw/Documents/git/Whippet/index/graph")
+                        "/path/to/Whippet/index/graph")
   -o, --out OUT         Where should the gzipped output go
-                        'dir/prefix'? (default: "./output")
+                        'dir/prefix'? (default:
+                        "/path/to/Whippet/output")
   -s, --sam             Should SAM format be sent to stdout?
   -L, --seed-len SEED-LEN
                         Seed length (type: Int64, default: 18)
   -M, --seed-try SEED-TRY
                         Number of failed seeds to try before giving up
-                        (type: Int64, default: 4)
+                        (type: Int64, default: 3)
   -T, --seed-tol SEED-TOL
                         Number of seed hits to tolerate (type: Int64,
                         default: 4)
@@ -177,11 +182,12 @@ optional arguments:
                         default: 0.6)
   --psi-body-read       Allow exon-body reads in quantification of PSI
                         values
-  --stranded            Is the data strand specific? If so, increase
-                        speed with this flag
-  --rev-pair            Is the second mate the reverse complement of
-                        the first? If so, increase speed with this
+  --stranded            Is the data strand specific in fwd
+                        orientation? If so, increase speed with this
                         flag
+  --pair-same-strand    Whippet by default tries to align fwd/rev
+                        pairs, if your data is fwd/fwd or rev/rev set
+                        this flag
   --phred-33            Qual string is encoded in Phred+33 integers
                         (default)
   --phred-64            Qual string is encoded in Phred+64 integers

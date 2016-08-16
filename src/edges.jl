@@ -20,7 +20,7 @@ Base.(:(>=))( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
 
 sortlt( a::SGNode, b::SGNode ) = a.gene == b.gene ? <( a.node, b.node ) : <( a.gene, b.gene )
 
-Base.convert{K}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
+Base.convert{K <: Integer}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
 
 # Is the EdgeType a connecting edge between two nodes?
 # Check a donor splice site by:   is_edge( edge, true )

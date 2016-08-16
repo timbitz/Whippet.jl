@@ -1,0 +1,12 @@
+language: julia
+os:
+  - linux
+  - osx
+julia:
+  - 0.4.6
+install:
+  julia ./dependencies.jl
+notifications:
+  email: false
+script:
+  julia --check-bounds=yes ./test/runtests.jl
