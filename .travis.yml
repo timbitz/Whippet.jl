@@ -9,4 +9,6 @@ install:
 notifications:
   email: false
 script:
-  julia --check-bounds=yes ./test/runtests.jl
+  - julia --check-bounds=yes --code-coverage ./test/runtests.jl
+after_success:
+  - julia -e 'Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
