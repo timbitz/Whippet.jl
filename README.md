@@ -1,6 +1,6 @@
 # Whippet
 
-[![Build Status](https://travis-ci.com/timbitz/Whippet.svg?token=R7mZheNGhsReQ7hn2gdf&branch=v0.3.1)](https://travis-ci.com/timbitz/Whippet)
+[![Build Status](https://travis-ci.com/timbitz/Whippet.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet)
 [![codecov](https://codecov.io/gh/timbitz/Whippet/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet)
 
 
