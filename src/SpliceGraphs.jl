@@ -2,16 +2,7 @@
 
 module SpliceGraphs
 
-import DataStructures
-import BufferedStreams
 import Bio
-import FMIndexes
-import IntArrays
-import IntervalTrees
-import Libz
-import Distributions
-import HTTPClient
-import HTTPClient.HTTPC
 
 using DataStructures
 using BufferedStreams
