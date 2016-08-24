@@ -56,7 +56,7 @@ end
 # of a iobuf::PipeBuffer and a rref::RemoteRef containing the http get request
 function read_http_chunk!( chunk, parser, iobuf, rref )
    i = 1
-   const buflimit = 10000
+   const buflimit = 100000
    while i <= length(chunk) && !(isready(rref) && eof(parser))
       if !isready(rref) && (iobuf.size - iobuf.ptr) < buflimit
          sleep(eps(Float64))
