@@ -13,6 +13,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using HTTPClient
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -24,6 +25,7 @@ include("../src/index.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
+include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
@@ -324,6 +326,23 @@ IIIIIIIIIIII
 
       @testset "SAM Output" begin
          
+      end
+     
+      @testset "EBI Accessions & HTTP Streaming" begin
+         ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
+         @test ebi_res.success
+         @test !ebi_res.paired
+      
+         parser, iobuf, rref = make_http_fqparser( ebi_res.fastq_1_url )
+         @test typeof(iobuf) <: IOBuffer
+         @test typeof(rref) <: RemoteRef
+         reads  = allocate_chunk( parser, size=50 )
+         cnt    = 0
+         while length(reads) > 0
+            read_http_chunk!( reads, parser, iobuf, rref )
+            cnt += length(reads)
+         end
+         @test cnt == 128482 # correct number of reads in file
       end
    end
 end
