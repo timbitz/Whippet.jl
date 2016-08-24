@@ -48,7 +48,7 @@ Or if you have paired-end RNA-seq data...
 $ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-Or you can provide a link to the fastq[.gz] file on the web using `--curl`, or just the experiments accession id using `--ebi`!
+Or you can provide a link to the fastq[.gz] file on the web using `--curl`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment.
 ```bash
 $ julia whippet-quant.jl --curl ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 $ julia whippet-quant.jl --ebi SRR1199010
