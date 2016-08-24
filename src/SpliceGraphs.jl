@@ -1,4 +1,4 @@
-__precompile__()
+#__precompile__()
 
 module SpliceGraphs
 
@@ -10,6 +10,8 @@ import IntArrays
 import IntervalTrees
 import Libz
 import Distributions
+import HTTPClient
+import HTTPClient.HTTPC
 
 using DataStructures
 using BufferedStreams
@@ -19,6 +21,8 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using HTTPClient
+using HTTPClient.HTTPC
 
 include("types.jl")
 include("timer.jl")
@@ -30,6 +34,7 @@ include("index.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
+include("ebi.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
@@ -67,7 +72,10 @@ export SpliceGraph,
        AlignParam,
        ungapped_align,
        make_fqparser,
+       make_http_fqparser,
        isgzipped,
+       EBIResponse,
+       ident_to_fastq_url,
        load_refflat,
        load_gtf,
        fasta_to_index,

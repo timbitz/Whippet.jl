@@ -29,7 +29,8 @@ adds = [ "DataStructures",
          "Distributions",
          "Glob",
          "Bio",
-         "BaseTestNext" ]
+         "BaseTestNext",
+         "HTTPClient"]
 
 tic()
 Pkg.update()
