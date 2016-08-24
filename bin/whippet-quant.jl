@@ -85,7 +85,7 @@ function parse_cmd()
       help     = "FASTQ files are URLs to download/process on the fly"
       action   = :store_true
     "--ebi"
-      help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets http=true)"
+      help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --curl=true)"
       action   = :store_true
     "--no-circ"
       help     = "Do not allow back/circular splicing"
@@ -126,7 +126,7 @@ function main()
    if args["ebi"]
       ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
       ispaired = ebi_res.paired
-      args["http"] = true
+      args["curl"] = true
       args["filename.fastq[.gz]"] = ebi_res.fastq_1_url
       if ispaired
          args["paired_mate.fastq[.gz]"] = ebi_res.fastq_2_url
@@ -134,12 +134,12 @@ function main()
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
    end
 
-   const parser,iobuf,rref = args["http"] ? make_http_fqparser( args["filename.fastq[.gz]"],
+   const parser,iobuf,rref = args["curl"] ? make_http_fqparser( args["filename.fastq[.gz]"],
                                                            encoding=enc, forcegzip=args["force-gz"] ) : 
                                             make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
                                                            encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser,mate_iobuf,mate_rref = args["http"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+      const mate_parser,mate_iobuf,mate_rref = args["curl"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
                                                                              encoding=enc, forcegzip=args["force-gz"] ) :
                                                               make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
                                                                              encoding=enc, forcegzip=args["force-gz"] )
@@ -154,13 +154,13 @@ function main()
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
                                                               sam=args["sam"], qualoffset=enc_offset, 
                                                               iobuf=iobuf, mate_iobuf=mate_iobuf,
-                                                              rref=rref, mate_rref=mate_rref, http=args["http"] )
+                                                              rref=rref, mate_rref=mate_rref, http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
                                                        sam=args["sam"], qualoffset=enc_offset,
-                                                       iobuf=iobuf, rref=rref, http=args["http"] )
+                                                       iobuf=iobuf, rref=rref, http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
