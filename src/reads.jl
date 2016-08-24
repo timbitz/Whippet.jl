@@ -56,9 +56,9 @@ end
 # of a iobuf::PipeBuffer and a rref::RemoteRef containing the http get request
 function read_http_chunk!( chunk, parser, iobuf, rref )
    i = 1
-   const buflimit = 100000
+   const nb_needed = 8192
    while i <= length(chunk) && !(isready(rref) && eof(parser))
-      if !isready(rref) && (iobuf.size - iobuf.ptr) < buflimit
+      if !isready(rref) && nb_available(iobuf) < nb_needed
          sleep(eps(Float64))
          continue
       end
@@ -145,6 +145,9 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
             mapped += 1
             @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / mapped
          end
+      end
+      if total % 100000 == 0
+         gc()
       end
    end # end while
    if sam
