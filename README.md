@@ -50,8 +50,8 @@ $ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 
 Or you can provide a link to the fastq[.gz] file on the web using `--curl`, or just the experiments accession id using `--ebi`!
 ```bash
-$ julia whippet-quant.jl --curl ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/002/SRR1199002/SRR1199002.fastq.gz
-$ julia whippet-quant.jl --ebi SRR1199002
+$ julia whippet-quant.jl --curl ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
+$ julia whippet-quant.jl --ebi SRR1199010
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
