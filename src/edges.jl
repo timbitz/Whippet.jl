@@ -61,12 +61,13 @@ kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(UInt64(kmer)) + 1
 kmer_index( seq::BioSequence ) = _kmer_index( seq )
 kmer_index( seq::SGSequence  ) = _kmer_index( seq )
 
+# calculate kmer index directly
 function _kmer_index( seq )
    x     = UInt64(0)
    for nt in seq
       ntint = convert(UInt8, nt)
       if ntint > 0x03
-         return 0
+         return 0 
       else
          x = x << 2 | ntint
       end
@@ -90,7 +91,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
       sub = replace( abstr, r"L|R", "" )
       #println("Caught $abstr replaced to $sub , $ksize")
       curl,curr = l-1,r+1
-      while length(sub) < ksize
+      while length(sub) < ksize && curl >= 1 && curr <= length(seq)
          sub = left ? AbstractString(seq[curl:curl]) * sub :
                       sub * AbstractString(seq[curr:curr])
          #println("Sub looks like $sub")
