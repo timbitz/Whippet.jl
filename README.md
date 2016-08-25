@@ -23,13 +23,13 @@
 Install most recent [julia release here](http://julialang.org/downloads/), which must be v0.4.x! (v0.5 will be supported in future releases).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
-Make sure dependencies are satisfied. Executables are in bin/
+
 ```
 git clone https://github.com/timbitz/Whippet.git
 cd Whippet
 julia dependencies.jl
 ```
-NOTE: `julia dependencies.jl` may be noisy with deprecated syntax warnings.  This is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies. 
+NOTE: if `julia dependencies.jl` has some deprecated syntax warnings, this is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies. 
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
@@ -48,10 +48,13 @@ Or if you have paired-end RNA-seq data...
 $ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-Or you can provide a link to the fastq[.gz] file on the web using `--curl`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment.
+Or you can provide a link/s to the fastq file/s on the web using `--curl`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment. For example:
+```
+$ julia whippet-quant.jl --ebi SRR1199010
+```
+is equivalent to
 ```bash
 $ julia whippet-quant.jl --curl ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
-$ julia whippet-quant.jl --ebi SRR1199010
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
@@ -140,14 +143,15 @@ optional arguments:
 
 ```bash
 $ julia whippet-quant.jl -h
-Whippet v0.3 loading and compiling... 
+Whippet v0.3.2 loading and compiling... 
 usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
                         [-S SCORE-MIN] [--psi-body-read] [--stranded]
                         [--pair-same-strand] [--phred-33] [--phred-64]
-                        [--no-circ] [--no-tpm] [--force-gz] [-h]
-                        filename.fastq[.gz] [paired_mate.fastq[.gz]]
+                        [--curl] [--ebi] [--no-circ] [--no-tpm]
+                        [--force-gz] [-h] filename.fastq[.gz]
+                        [paired_mate.fastq[.gz]]
 
 positional arguments:
   filename.fastq[.gz]
@@ -157,10 +161,10 @@ positional arguments:
 optional arguments:
   -x, --index INDEX     Output prefix for saving index 'dir/prefix'
                         (default Whippet/index/graph) (default:
-                        "/path/to/Whippet/index/graph")
+                        "/Users/timsw/Documents/git/Whippet/index/graph")
   -o, --out OUT         Where should the gzipped output go
                         'dir/prefix'? (default:
-                        "/path/to/Whippet/output")
+                        "/Users/timsw/Documents/git/Whippet/output")
   -s, --sam             Should SAM format be sent to stdout?
   -L, --seed-len SEED-LEN
                         Seed length (type: Int64, default: 18)
@@ -199,11 +203,14 @@ optional arguments:
   --phred-33            Qual string is encoded in Phred+33 integers
                         (default)
   --phred-64            Qual string is encoded in Phred+64 integers
+  --curl                FASTQ files are URLs to download/process on
+                        the fly
+  --ebi                 Retrieve FASTQ files from ebi.ac.uk using seq
+                        run id (ie. SRR1199003). (sets --curl=true)
   --no-circ             Do not allow back/circular splicing
   --no-tpm              Should tpm file be sent to
                         output/prefix.tpm.gz? (default on)
   --force-gz            Regardless of suffix, consider read input as
                         gzipped
   -h, --help            show this help message and exit
-
 ```
