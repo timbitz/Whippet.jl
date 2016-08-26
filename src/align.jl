@@ -41,7 +41,7 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 3, 9, 2, 4, 4, 18, 5, 18
                            args["score-min"],
                            args["stranded"], ispaired,
                           !args["pair-same-strand"], false,
-                           args["no-circ"] )
+                           args["circ"] )
    aln
 end
 

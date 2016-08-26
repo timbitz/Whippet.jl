@@ -87,9 +87,9 @@ function parse_cmd()
     "--ebi"
       help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --curl=true)"
       action   = :store_true
-    "--no-circ"
-      help     = "Do not allow back/circular splicing"
-      action   = :store_false
+    "--circ"
+      help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
+      action   = :store_true
     "--no-tpm"
       help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
       action   = :store_true
@@ -185,7 +185,7 @@ function main()
    @timer bias_ave,bias_var = global_bias( quant )
    println(STDERR, "Global bias is $bias_ave +/- $bias_var ")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"] )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"], iscircok=args["circ"] )
    println(STDERR, "Whippet $ver done." )
 end
 

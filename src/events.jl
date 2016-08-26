@@ -727,7 +727,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    psi,inc_graph,exc_graph,ambig_cnt,total_reads
 end
 
-function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=true )
+function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=false, iscircok=false )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream( io )
    output_psi_header( stream )
@@ -736,14 +736,15 @@ function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok
       chr  = lib.info[g].name
       strand = lib.info[g].strand ? '+' : '-'
       #println(STDERR, "$g, $name, $chr, $strand" )
-      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), isnodeok=isnodeok )
+      _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), 
+                       isnodeok=isnodeok, iscircok=iscircok )
    end
    close(stream)
    close(io)
 end
 
-# TODO: make single exon gene safe.
-function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; isnodeok=false )
+function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; 
+                          isnodeok=false, iscircok=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -780,7 +781,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       i += 1
    end
    # process back-splicing
-   output_circular( io, sg, sgquant, info )
+   iscircok && output_circular( io, sg, sgquant, info )
 end
 
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
