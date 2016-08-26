@@ -69,6 +69,13 @@ function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
             error("HTTP Timeout! Unable to download file!")
          end
          continue
+      elseif isready(rref) && nb_available(iobuf) < nb_needed
+          res = fetch(rref)
+          if typeof(res) <: HTTPClient.HTTPC.Response && !(200 <= res.http_code < 300) 
+              error("HTTP Code $(res.http_code)! Download failed!")
+          elseif typeof(res) <: RemoteException
+              error(res.captured.ex * "... Download failed!")
+          end
       end
       read!( parser, chunk[i] )
       i += 1
