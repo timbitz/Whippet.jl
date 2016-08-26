@@ -5,16 +5,17 @@
 
 
 ## Features
-- High performance PolyA+ Spliced Read Alignment
+- High speed PolyA+ Spliced Read Alignment
   - Repetitive read assignment for gene families
-- Robust quantification of the expression and transcriptome structure of model and non-model organisms
+  - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
+- Robust quantification of transcriptome structure and expression
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Accurate splice graph representations of high complexity event types (splicing and alt-3'/5' end usage)
   - Pseudo _de novo_ event discovery
-  - Entropic measurements of Splicing-event Complexity
-  - Circular splicing discovery
-
+  - Entropic measurements of splicing-event complexity
+- Differential splicing comparisons
+  - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
 
 ### 1) Install 
