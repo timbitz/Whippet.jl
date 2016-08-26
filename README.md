@@ -6,6 +6,7 @@
 
 ## Features
 - High speed PolyA+ Spliced Read Alignment
+  - Build an index for any species with a genome and annotation file
   - Repetitive read assignment for gene families
   - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
 - Robust quantification of transcriptome structure and expression
