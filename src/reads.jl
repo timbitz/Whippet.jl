@@ -54,12 +54,20 @@ end
 
 # Use this version to parse reads from a parser that is reliant on the state
 # of a iobuf::PipeBuffer and a rref::RemoteRef containing the http get request
-function read_http_chunk!( chunk, parser, iobuf, rref )
+function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
    i = 1
-   const nb_needed = 8192
+   const nb_needed  = 8192
+   const start_mark  = iobuf.mark
+   const start_size = iobuf.size
+   const start_time = time()
    while i <= length(chunk) && !(isready(rref) && eof(parser))
       if !isready(rref) && nb_available(iobuf) < nb_needed
          sleep(eps(Float64))
+         if time() - start_time > maxtime &&
+            iobuf.mark == start_mark &&
+            iobuf.size == start_size
+            error("HTTP Timeout! Unable to download file!")
+         end
          continue
       end
       read!( parser, chunk[i] )

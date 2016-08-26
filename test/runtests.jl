@@ -332,8 +332,9 @@ IIIIIIIIIIII
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
-      
-         parser, iobuf, rref = make_http_fqparser( ebi_res.fastq_1_url )
+
+         println(STDERR, "Streaming fastq file from $(ebi_res.fastq_1_url)")
+         parser, iobuf, rref = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
          @test typeof(iobuf) <: IOBuffer
          @test typeof(rref) <: RemoteRef
          reads  = allocate_chunk( parser, size=50 )
