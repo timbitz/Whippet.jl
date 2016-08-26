@@ -5,17 +5,20 @@
 
 
 ## Features
-- High performance PolyA+ Spliced Read Alignment
+- High speed PolyA+ Spliced Read Alignment
+  - Build an index for any species with a genome and annotation file
   - Repetitive read assignment for gene families
-- Robust quantification of the expression and transcriptome structure of model and non-model organisms
+  - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
+- Robust quantification of transcriptome structure and expression
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Accurate splice graph representations of high complexity event types (splicing and alt-3'/5' end usage)
   - Pseudo _de novo_ event discovery
-  - Entropic measurements of Splicing-event Complexity
-  - Circular splicing discovery
+  - Entropic measurements of splicing-event complexity
+- Differential splicing comparisons
+  - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
-
+## Get started
 
 ### 1) Install 
 Install most recent [julia release here](http://julialang.org/downloads/), which must be v0.4.x! (v0.5 will be supported in future releases).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
@@ -27,7 +30,6 @@ git clone https://github.com/timbitz/Whippet.git
 cd Whippet
 julia dependencies.jl
 ```
-NOTE: if `julia dependencies.jl` has some deprecated syntax warnings, this is due to the rapid pace at which base julia is being developed and does not actually mean that there was/is a fatal problem with Whippet or its dependencies. 
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
