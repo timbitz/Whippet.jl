@@ -4,15 +4,6 @@
 
 abstract SeqLibrary
 
-immutable SeqLib <: SeqLibrary
-   seq::NucleotideSequence
-   offset::Vector{CoordInt}
-   names::Vector{GeneName}
-   info::Vector{GeneInfo}
-   index::FMIndex
-   sorted::Bool
-end
-
 immutable GraphLib <: SeqLibrary
    offset::Vector{CoordInt}
    names::Vector{GeneName}
@@ -24,40 +15,6 @@ immutable GraphLib <: SeqLibrary
    kmer::Int64
 end
 
-# Binary search.  -- deprecated for more efficient Base.searchsortedlast !!
-@inline function search_sorted{T}( arr::Vector{T}, elem::T, low=1, high=length(arr)+1; lower=false )
-   low == high && return(lower ? low - 1 : 0)
-   const mid = ((high - low) >> 1) + low
-   arr[mid] == elem && return(mid)
-   if arr[mid] > elem
-      return search_sorted(arr, elem, low, mid, lower=lower)
-   else
-      return search_sorted(arr, elem, mid+1, high, lower=lower)
-   end
-end
-
-offset_to_name( seqlib::SeqLibrary, offset ) = getindex( seqlib.names, search_sorted(seqlib.offset, CoordInt(offset), lower=true) )
-
-function name_to_offset( seqlib::SeqLibrary, name::GeneName )
-   if seqlib.sorted
-      ind = search_sorted( seqlib.names, name, true )
-      ret = seqlib.names[ind]
-   else
-      ret = brute_getoffset( seqlib, name )
-   end
-   ret
-end
-
-function brute_getoffset( seqlib::SeqLibrary, name::GeneName )
-   ret = -1
-   for n in 1:length(seqlib.names)
-     if seqlib.names[n] == name
-       ret = seqlib.offset[n]
-       break
-     end
-   end
-   ret
-end
 
 function build_offset_dict{I <: Integer, 
                            S <: AbstractString}( offset::Vector{I}, names::Vector{S} )
@@ -77,20 +34,6 @@ function build_chrom_dict( ref::RefSet )
          ret[chrom] = Vector{GeneName}()
       end
       push!(ret[chrom], g)
-   end
-   ret
-end
-
-# replace L,R,S,N with A
-function twobit_enc(seq)
-   len = length(seq)
-   ret = IntVector{2,UInt8}(len)
-   for i in 1:len
-      if seq[i] == DNA_N
-         ret[i] = convert(UInt8, DNA_A)
-      else
-         ret[i] = convert(UInt8, seq[i])
-      end
    end
    ret
 end
