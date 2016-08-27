@@ -10,11 +10,11 @@
   - Pseudo _de novo_ event discovery
     - Spliced alignment to any combination of annotated splice sites
   - Dynamic building of splicing events of any complexity
-    - Entropic measurements of splicing-event complexity
+    - Entropic measurements of splicing diversity
 - High speed PolyA+ Spliced Read Alignment
   - Repetitive read assignment for gene families
   - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
-- Robust quantification of transcriptome structure and expression
+- Fast and robust quantification of transcriptome structure and expression using EM
   - Event-specific Percent-spliced-in (PSI)
   - Gene expression (TpM)
 - Differential splicing comparisons
