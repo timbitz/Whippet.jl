@@ -151,7 +151,7 @@ usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
                         [-S SCORE-MIN] [--psi-body-read] [--stranded]
                         [--pair-same-strand] [--phred-33] [--phred-64]
-                        [--curl] [--ebi] [--no-circ] [--no-tpm]
+                        [--curl] [--ebi] [--circ] [--no-tpm]
                         [--force-gz] [-h] filename.fastq[.gz]
                         [paired_mate.fastq[.gz]]
 
@@ -209,7 +209,8 @@ optional arguments:
                         the fly
   --ebi                 Retrieve FASTQ files from ebi.ac.uk using seq
                         run id (ie. SRR1199003). (sets --curl=true)
-  --no-circ             Do not allow back/circular splicing
+  --circ                Allow back/circular splicing, this will allow
+                        output of `BS`-type lines
   --no-tpm              Should tpm file be sent to
                         output/prefix.tpm.gz? (default on)
   --force-gz            Regardless of suffix, consider read input as
