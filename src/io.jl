@@ -414,9 +414,18 @@ end
 #
 =#
 
-function output_stats( filename::String )
+function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 
+                       total::Int, mapped::Int, multi::Int, readlen::Int )
+   io = open( filename, "w" )
+   stream = ZlibDeflateOutputStream( io )
 
-    
+   output_stats( stream )
+
+   close(stream)
+   close(io)
 end
 
-function output_stats( io::BufOut
+function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
+                       total::Int, mapped::Int, multi::Int, readlen::Int )
+   
+end
