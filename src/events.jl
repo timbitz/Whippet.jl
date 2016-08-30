@@ -802,24 +802,6 @@ function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, d
    end
 end
 
-# Deprecated -- for beta_posterior_ci which is more accurate and on the correct
-# 0,1 domain, rather than the normal approximation given by the sqrt of 
-# fisher information below
-@inline function binomial_likelihood_ci( p, n, z=1.64; sig=0 )
-   const fisher_info = (p * (1-p)) / n
-   if fisher_info < 0
-      return(0.0,1.0)
-   end
-   const ci = z * sqrt( fisher_info )
-   if sig > 0
-      const lo = signif( max( 0.0, p - ci ), sig )
-      const hi = signif( min( 1.0, p + ci ), sig )
-   else
-      const lo = max( 0.0, p - ci )
-      const hi = min( 1.0, p + ci )
-   end
-   lo,hi
-end
 
 # Beta(
 @inline function beta_posterior_ci( p, n; ci=0.9, sig=0 )

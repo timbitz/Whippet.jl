@@ -63,9 +63,7 @@ function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
    while i <= length(chunk) && !(isready(rref) && eof(parser))
       if !isready(rref) && nb_available(iobuf) < nb_needed
          sleep(eps(Float64))
-         if time() - start_time > maxtime &&
-            iobuf.mark == start_mark &&
-            iobuf.size == start_size
+         if time() - start_time > maxtime
             error("HTTP Timeout! Unable to download file!")
          end
          continue

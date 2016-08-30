@@ -1,6 +1,18 @@
 
-tab_write{S <: AbstractString}( io::BufOut, str::S ) = (write( io, str ); write( io, '\t'  ))
-tab_write( io::BufOut, str::Char ) = (write( io, str ); write( io, '\t'  ))
+#=
+#
+#                     Basic IO Functions...
+#
+=#
+
+plug_write{S <: AbstractString}( io::BufOut, str::S; plug::Char='\t' ) = (write( io, str ); write( io, plug  ))
+plug_write( io::BufOut, str::Char; plug::Char='\t' ) = (write( io, str ); write( io, plug  ))
+
+tab_write{S <: AbstractString}( io::BufOut, str::S ) = plug_write( io, str, plug='\t' )
+tab_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\t' )
+
+end_write{S <: AbstractString}( io::BufOut, str::S ) = plug_write( io, str, plug='\n' )
+end_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\n' )
 
 function coord_write( io::BufOut, chr, first, last; tab=false )
    write( io, chr   )
@@ -35,6 +47,12 @@ function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, si
    write( io, string(hi) )
    tab && write( io, '\t' )
 end
+
+#=
+#
+#                     SAM Format IO...
+#
+=#
 
 function seq_write( io::BufOut, read::SeqRecord; tab=false )
    for c in read.seq
@@ -239,7 +257,13 @@ function write_sam_header( io::BufOut, lib::GraphLib )
    end
 end
 
-### EVENT PRINTING
+
+#=
+#
+#                     Event IO...
+#
+=#
+
 function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph}, 
                      total_reads::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta; empty=false )
@@ -388,4 +412,32 @@ function output_diff( io::BufOut, event, complex::Int, entropy::Float64,
    tab_write( io, string(complex) )
    tab_write( io, string(entropy) )
    write( io, '\n' )
+end
+
+#=
+#
+#                     Mapping Stats IO...
+#
+=#
+
+function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 
+                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int )
+   io = open( filename, "w" )
+   stream = ZlibDeflateOutputStream( io )
+
+   output_stats( stream, lib, graphq, param, index, total, mapped, multi, readlen )
+
+   close(stream)
+   close(io)
+end
+
+function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
+                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int )
+   write( io, "Mapped_Index\t$index\n" )
+   write( io, "Read_Length\t$readlen\n" )
+   write( io, "Total_Reads\t$total\n" )
+   write( io, "Mapped_Reads\t$mapped\n" )
+   write( io, "Multimap_Reads\t$multi\n" )
+   write( io, "Mapped_Percent\t$((mapped/total)*100)%\n" )
+   write( io, "Multimap_Percent\t$((multi/mapped)*100)%\n" )    
 end

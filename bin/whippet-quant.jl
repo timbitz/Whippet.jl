@@ -90,9 +90,6 @@ function parse_cmd()
     "--circ"
       help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
       action   = :store_true
-    "--no-tpm"
-      help     = "Should tpm file be sent to output/prefix.tpm.gz? (default on)"
-      action   = :store_true
     "--force-gz"
       help     = "Regardless of suffix, consider read input as gzipped"
       action   = :store_true
@@ -172,9 +169,8 @@ function main()
    @timer iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen, max=1000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
-   if !args["no-tpm"]
-      output_tpm( args["out"] * ".tpm.gz", lib, quant )
-   end
+   output_tpm( args["out"] * ".tpm.gz", lib, quant )
+   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi), readlen )
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
