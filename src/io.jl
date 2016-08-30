@@ -438,6 +438,6 @@ function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::
    write( io, "Total_Reads\t$total\n" )
    write( io, "Mapped_Reads\t$mapped\n" )
    write( io, "Multimap_Reads\t$multi\n" )
-   write( io, "Mapped_Percent\t%$((mapped/total)*100)\n" )
-   write( io, "Multimap_Percent\t%$((multi/mapped)*100)\n" )    
+   write( io, "Mapped_Percent\t$((mapped/total)*100)%\n" )
+   write( io, "Multimap_Percent\t$((multi/mapped)*100)%\n" )    
 end
