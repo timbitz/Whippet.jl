@@ -5,8 +5,14 @@
 #
 =#
 
-tab_write{S <: AbstractString}( io::BufOut, str::S ) = (write( io, str ); write( io, '\t'  ))
-tab_write( io::BufOut, str::Char ) = (write( io, str ); write( io, '\t'  ))
+plug_write{S <: AbstractString}( io::BufOut, str::S; plug::Char='\t' ) = (write( io, str ); write( io, plug  ))
+plug_write( io::BufOut, str::Char; plug::Char='\t' ) = (write( io, str ); write( io, plug  ))
+
+tab_write{S <: AbstractString}( io::BufOut, str::S ) = plug_write( io, str, plug='\t' )
+tab_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\t' )
+
+end_write{S <: AbstractString}( io::BufOut, str::S ) = plug_write( io, str, plug='\n' )
+end_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\n' )
 
 function coord_write( io::BufOut, chr, first, last; tab=false )
    write( io, chr   )
@@ -415,17 +421,23 @@ end
 =#
 
 function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 
-                       total::Int, mapped::Int, multi::Int, readlen::Int )
+                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int )
    io = open( filename, "w" )
    stream = ZlibDeflateOutputStream( io )
 
-   output_stats( stream )
+   output_stats( stream, lib, graphq, param, index, total, mapped, multi, readlen )
 
    close(stream)
    close(io)
 end
 
 function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
-                       total::Int, mapped::Int, multi::Int, readlen::Int )
-   
+                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int )
+   write( io, "Mapped_Index\t$index\n" )
+   write( io, "Read_Length\t$readlen\n" )
+   write( io, "Total_Reads\t$total\n" )
+   write( io, "Mapped_Reads\t$mapped\n" )
+   write( io, "Multimap_Reads\t$multi\n" )
+   write( io, "Mapped_Percent\t%$((mapped/total)*100)\n" )
+   write( io, "Multimap_Percent\t%$((multi/mapped)*100)\n" )    
 end
