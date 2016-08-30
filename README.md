@@ -8,7 +8,7 @@
 - Splice graph representations of transcriptome structure
   - Build an index for any species with a genome and annotation file
   - Pseudo _de novo_ event discovery
-    - Spliced alignment to any combination of annotated splice sites
+    - Spliced alignment from/to any combination of annotated donor/acceptor splice sites
   - Dynamic building of splicing events of any complexity
     - Entropic measurements of splicing diversity
 - High speed PolyA+ Spliced Read Alignment
