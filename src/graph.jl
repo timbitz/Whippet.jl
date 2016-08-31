@@ -242,7 +242,6 @@ function build_annotated_path( nodecoord::Vector{CoordInt},
    path.limit = 64
    for i in 1:length(tx.acc)
       const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
-#      println("node $ind nodecoord: $(nodecoord[ind]) matches $(tx.acc[i]) $i")
       push!( path, ind )
       cur = ind + (strand ? 1 : -1)
       while 1 <= cur <= length(nodecoord) && 

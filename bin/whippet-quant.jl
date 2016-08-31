@@ -170,7 +170,7 @@ function main()
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    output_tpm( args["out"] * ".tpm.gz", lib, quant )
-   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi), readlen )
+   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi), readlen, ver )
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.

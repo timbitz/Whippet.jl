@@ -420,24 +420,74 @@ end
 #
 =#
 
+function count_annotated_edges( sg::SpliceGraph, sgquant::SpliceGraphQuant )
+   annoreads  = 0.0
+   annocnt    = 0
+   totalreads = 0.0
+   totalcnt   = 0
+   for edg in sgquant.edge
+      totalreads += edg.value
+      totalcnt   += 1
+      if edg in sg.annopath
+         annoreads += edg.value
+         annocnt   += 1
+      end
+   end
+   annoreads,annocnt,totalreads,totalcnt
+end
+
+function count_read_types( lib::GraphLib, graphq::GraphLibQuant )
+   bodyreads = 0.0
+   juncreads = 0.0
+   annoreads = 0.0
+   junccnt   = 0
+   annocnt   = 0
+   for i in 1:length(lib.graphs)
+      bodyreads += sum(graphq.quant[i].node)
+      areads,acnt,treads,tcnt = count_annotated_edges( lib.graphs[i], graphq.quant[i] )
+      annoreads += areads
+      juncreads += treads
+      annocnt   += acnt
+      junccnt   += tcnt
+   end
+   Int(bodyreads),Int(juncreads),Int(annoreads),junccnt,annocnt
+end
+
 function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 
-                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int )
+                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int, ver::String )
    io = open( filename, "w" )
    stream = ZlibDeflateOutputStream( io )
 
-   output_stats( stream, lib, graphq, param, index, total, mapped, multi, readlen )
+   output_stats( stream, lib, graphq, param, index, total, mapped, multi, readlen, ver )
 
    close(stream)
    close(io)
 end
 
 function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
-                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int )
+                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int, ver::String )
+   write( io, "# -------- Whippet $ver ---------\n" )
    write( io, "Mapped_Index\t$index\n" )
    write( io, "Read_Length\t$readlen\n" )
    write( io, "Total_Reads\t$total\n" )
+   write( io, "# -------- Mapping Stats ---------\n" )
    write( io, "Mapped_Reads\t$mapped\n" )
+   write( io, "Mapped_Percent\t$(signif((mapped/total)*100,2))%\n" )
+   write( io, "# -------- Multi-loci Mapping ---------\n" )
    write( io, "Multimap_Reads\t$multi\n" )
-   write( io, "Mapped_Percent\t$((mapped/total)*100)%\n" )
-   write( io, "Multimap_Percent\t$((multi/mapped)*100)%\n" )    
+   write( io, "Multimap_Percent\t$(signif((multi/mapped)*100,2))%\n" )
+   write( io, "# -------- Unspliced Reads ---------\n" )   
+   body,junc,anno,jcnt,acnt = count_read_types( lib, graphq )
+   write( io, "Exon_Body_Reads\t$body\n" )
+   write( io, "Exon_Body_Percent\t$(signif((body/(body+junc))*100,2))%\n" )
+   write( io, "# -------- Spliced Reads ---------\n" ) 
+   write( io, "Junction_Reads\t$junc\n" )
+   write( io, "Junction_Percent\t$(signif((junc/(body+junc))*100,2))%\n" )
+   write( io, "Junction_Number\t$jcnt\n" )
+   write( io, "Annotated_Junc_Reads\t$anno\n" )
+   write( io, "Annotated_Junc_Percent\t$(signif((anno/junc)*100,2))%\n" )
+   write( io, "Annotated_Junc_Number\t$acnt\n" )
+   write( io, "Novel_Junc_Number\t$(jcnt-acnt)\n" )
+   write( io, "Novel_Junc_Percent\t$(signif(((jcnt-acnt)/jcnt)*100,2))%\n" )
 end
+

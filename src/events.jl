@@ -183,6 +183,16 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    false
 end
 
+# This looks for an edge in a Vector of IntSets using ^
+function Base.in{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+   for iset in viset
+      if edge in iset
+         return true
+      end
+   end
+   false
+end
+
 complexity( one::PsiGraph, two::PsiGraph ) = complexity(length(one.nodes) + length(two.nodes))
 complexity( one::PsiGraph ) = complexity(length(one.nodes))
 # This function calculates complexity of a splicing event
