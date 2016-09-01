@@ -37,7 +37,7 @@ julia dependencies.jl
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
 
 ```bash
-$ julia whippet-index.jl --fasta hg19.fa.gz --flat anno/refseq_hg19.flat.gz
+$ julia whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
 ### 4) Quantify FASTQ files.
