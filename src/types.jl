@@ -1,3 +1,7 @@
+#=
+Basic Types and Aliases
+=#
+
 const Mb = 1_000_000
 const GENOMESIZE = 3235Mb
 
@@ -10,10 +14,10 @@ end
 
 typealias CoordTuple Tuple{Vararg{CoordInt}}
 typealias CoordArray Vector{CoordInt}
-typealias CoordTree  IntervalTree{CoordInt,Interval{CoordInt}}
+typealias CoordTree  IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
 
 typealias ExonInt    UInt16
-typealias ExonTree   IntervalTree{ExonInt,Interval{ExonInt}}
+typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 
 if VERSION < v"0.5.0-dev"
    typealias String ASCIIString
@@ -45,3 +49,15 @@ immutable TxInfo
    exnum::CoordInt
 end
 
+
+#=
+Basic IO Functions
+=#
+
+fixpath( str::String ) = abspath( expanduser( str ) )
+
+function isgzipped( filename::String )
+   restr = "\.gz\$"
+   re = match(Regex(restr), filename)
+   return re == nothing ? false : true
+end
