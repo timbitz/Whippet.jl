@@ -91,7 +91,7 @@ function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap}; ispaired
    end
 end
 
-function count!( graphq::GraphLibQuant, align::SGAlignment; val=1.0 )
+function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
    align.isvalid == true || return
    init_gene = align.path[1].gene
    sgquant   = graphq.quant[ init_gene ]
@@ -196,9 +196,9 @@ end
 function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap}; 
                                  count_temp::Vector{Float64}=ones(length(quant.count)),
                                  tpm_temp::Vector{Float64}=ones(length(quant.count)),
-                                 uniqsum=sum(quant.count),
-                                 ambigsum=length(ambig),
-                                 it=1, max=1000, sig=0, readlen=50 )
+                                 uniqsum::Float64=sum(quant.count),
+                                 ambigsum::Int64=length(ambig),
+                                 it::Int64=1, max::Int64=1000, sig::Int64=0, readlen::Int64=50 )
    
    unsafe_copy!( count_temp, quant.count )
    unsafe_copy!( tpm_temp, quant.tpm )

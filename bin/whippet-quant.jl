@@ -166,7 +166,7 @@ function main()
    # TPM_EM
    println(STDERR, "Calculating expression values and MLE for $( length(multi) ) repetitive reads with EM...")
    calculate_tpm!( quant, readlen=readlen )
-   @timer iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen, max=1000 ) 
+   @timer iter = rec_gene_em!( quant, multi, sig=6, readlen=readlen, max=500 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    output_tpm( args["out"] * ".tpm.gz", lib, quant )
