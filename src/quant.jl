@@ -49,10 +49,9 @@ function GraphLibQuant( lib::GraphLib, ref::RefSet )
    GraphLibQuant( tpm, count, len, quant )
 end
 
-function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen=50, sig=0 )
+@inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=0 )
    for i in 1:length(counts)
-      const denom = max( 1.0, (quant.length[i] - readlen) )
-      @fastmath quant.tpm[ i ] = counts[i] / denom
+      @fastmath quant.tpm[ i ] = counts[i] / max( 1.0, (quant.length[i] - readlen) )
    end
    const rpk_sum = sum( quant.tpm )
    for i in 1:length(quant.tpm)
@@ -75,7 +74,7 @@ Multimap( aligns::Vector{SGAlignment} ) = length(aligns) >= 1 ?
                                     Multimap( aligns, Float64[], 0.0 )
 
 
-function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap}; ispaired=false )
+function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap}; ispaired::Bool=false )
    for mm in ambig
       i = 1
       while i <= length(mm.prop)
@@ -182,7 +181,6 @@ function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int,
 end
 
 
-
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T} )
    for i in 1:length(src)
       dest[i] = src[i]
@@ -207,16 +205,16 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
       if it > 1 # Maximization
          mm.prop_sum = 0.0
          for ai in 1:length(mm.align)
-            init_gene = mm.align[ai].path[1].gene
-            init_tpm  = quant.tpm[ init_gene ]
+            const init_gene = mm.align[ai].path[1].gene
+            const init_tpm  = quant.tpm[ init_gene ]
             mm.prop[ai] = init_tpm
-            mm.prop_sum += init_tpm
+            @fastmath mm.prop_sum += init_tpm
          end
       end
       
       for ai in 1:length(mm.align)
-         init_gene = mm.align[ai].path[1].gene
-         @fastmath prop = mm.prop[ai] / mm.prop_sum
+         const init_gene = mm.align[ai].path[1].gene
+         @fastmath const prop = mm.prop[ai] / mm.prop_sum
          mm.prop[ai] = prop
          @fastmath count_temp[ init_gene ] += prop
       end
@@ -231,6 +229,46 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
    end
    it
 end
+
+function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
+                   it::Int64=1, max::Int64=1000, sig::Int64=0, readlen::Int64=50 )
+
+   const count_temp = ones(length(quant.count))
+   const tpm_temp   = ones(length(quant.count))
+   const uniqsum    = sum(quant.count)
+   const ambigsum   = length(ambig)
+
+   while tpm_temp != quant.tpm && it < max
+
+      unsafe_copy!( count_temp, quant.count )
+      unsafe_copy!( tpm_temp, quant.tpm )
+
+      for mm in ambig
+         if it > 1 # Maximization
+            mm.prop_sum = 0.0
+            for ai in 1:length(mm.align)
+               const init_gene = mm.align[ai].path[1].gene
+               const init_tpm  = quant.tpm[ init_gene ]
+               mm.prop[ai] = init_tpm
+               @fastmath mm.prop_sum += init_tpm
+            end
+         end
+
+         for ai in 1:length(mm.align)
+            const init_gene = mm.align[ai].path[1].gene
+            @fastmath const prop = mm.prop[ai] / mm.prop_sum
+            mm.prop[ai] = prop
+            @fastmath count_temp[ init_gene ] += prop
+         end
+      end
+
+      calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
+ 
+      it += 1
+   end
+   it
+end
+
 
 function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
    io = open( file, "w" )
