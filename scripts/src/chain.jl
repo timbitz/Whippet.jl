@@ -112,30 +112,40 @@ function liftover{T}( chain::LiftOverChain, istream::Bio.Intervals.IntervalStrea
             chain_el, chain_state = next(chain, chain_state)
             cname   = chain_el.metadata.qname
             cstrand = chain_el.metadata.qstrand
+#            println(STDERR, "$chain_el")
 
         elseif precedes( istream_el, chain_el )
             # increment istream
             push!( lifted, Nullable{Bio.Intervals.Interval{T}}() )
             done(istream, istream_state) && break
             istream_el, istream_state = next(istream, istream_state)
+#            println(STDERR, "$istream_el")
 
         else # chain entry and interval overlap, now liftover
 
+            #println(STDERR, "MATCH $istream_el, $chain_el")
             # initialize block
+            success = false
             block       = chain_el.metadata.blocks
-            block_state = start(block)
-            if !done(block, block_state)
-                block_el = next(block, block_state)
+#            println(STDERR, "block is $block")
+            firstleaf, firsti = IntervalTrees.firstfrom(block, istream_el.first)
+            block_state       = IntervalTrees.IntervalBTreeIteratorState(Nullable(firstleaf), firsti)
+
+#            quit()
+            if !done(block, block_state) && firsti != 0
+#                println(STDERR, "not done yet")
+                block_el,_ = next(block, block_state)
             end
+            #println(STDERR, "now while")
+            while !done(block, block_state) && firsti != 0
 
-            while !done(block, block_state) 
-
-                if block_state == start(block)
+                if block_state.i == firsti && block_state.leaf == firstleaf
                     block_el, block_state = next(block, block_state)
                 end    
 
                 if block_el.last < istream_el.first
                     # increment block
+                    #println(STDERR, "increment $block_el")
                     block_el, block_state = next(block, block_state)
 
                 elseif istream_el.last < block_el.first
@@ -143,12 +153,12 @@ function liftover{T}( chain::LiftOverChain, istream::Bio.Intervals.IntervalStrea
                     push!( lifted, Nullable{Bio.Intervals.Interval{T}}() )
                     done(istream, istream_state) && return lifted
                     istream_el, istream_state = next(istream, istream_state)
-
                 else
                     # there is overlap with the current block
                     overlap = istream_el.last - istream_el.first # initial
+                    #println(STDERR, "OVERLAP")
 
-                    if istream_el.first < block_el.first
+                    if istream_el.first <= block_el.first
                         # first coordinate is deleted.
                         cfirst    = block_el.value
                         #overlap -= block_el.first - istream_el.first
@@ -161,12 +171,20 @@ function liftover{T}( chain::LiftOverChain, istream::Bio.Intervals.IntervalStrea
                     push!( lifted, Nullable(interval) )
                     done(istream, istream_state) && return lifted
                     istream_el, istream_state = next(istream, istream_state)
+                    success = true
                     break
                 end
 
             end # end while 
-        end
 
+            if !success
+               push!( lifted, Nullable{Bio.Intervals.Interval{T}}() )
+               done(istream, istream_state) && return lifted
+               istream_el, istream_state = next(istream, istream_state)
+            end
+
+         end
+#         length(lifted) > 1 && println(STDERR, "Length of lifted is $(length(lifted)) and last was $(isnull(lifted[end])): $istream_el")
     end # end while
     return lifted
 end
@@ -175,8 +193,8 @@ end
 # of an interval with a copied version of the block iterator
 function liftsecond( block, orig_el, orig_state, istream_el )
 
-    block_state = deepcopy(orig_state)
     block_el    = orig_el
+    block_state = IntervalTrees.IntervalBTreeIteratorState( orig_state.leaf, orig_state.i )
     prev_el     = nothing
 
     while !done(block, block_state)
@@ -190,7 +208,7 @@ function liftsecond( block, orig_el, orig_state, istream_el )
             return liftinternal( block_el, istream_el.last )
         elseif istream_el.last < block_el.first
             # last coordinate is deleted
-            if prev_el == orig_el
+            if prev_el == nothing
                 error("End coordinate cannot be less than the first!")
             else
                 return liftlast( prev_el )
@@ -224,3 +242,13 @@ function Base.collect( chain::LiftOverChain )
     # form of `from->to`
 end
 
+function lifted_intervals{I <: Bio.Intervals.AbstractInterval}( liftover::Vector{Nullable{I}} )
+   retvec = Vector{I}()
+   for i in liftover
+      if !isnull(i)
+         push!(retvec, get(i))
+      end
+   end
+   sort!(retvec)
+   IntervalCollection(retvec)
+end

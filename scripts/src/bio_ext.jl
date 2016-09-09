@@ -7,7 +7,7 @@ function flip( strand::Bio.Intervals.Strand )
 end
 
 # "chrX:32049-32077"
-function Bio.Intervals.Interval(genome_coord::AbstractString, strand::Union{Bio.Intervals.Strand,Char}=STRAND_BOTH)
+function Bio.Intervals.Interval{T}(genome_coord::AbstractString, strand::Union{Bio.Intervals.Strand,Char}=STRAND_BOTH, metadata::T=nothing)
     spl_a = split( genome_coord, ':' )
     if length(spl_a) != 2
         error("Invalid genome coord to build Bio.Intervals.Interval!")
@@ -19,7 +19,7 @@ function Bio.Intervals.Interval(genome_coord::AbstractString, strand::Union{Bio.
            return Bio.Intervals.Interval(String(spl_a[1]),
                            parse(Int, spl_b[1]),
                            parse(Int, spl_b[2]),
-                           strand)
+                           strand, metadata)
         end
     end
 end
