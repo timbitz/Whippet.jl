@@ -65,10 +65,10 @@ const DEF_ALIGN = SGAlignment(0, 0.0, 0, SGNode[], true, false)
 @inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.matches - align.mismatches
 @inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath ( align.matches - align.mismatches ) / readlen)
 
-Base.(:>)( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
-Base.(:<)( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
-Base.(:(>=))( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
-Base.(:(<=))( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
+Base.:>( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
+Base.:<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
+Base.:>=( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
+Base.:<=( a::SGAlignment, b::SGAlignment ) = <=( score(a), score(b) )
 Base.isless( a::SGAlignment, b::SGAlignment ) = a < b
 
 # add prob of being accurate base to mismatch, rather than integer.

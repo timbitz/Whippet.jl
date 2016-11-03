@@ -13,10 +13,10 @@ immutable Edges{K}
    right::Vector{SGNodeSet}
 end
 
-Base.(:<)( a::SGNode, b::SGNode ) = <( a.gene, b.gene )
-Base.(:>)( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
-Base.(:(<=))( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
-Base.(:(>=))( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
+Base.:<( a::SGNode, b::SGNode ) = <( a.gene, b.gene )
+Base.:>( a::SGNode, b::SGNode ) = >( a.gene, b.gene )
+Base.:<=( a::SGNode, b::SGNode ) = <=( a.gene, b.gene )
+Base.:>=( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
 
 sortlt( a::SGNode, b::SGNode ) = a.gene == b.gene ? <( a.node, b.node ) : <( a.gene, b.gene )
 

@@ -309,10 +309,10 @@ type AmbigCounts
    multiplier::Float64
 end
 
-Base.(:(==))( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
-Base.(:(==))( a::AmbigCounts, b::IntSet ) = ( a.paths == b )
-Base.(:(==))( a::IntSet, b::AmbigCounts ) = ( a == b.paths )
-Base.(:(==)){I <: Integer}( a::Vector{I}, b::IntSet ) = ( b == a )
+Base.:==( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
+Base.:==( a::AmbigCounts, b::IntSet ) = ( a.paths == b )
+Base.:==( a::IntSet, b::AmbigCounts ) = ( a == b.paths )
+Base.:=={I <: Integer}( a::Vector{I}, b::IntSet ) = ( b == a )
 function Base.(:(==)){I <: Integer}( iset::IntSet, ivec::Vector{I} )
    length(iset) != length(ivec) && return false
    for intv in ivec
