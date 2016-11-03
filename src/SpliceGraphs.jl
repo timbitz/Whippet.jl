@@ -31,7 +31,7 @@ include("events.jl")
 include("io.jl")
 include("diff.jl")
 
-if VERSION >= v"0.5.0-dev"
+if VERSION >= v"0.5.0"
    using Base.Threads
    include("threaded.jl")
 end

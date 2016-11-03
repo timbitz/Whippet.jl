@@ -593,7 +593,7 @@ Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
 Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
 
 # Convert between DNA/RNA and SG
-Base.convert(::Type{SGSequence}, seq::Bio.Seq.NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
+#Base.convert(::Type{SGSequence}, seq::NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
 Base.convert(::Type{SGSequence}, seq::Bio.Seq.BioSequence) = SGSequence( convert(AbstractString, seq) )
 Base.convert(::Type{SGSequence}, seq::Bio.Seq.ReferenceSequence) = SGSequence( convert(AbstractString, seq) )
 
@@ -654,7 +654,7 @@ end
 
 # This function returns true if there are no n's in the sequence
 # it returns false if there are. TODO use parts. for now use hasn?
-function iskmersafe{T <: Bio.Seq.NucleotideSequence}( seq::T )
+function iskmersafe{T <: NucleotideSequence}( seq::T )
    for i in 1:length( seq.ns.chunks )
       seq.ns.chunks[i] == 0 || return false
    end
@@ -850,7 +850,7 @@ end
 
 The nucleotide complement of the sequence `seq`
 """
-Base.complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(copy(seq))
+complement!{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(copy(seq))
 
 # Nucleotide reverse. Reverse a kmer stored in a UInt64.
 function nucrev(x::UInt64)
@@ -902,8 +902,8 @@ Reversed complement of the nucleotide sequence `seq`
 """
 reverse_complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(reverse(copy(seq)))
 
-reverse_complement!{T<:Bio.Seq.DNANucleotide}(seq::Bio.Seq.NucleotideSequence{T}) = Bio.Seq.unsafe_complement!(reverse!(seq))
-function Base.reverse!{T<:Bio.Seq.DNANucleotide}(seq::Bio.Seq.NucleotideSequence{T})
+reverse_complement!{T<:Bio.Seq.DNANucleotide}(seq::NucleotideSequence{T}) = Bio.Seq.unsafe_complement!(reverse!(seq))
+function Base.reverse!{T<:Bio.Seq.DNANucleotide}(seq::NucleotideSequence{T})
     if isempty(seq)
        return seq
     end
