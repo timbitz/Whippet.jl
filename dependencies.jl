@@ -30,7 +30,7 @@ adds = [ "DataStructures",
          "Glob",
          "Bio",
          "BaseTestNext",
-         "HTTPClient"]
+         "Requests"]
 
 tic()
 Pkg.update()
@@ -52,6 +52,7 @@ using StatsBase
 using Distributions
 using Glob
 using SuffixArrays
+using Requests
 
 const dir = abspath( splitdir(@__FILE__)[1] )
 push!( LOAD_PATH, dir * "/src" )
