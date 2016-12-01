@@ -10,7 +10,6 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using ArgParse
 
 push!( LOAD_PATH, dir * "/../src" )
-import SpliceGraphs
 using SpliceGraphs
 
 function parse_cmd()
@@ -131,15 +130,15 @@ function main()
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
    end
 
-   const parser,iobuf,rref = args["curl"] ? make_http_fqparser( args["filename.fastq[.gz]"],
-                                                           encoding=enc, forcegzip=args["force-gz"] ) : 
-                                            make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
-                                                           encoding=enc, forcegzip=args["force-gz"] )
+   const parser,response = args["curl"] ? make_http_fqparser( args["filename.fastq[.gz]"],
+                                                         encoding=enc, forcegzip=args["force-gz"] ) : 
+                                          make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
+                                                         encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser,mate_iobuf,mate_rref = args["curl"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
-                                                                             encoding=enc, forcegzip=args["force-gz"] ) :
-                                                              make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
-                                                                             encoding=enc, forcegzip=args["force-gz"] )
+      const mate_parser,mate_response = args["curl"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+                                                                      encoding=enc, forcegzip=args["force-gz"] ) :
+                                                       make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
+                                                                      encoding=enc, forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -150,7 +149,7 @@ function main()
       if ispaired
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
                                                               sam=args["sam"], qualoffset=enc_offset, 
-                                                              iobuf=iobuf, mate_iobuf=mate_iobuf,
+                                                              response=response, mate_response=mate_response,
                                                               rref=rref, mate_rref=mate_rref, http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")

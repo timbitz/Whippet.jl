@@ -1,28 +1,17 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-const ver = chomp(readline(open(splitdir(@__FILE__)[1] * "/VERSION")))
-const dir = abspath( splitdir(@__FILE__)[1] * "/../src" )
+const dir = abspath( splitdir(@__FILE__)[1] )
+const ver = chomp(readline(open(dir * "/VERSION")))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
 
-using DataStructures
-using IntervalTrees
-using Bio.Seq
-using FMIndexes
-using IntArrays
-using Libz
-
 using ArgParse
 
-include("$dir/types.jl")
-include("$dir/sgsequence.jl")
-include("$dir/refset.jl")
-include("$dir/graph.jl")
-include("$dir/edges.jl")
-include("$dir/index.jl")
-include("$dir/timer.jl")
+push!( LOAD_PATH, dir * "/../src" )
+using SpliceGraphs
+using Libz
 
 function parse_cmd()
   s = ArgParseSettings()

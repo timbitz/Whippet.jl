@@ -24,7 +24,7 @@ function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, for
    end 
    FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
                                                              encoding,
-                                                             DNA_A ), PipeBuffer(1), RemoteChannel()
+                                                             DNA_A ), Requests.ResponseStream{TCPSocket}()
 end
 
 # modified for Bio v0.2 with tryread_bool!
@@ -124,7 +124,7 @@ end
 =#
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
                          multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                         iobuf=PipeBuffer(1), rref=RemoteChannel(), http=false )
+                         response=Requests.ResponseStream{TCPSocket}(), http=false )
   
    const reads  = allocate_chunk( parser, size=bufsize )
    mean_readlen = 0.0
@@ -136,7 +136,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
    end
    while length(reads) > 0
       if http
-         read_http_chunk!( reads, parser, iobuf, rref )
+         read_http_chunk!( reads, parser, response )
       else
          read_chunk!( reads, parser )
       end
@@ -176,8 +176,9 @@ process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib,
 
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
                                 multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                                iobuf=PipeBuffer(1), mate_iobuf=PipeBuffer(1), 
-                                rref=RemoteChannel(), mate_rref=RemoteChannel(), http=false )
+                                     response=Requests.ResponseStream{TCPSocket}(), 
+                                mate_response=Requests.ResponseStream{TCPSocket}(), 
+                                http=false )
 
    const fwd_reads  = allocate_chunk( fwd_parser, size=bufsize )
    const rev_reads  = allocate_chunk( rev_parser, size=bufsize )
@@ -190,8 +191,8 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
    end
    while length(fwd_reads) > 0 && length(rev_reads) > 0
       if http
-         read_http_chunk!( fwd_reads, fwd_parser, iobuf, rref )
-         read_http_chunk!( rev_reads, rev_parser, mate_iobuf, mate_rref )
+         read_http_chunk!( fwd_reads, fwd_parser, response )
+         read_http_chunk!( rev_reads, rev_parser, mate_response )
       else
          read_chunk!( fwd_reads, fwd_parser )
          read_chunk!( rev_reads, rev_parser )

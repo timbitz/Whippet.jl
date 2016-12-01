@@ -220,6 +220,23 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test edges.left[exon1_lind] ∩ edges.right[exon2_rind] == edges.right[exon2_rind]
    end
 
+   @testset "Saving and Loading Index" begin
+      println(STDERR, "Saving test annotations...")
+      open("test_index_anno.jls", "w+") do fh
+         @timer serialize(fh, gtfref)
+      end
+
+      println(STDERR, "Saving test index...")
+      open("test_index.jls", "w+") do io
+         @timer serialize( io, lib )
+      end 
+
+      println(STDERR, "Loading test index...")
+      @timer const load_lib = open(deserialize, "test_index.jls")
+      println(STDERR, "Loading test annotations...")
+      @timer const load_anno = open(deserialize, "test_index_anno.jls")
+   end
+
    @testset "Alignment" begin
       # reads
       fastq = IOBuffer("@exon1
