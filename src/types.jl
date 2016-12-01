@@ -19,9 +19,6 @@ typealias CoordTree  IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
 typealias ExonInt    UInt16
 typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 
-if VERSION < v"0.5.0-dev"
-   typealias String ASCIIString
-end
 typealias GeneName   String
 typealias SeqName    String
 typealias RefSeqId   String

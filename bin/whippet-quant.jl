@@ -18,18 +18,18 @@ function parse_cmd()
   # TODO finish options...
   @add_arg_table s begin
     "filename.fastq[.gz]"
-      arg_type = ASCIIString
+      arg_type = String
       required = true
     "paired_mate.fastq[.gz]"
-      arg_type = ASCIIString
+      arg_type = String
       required = false
     "--index", "-x"
       help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
-      arg_type = ASCIIString
+      arg_type = String
       default  = fixpath( "$(dir)/../index/graph" )
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
-      arg_type = ASCIIString
+      arg_type = String
       default  = fixpath( "./output" )
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"

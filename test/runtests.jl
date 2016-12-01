@@ -332,7 +332,7 @@ IIIIIIIIIIII
          
       end
      
-      @testset "EBI Accessions & HTTP Streaming" begin
+#=      @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
@@ -350,5 +350,5 @@ IIIIIIIIIIII
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
       end
-   end
+   end =#
 end
