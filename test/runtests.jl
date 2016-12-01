@@ -8,7 +8,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-using HTTPClient
+using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -61,8 +61,6 @@ include("../src/diff.jl")
       @test refset[i] == sgset[i] && sgset[i] == refset[i]
       @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
    end
-   println(STDERR, sgset)
-   println(STDERR, SGSequence( dnaset ) )
 end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
@@ -332,23 +330,21 @@ IIIIIIIIIIII
          
       end
      
-#=      @testset "EBI Accessions & HTTP Streaming" begin
+      @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
 
          println(STDERR, "Streaming fastq file from $(ebi_res.fastq_1_url)")
-         parser, iobuf, rref = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
-         @test typeof(iobuf) <: IOBuffer
-         @test typeof(rref) <: RemoteChannel
+         parser, response = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
          reads  = allocate_chunk( parser, size=50 )
          cnt    = 0
          while length(reads) > 0
-            read_http_chunk!( reads, parser, iobuf, rref )
+            read_http_chunk!( reads, parser, response )
             cnt += length(reads)
          end
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
       end
-   end =#
+   end
 end

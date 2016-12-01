@@ -43,39 +43,34 @@ end
 # This function specifically tries to download a fastq file from a url string and returns
 # the Bio.Seq parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
 function make_http_fqparser( url::String; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
-   iobuf = PipeBuffer()
-   rref = HTTPClient.HTTPC.get(url, HTTPClient.HTTPC.RequestOptions(ostream=iobuf, blocking=false))
+   response = Requests.get_streaming(url)
    if isgzipped( url ) || forcegzip
-      zlibstr  = ZlibInflateInputStream( iobuf, reset_on_end=true )
-      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( zlibstr, encoding, DNA_A )
+      zlibstr  = ZlibInflateInputStream( response.buffer, reset_on_end=true )
+      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
    else
-      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( iobuf,   encoding, DNA_A )
+      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
    end
-   fqparser, iobuf, rref
+   fqparser, response
 end
 
 # Use this version to parse reads from a parser that is reliant on the state
-# of a iobuf::PipeBuffer and a rref::RemoteChannel containing the http get request
-function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
+function read_http_chunk!( chunk, parser, resp; maxtime=24 )
    i = 1
+   const iobuf      = resp.buffer
    const nb_needed  = 8192
-   const start_mark  = iobuf.mark
+   const start_mark = iobuf.mark
    const start_size = iobuf.size
    const start_time = time()
-   while i <= length(chunk) && !(isready(rref) && eof(parser))
-      if !isready(rref) && nb_available(iobuf) < nb_needed
+   if !(200 <= resp.response.status < 300)
+      error("HTTP Code $(resp.response.status)! Download failed!")
+   end
+   while i <= length(chunk) && !(eof(iobuf) && eof(parser))
+      if resp.state!=Requests.BodyDone && nb_available(iobuf) < nb_needed
          sleep(eps(Float64))
          if time() - start_time > maxtime
             error("HTTP Timeout! Unable to download file!")
          end
          continue
-      elseif isready(rref) && nb_available(iobuf) < nb_needed
-          res = fetch(rref)
-          if typeof(res) <: HTTPClient.HTTPC.Response && !(200 <= res.http_code < 300) 
-              error("HTTP Code $(res.http_code)! Download failed!")
-          elseif typeof(res) <: RemoteException
-              error(res.captured.ex * "... Download failed!")
-          end
       end
       read!( parser, chunk[i] )
       i += 1
@@ -85,7 +80,6 @@ function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
    end
    parser
 end
-
 
 function allocate_chunk( parser; size=100000 )
   chunk = Vector{eltype(parser)}( size )

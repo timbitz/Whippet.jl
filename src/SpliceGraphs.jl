@@ -12,8 +12,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-using HTTPClient
-using HTTPClient.HTTPC
+using Requests
 
 include("types.jl")
 include("timer.jl")
