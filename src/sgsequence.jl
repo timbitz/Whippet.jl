@@ -23,6 +23,9 @@ Base.convert(::Type{UInt8}, nt::SGNucleotide) = box(UInt8, unbox(SGNucleotide, n
 #Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{T}, nt::S) = box(T, Base.zext_int(T, unbox(S, nt)))
 #Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{S}, nt::T) = convert(S, convert(UInt8, nt))
 
+# Encode BioSequence types as DNAAlphabet{2}
+#Base.convert(::Type{UInt8}, nt::Bio.Seq.DNANucleotide) = Bio.Seq.encode(DNAAlphabet{2}, nt) 
+
 
 # Nucleotide encoding definition
 # ------------------------------
@@ -113,8 +116,8 @@ Base.convert(::Type{Char}, nt::SGNucleotide) = sg_to_char[convert(UInt8, nt) + 1
 
 # Converstion to DNANucleotide
 # ----------------------------
-==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = box(UInt8, a) == box(UInt8, b)
-==( a::SGNucleotide, b::Bio.Seq.DNANucleotide ) = box(UInt8, a) == box(UInt8, b)
+==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = Bio.Seq.encode(DNAAlphabet{2}, a) == convert(UInt8, b)
+==( a::SGNucleotide, b::Bio.Seq.DNANucleotide ) = convert(UInt8, a) == Bio.Seq.encode(DNAAlphabet{2}, b)
 
 
 # Basic functions
@@ -902,6 +905,7 @@ Reversed complement of the nucleotide sequence `seq`
 """
 reverse_complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(reverse(copy(seq)))
 
+#=
 reverse_complement!{T<:Bio.Seq.DNANucleotide}(seq::NucleotideSequence{T}) = Bio.Seq.unsafe_complement!(reverse!(seq))
 function Base.reverse!{T<:Bio.Seq.DNANucleotide}(seq::NucleotideSequence{T})
     if isempty(seq)
@@ -929,6 +933,7 @@ function Base.reverse!{T<:Bio.Seq.DNANucleotide}(seq::NucleotideSequence{T})
     reverse!(seq.ns)
     return seq
 end
+=#
 
 # SequenceNIterator
 # -----------------
@@ -1248,8 +1253,6 @@ function Base.convert{T, K}(::Type{NucleotideSequence{T}}, x::Kmer{T, K})
 end
 Base.convert{T, K}(::Type{NucleotideSequence}, x::Kmer{T, K}) = convert(NucleotideSequence{T}, x)
 
-
-==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = convert(UInt64, a) == convert(UInt64, b)
 
 # Constructors
 # ------------

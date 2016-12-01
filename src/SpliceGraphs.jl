@@ -17,7 +17,8 @@ using HTTPClient.HTTPC
 
 include("types.jl")
 include("timer.jl")
-include("bio_nuc_safepatch.jl")
+include("sgsequence.jl")
+include("fmindex_patch.jl")
 include("refset.jl")
 include("graph.jl")
 include("edges.jl") 
@@ -31,10 +32,10 @@ include("events.jl")
 include("io.jl")
 include("diff.jl")
 
-if VERSION >= v"0.5.0"
+#=if VERSION >= v"0.5.0"
    using Base.Threads
    include("threaded.jl")
-end
+end=#
 
 export SpliceGraph,
        SpliceGraphQuant,

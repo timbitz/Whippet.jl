@@ -1,7 +1,7 @@
 
 # this is an alternative to tryread! from Bio.Seq that doesn't
 # create any new objects to return.
-function tryread_bool!(parser::Bio.Seq.AbstractParser, output)
+function tryread_bool!(parser::Bio.IO.AbstractReader, output)
    T = eltype(parser)
    try
       read!(parser, output)
@@ -22,7 +22,9 @@ function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, for
    else
       to_open = filename
    end 
-   open( to_open, FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} ), PipeBuffer(1), RemoteRef()
+   FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
+                                                             encoding,
+                                                             DNA_A ), PipeBuffer(1), RemoteChannel()
 end
 
 # modified for Bio v0.2 with tryread_bool!
@@ -39,21 +41,21 @@ end
 end
 
 # This function specifically tries to download a fastq file from a url string and returns
-# the Bio.Seq parser, the IOBuffer, and the RemoteRef to the HTTPC.get
+# the Bio.Seq parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
 function make_http_fqparser( url::String; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
    iobuf = PipeBuffer()
    rref = HTTPClient.HTTPC.get(url, HTTPClient.HTTPC.RequestOptions(ostream=iobuf, blocking=false))
    if isgzipped( url ) || forcegzip
       zlibstr  = ZlibInflateInputStream( iobuf, reset_on_end=true )
-      fqparser = open( zlibstr, FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
+      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( zlibstr, encoding, DNA_A )
    else
-      fqparser = open( iobuf,   FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
+      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( iobuf,   encoding, DNA_A )
    end
    fqparser, iobuf, rref
 end
 
 # Use this version to parse reads from a parser that is reliant on the state
-# of a iobuf::PipeBuffer and a rref::RemoteRef containing the http get request
+# of a iobuf::PipeBuffer and a rref::RemoteChannel containing the http get request
 function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
    i = 1
    const nb_needed  = 8192
@@ -93,7 +95,7 @@ function allocate_chunk( parser; size=100000 )
   chunk
 end
 
-allocate_rref( size=250000; rreftype=RemoteRef{Channel{Any}} ) = Vector{rreftype}( size )
+allocate_rref( size=250000; rreftype=RemoteChannel{Channel{Any}} ) = Vector{rreftype}( size )
 
 function resize_rref!( rref, subsize )
    @assert subsize <= length(rref)
@@ -128,7 +130,7 @@ end
 =#
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
                          multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                         iobuf=PipeBuffer(1), rref=RemoteRef(), http=false )
+                         iobuf=PipeBuffer(1), rref=RemoteChannel(), http=false )
   
    const reads  = allocate_chunk( parser, size=bufsize )
    mean_readlen = 0.0
@@ -181,7 +183,7 @@ process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib,
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
                                 multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
                                 iobuf=PipeBuffer(1), mate_iobuf=PipeBuffer(1), 
-                                rref=RemoteRef(), mate_rref=RemoteRef(), http=false )
+                                rref=RemoteChannel(), mate_rref=RemoteChannel(), http=false )
 
    const fwd_reads  = allocate_chunk( fwd_parser, size=bufsize )
    const rev_reads  = allocate_chunk( rev_parser, size=bufsize )

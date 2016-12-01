@@ -123,7 +123,7 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
       to_open = filename
    end
    # iterate through fasta entries
-   index = @time trans_index!(open( to_open, FASTA, Bio.Seq.ReferenceSequence ), ref, kmer=kmer)
+   index = @time trans_index!(FASTAReader{Bio.Seq.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)
    index
 end
 

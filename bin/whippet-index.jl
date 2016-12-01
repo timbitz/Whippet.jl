@@ -17,7 +17,7 @@ using Libz
 using ArgParse
 
 include("$dir/types.jl")
-include("$dir/bio_nuc_safepatch.jl")
+include("$dir/sgsequence.jl")
 include("$dir/refset.jl")
 include("$dir/graph.jl")
 include("$dir/edges.jl")

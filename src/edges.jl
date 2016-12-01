@@ -65,7 +65,7 @@ kmer_index( seq::SGSequence  ) = _kmer_index( seq )
 function _kmer_index( seq )
    x     = UInt64(0)
    for nt in seq
-      ntint = trailing_zeros(nt)
+      ntint = convert(UInt8, trailing_zeros(nt))
       if ntint > 0x03
          return 0 
       else

@@ -12,7 +12,8 @@ using HTTPClient
 
 include("../src/types.jl")
 include("../src/timer.jl")
-include("../src/bio_nuc_safepatch.jl")
+include("../src/sgsequence.jl")
+include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
@@ -48,13 +49,20 @@ include("../src/diff.jl")
    @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
    @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
    @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide)
-   dnaset = dna"ACGT" # from Bio.Seq
+   dnaset = BioSequence{DNAAlphabet{2}}("ACGT") # from Bio.Seq
+   refset = ReferenceSequence("ACGT")           #
    sgset  = sg"ACGT"
+   @test SGSequence( dnaset ) == sgset
+   @test SGSequence( refset ) == sgset
    # Make sure the encodings are consistent
    for i in 1:length(dnaset)
-      @test UInt8(dnaset[i]) == UInt8(sgset[i])
+      @test Bio.Seq.encode(DNAAlphabet{2}, refset[i]) == UInt8(sgset[i])
+      @test Bio.Seq.encode(DNAAlphabet{2}, dnaset[i]) == UInt8(sgset[i])
+      @test refset[i] == sgset[i] && sgset[i] == refset[i]
+      @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
    end
    println(STDERR, sgset)
+   println(STDERR, SGSequence( dnaset ) )
 end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
@@ -264,7 +272,8 @@ IIIIIIIIIIII
       quant = GraphLibQuant( lib, gtfref )
       multi = Vector{Multimap}()
 
-      fqparse = open( BufferedInputStream(fastq), FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
+      typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
+      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_A )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
@@ -331,7 +340,7 @@ IIIIIIIIIIII
          println(STDERR, "Streaming fastq file from $(ebi_res.fastq_1_url)")
          parser, iobuf, rref = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
          @test typeof(iobuf) <: IOBuffer
-         @test typeof(rref) <: RemoteRef
+         @test typeof(rref) <: RemoteChannel
          reads  = allocate_chunk( parser, size=50 )
          cnt    = 0
          while length(reads) > 0

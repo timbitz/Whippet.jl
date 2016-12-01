@@ -181,13 +181,11 @@ function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int,
    end
 end
 
-
-
-function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T} )
+function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
    for i in 1:length(src)
-      dest[i] = src[i]
+      dest[i+indx_shift] = src[i]
    end
-end 
+end
 
 # This function recursively performs expectation maximization
 # and sets the quant.tpm array as the proposed expression set
