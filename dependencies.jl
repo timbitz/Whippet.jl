@@ -29,7 +29,6 @@ adds = [ "DataStructures",
          "Distributions",
          "Glob",
          "Bio",
-         "BaseTestNext",
          "Requests"]
 
 tic()
