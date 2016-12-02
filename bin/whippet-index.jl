@@ -9,10 +9,11 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
 
-#push!( LOAD_PATH, dir * "/../src" )
-#using SpliceGraphs
+push!( LOAD_PATH, dir * "/../src" )
+using SpliceGraphs
 using Libz
 
+#=
 using DataStructures
 using BufferedStreams
 using Bio.Seq
@@ -39,6 +40,7 @@ include("$dir/../src/paired.jl")
 include("$dir/../src/events.jl")
 include("$dir/../src/io.jl")
 include("$dir/../src/diff.jl")
+=#
 
 function parse_cmd()
   s = ArgParseSettings()

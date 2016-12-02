@@ -17,6 +17,7 @@ using Requests
 include("types.jl")
 include("timer.jl")
 include("sgsequence.jl")
+include("sgkmer.jl")
 include("fmindex_patch.jl")
 include("refset.jl")
 include("graph.jl")
@@ -58,6 +59,7 @@ export SpliceGraph,
        SGNucleotideSequence,
        @sg_str,
        reverse_complement,
+       kmer,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
        Multimap,

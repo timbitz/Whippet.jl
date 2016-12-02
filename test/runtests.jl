@@ -14,6 +14,7 @@ using JLD
 include("../src/types.jl")
 include("../src/timer.jl")
 include("../src/sgsequence.jl")
+include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
@@ -28,7 +29,7 @@ include("../src/events.jl")
 include("../src/io.jl")
 include("../src/diff.jl")
 
-@testset "Bio.Seq Patch" begin
+@testset "SG Sequence" begin
    @test typeof(sg"GATGCA") == NucleotideSequence{SGNucleotide}
    fullset = sg"ACGTNLRS"
    fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
@@ -63,7 +64,13 @@ include("../src/diff.jl")
       @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
    end
 end
-#=@testset "Splice Graphs" begin
+@testset "SG Kmers" begin
+   @test sgkmer(sg"ATG") == Bio.Seq.DNAKmer(dna"ATG")
+   @test isa(sgkmer(sg"ATG"), SGKmer{3})
+   @test kmer_index( sgkmer(sg"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test kmer_index( sg"ATG" ) == kmer_index( dna"ATG" )
+end
+@testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
 chr0\tTEST\texon\t31\t40\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
@@ -146,10 +153,12 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    expected_sin = sg"SLGCGGATTACARS"
    expected_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
 
-   graph_one = SpliceGraph( gtfref["one"], genome )
-   graph_sin = SpliceGraph( gtfref["single"], genome )
-   graph_rev = SpliceGraph( gtfref["single_rev"], genome)
-   graph_kis = SpliceGraph( gtfref["kissing"], genome )
+   kmer_size = 2 # good test size
+
+   graph_one = SpliceGraph( gtfref["one"], genome, kmer_size )
+   graph_sin = SpliceGraph( gtfref["single"], genome, kmer_size )
+   graph_rev = SpliceGraph( gtfref["single_rev"], genome, kmer_size )
+   graph_kis = SpliceGraph( gtfref["kissing"], genome, kmer_size )
 
    @testset "Graph Building" begin
       @test graph_one.seq == expected_one
@@ -162,8 +171,6 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # path of apa_alt5
    end
 
-   kmer_size = 2 # good test size
-
    # Build Index (from index.jl)
    xcript  = sg""
    xoffset = Vector{UInt64}()
@@ -175,7 +182,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    runoffset = 0
 
    for g in keys(gtfref)
-      curgraph = SpliceGraph( gtfref[g], genome )
+      curgraph = SpliceGraph( gtfref[g], genome, kmer_size )
       xcript  *= curgraph.seq
       push!(xgraph, curgraph)
       push!(xgenes, g)
@@ -221,16 +228,16 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       exon2_rind = rkmer[1]
       @test intersect( edges.left[exon1_lind], edges.right[exon2_rind] ) == edges.right[exon2_rind]
       @test edges.left[exon1_lind] ∩ edges.right[exon2_rind] == edges.right[exon2_rind]
-   end=#
+   end
 
    @testset "Saving and Loading Index" begin
-#=      println(STDERR, "Saving test index...")
-      open("test_index.jls", "w+") do io
-         serialize( io, lib )
-      end=#
-
+      println(STDERR, "Saving test index...")
+#      println(lib)
+#      open("test_index.jls", "w+") do io
+#         serialize( io, lib )
+#      end
       println(STDERR, "Loading test index...")
-      @timer const lib = open(deserialize, "test_index.jls")
+      @timer lib = open(deserialize, "test_index.jls")
       println(lib)
    end
 

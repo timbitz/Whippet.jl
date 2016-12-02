@@ -55,25 +55,6 @@ function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T}; right=true )
    res
 end 
 
-kmer_index{T,K}( kmer::Kmer{T,K} ) = Int(UInt64(kmer)) + 1
-kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(UInt64(kmer)) + 1
-
-kmer_index( seq::BioSequence ) = _kmer_index( seq )
-kmer_index( seq::SGSequence  ) = _kmer_index( seq )
-
-# calculate kmer index directly
-function _kmer_index( seq )
-   x     = UInt64(0)
-   for nt in seq
-      ntint = convert(UInt8, trailing_zeros(nt))
-      if ntint > 0x03
-         return 0 
-      else
-         x = x << 2 | ntint
-      end
-   end
-   Int(x) + 1
-end
 
 function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet}, 
                                                   seq::S, l, r, left::Bool,
@@ -83,7 +64,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
    ind = 0 #default
    #println( "$(seq[(l-4):(l-1)]) + $(seq[l:r]) + $(seq[(r+1):(r+4)])" )
    try
-      curkmer = SGKmer( s ) 
+      curkmer = sgkmer( s ) 
       ind = kmer_index(curkmer)
    catch
       abstr = String(s)
@@ -100,7 +81,7 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
          curl -= 1
       end
       try
-        curkmer = SGKmer( s )
+        curkmer = sgkmer( s )
         ind = kmer_index(curkmer)
         #println( "Index size: $ind, kmer size: $(typeof(curkmer))" )
       end
@@ -125,11 +106,11 @@ function build_edges( graphs::Vector{SpliceGraph}, k::Integer )
 
          if is_edge( g.edgetype[j], true ) && isvalid( g.seq, (n-k-2):(n-3) ) # left edge
             lkmer = add_kmer_edge!( left, g.seq, n-k-2, n-3, true,  SGNode(i,j) )
-            g.edgeleft[j] = SGKmer{k}(lkmer)
+            g.edgeleft[j] = convert(SGKmer{k}, lkmer)
          end
          if is_edge( g.edgetype[j], false ) && isvalid( g.seq, n:(n+k-1) )# right edge
             rkmer = add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNode(i,j) )
-            g.edgeright[j] = SGKmer{k}(rkmer)
+            g.edgeright[j] = convert(SGKmer{k}, rkmer)
          end
 
       end

@@ -9,10 +9,10 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
 
-#push!( LOAD_PATH, dir * "/../src" )
-#using SpliceGraphs
+push!( LOAD_PATH, dir * "/../src" )
+using SpliceGraphs
 
-
+#=
 using DataStructures
 using BufferedStreams
 using Bio.Seq
@@ -39,7 +39,7 @@ include("$dir/../src/paired.jl")
 include("$dir/../src/events.jl")
 include("$dir/../src/io.jl")
 include("$dir/../src/diff.jl")
-
+=#
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -133,8 +133,8 @@ function main()
 
    indexpath = fixpath( args["index"] )
    println(STDERR, "Loading splice graph index... $( indexpath ).jls")
-#   @timer const lib = open(deserialize, "$( indexpath ).jls")
-   @timer const lib = JLD.load("$( indexpath ).jld")
+   @timer const lib = open(deserialize, "$( indexpath ).jls")
+#   @timer const lib = JLD.load("$( indexpath ).jld", "lib")
 #   @assert reverse_complement(sg"LRS") == sg"SRL"
 #   @timer const lib = open(deserialize, "$( indexpath ).jls")
 
@@ -152,9 +152,9 @@ function main()
       ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
       ispaired = ebi_res.paired
       args["curl"] = true
-      args["filename.fastq[.gz]"] = ebi_res.fastq_1_url
+      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
       if ispaired
-         args["paired_mate.fastq[.gz]"] = ebi_res.fastq_2_url
+         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
       end
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
    end
@@ -179,13 +179,13 @@ function main()
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
                                                               sam=args["sam"], qualoffset=enc_offset, 
                                                               response=response, mate_response=mate_response,
-                                                              rref=rref, mate_rref=mate_rref, http=args["curl"] )
+                                                              http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
                                                        sam=args["sam"], qualoffset=enc_offset,
-                                                       iobuf=iobuf, rref=rref, http=args["curl"] )
+                                                       response=response, http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
