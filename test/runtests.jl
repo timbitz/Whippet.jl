@@ -66,9 +66,16 @@ include("../src/diff.jl")
 end
 @testset "SG Kmers" begin
    @test sgkmer(sg"ATG") == Bio.Seq.DNAKmer(dna"ATG")
+   @test sgkmer("ATG") == Bio.Seq.DNAKmer(dna"ATG")
    @test isa(sgkmer(sg"ATG"), SGKmer{3})
    @test kmer_index( sgkmer(sg"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
    @test kmer_index( sg"ATG" ) == kmer_index( dna"ATG" )
+   seq = sg""
+   for i in 1:32
+      seq = i % 2 == 0 ? seq * sg"C" : seq * sg"T"
+      curkmer = sgkmer(seq)
+      @test isa( curkmer, SGKmer{i} )
+   end
 end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
@@ -232,13 +239,13 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Saving and Loading Index" begin
       println(STDERR, "Saving test index...")
-#      println(lib)
-#      open("test_index.jls", "w+") do io
-#         serialize( io, lib )
-#      end
+      println(STDERR, lib)
+      @timer open("test_index.jls", "w+") do io
+         serialize( io, lib )
+      end
       println(STDERR, "Loading test index...")
       @timer lib = open(deserialize, "test_index.jls")
-      println(lib)
+      println(STDERR, lib)
    end
 
    @testset "Alignment" begin
