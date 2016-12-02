@@ -9,7 +9,6 @@ using IntervalTrees
 using Libz
 using Distributions
 using Requests
-using JLD
 
 include("../src/types.jl")
 include("../src/timer.jl")
