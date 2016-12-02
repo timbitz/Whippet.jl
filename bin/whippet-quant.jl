@@ -9,8 +9,37 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
 
-push!( LOAD_PATH, dir * "/../src" )
-using SpliceGraphs
+#push!( LOAD_PATH, dir * "/../src" )
+#using SpliceGraphs
+
+
+using DataStructures
+using BufferedStreams
+using Bio.Seq
+using FMIndexes
+using IntArrays
+using IntervalTrees
+using Libz
+using Distributions
+using Requests
+
+include("$dir/../src/types.jl")
+include("$dir/../src/timer.jl")
+include("$dir/../src/sgsequence.jl")
+include("$dir/../src/fmindex_patch.jl")
+include("$dir/../src/refset.jl")
+include("$dir/../src/graph.jl")
+include("$dir/../src/edges.jl")
+include("$dir/../src/index.jl")
+include("$dir/../src/align.jl")
+include("$dir/../src/quant.jl")
+include("$dir/../src/reads.jl")
+include("$dir/../src/ebi.jl")
+include("$dir/../src/paired.jl")
+include("$dir/../src/events.jl")
+include("$dir/../src/io.jl")
+include("$dir/../src/diff.jl")
+
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -25,7 +54,7 @@ function parse_cmd()
     "--index", "-x"
       help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
-      default  = fixpath( "$(dir)/../index/graph" )
+      default  = fixpath( "$dir/../index/graph" )
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
@@ -104,15 +133,15 @@ function main()
 
    indexpath = fixpath( args["index"] )
    println(STDERR, "Loading splice graph index... $( indexpath ).jls")
-   @timer const lib = open(deserialize, "$( indexpath ).jls")
-
-   println(STDERR, "Loading annotation index... $( indexpath )_anno.jls")
-   @timer const anno = open(deserialize, "$( indexpath )_anno.jls")
+#   @timer const lib = open(deserialize, "$( indexpath ).jls")
+   @timer const lib = JLD.load("$( indexpath ).jld")
+#   @assert reverse_complement(sg"LRS") == sg"SRL"
+#   @timer const lib = open(deserialize, "$( indexpath ).jls")
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
-   const quant = GraphLibQuant( lib, anno )
+   const quant = GraphLibQuant( lib )
    const multi = Vector{Multimap}()
 
    const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING

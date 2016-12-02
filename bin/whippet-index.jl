@@ -9,9 +9,36 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
 
-push!( LOAD_PATH, dir * "/../src" )
-using SpliceGraphs
+#push!( LOAD_PATH, dir * "/../src" )
+#using SpliceGraphs
 using Libz
+
+using DataStructures
+using BufferedStreams
+using Bio.Seq
+using FMIndexes
+using IntArrays
+using IntervalTrees
+using Libz
+using Distributions
+using Requests
+
+include("$dir/../src/types.jl")
+include("$dir/../src/timer.jl")
+include("$dir/../src/sgsequence.jl")
+include("$dir/../src/fmindex_patch.jl")
+include("$dir/../src/refset.jl")
+include("$dir/../src/graph.jl")
+include("$dir/../src/edges.jl")
+include("$dir/../src/index.jl")
+include("$dir/../src/align.jl")
+include("$dir/../src/quant.jl")
+include("$dir/../src/reads.jl")
+include("$dir/../src/ebi.jl")
+include("$dir/../src/paired.jl")
+include("$dir/../src/events.jl")
+include("$dir/../src/io.jl")
+include("$dir/../src/diff.jl")
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -67,17 +94,29 @@ function main()
    println(STDERR, "Indexing transcriptome...")
    @timer graphome = fasta_to_index( fixpath( args["fasta"] ), ref, kmer=args["kmer"] )
 
+   #=
    println(STDERR, "Saving Annotations...")
-   open("$(args["index"])_anno.jls", "w+") do fh
+   open("$(args["index"])_anno.jls", "w") do fh
       @timer serialize(fh, ref)
    end
-
-   println(STDERR, "Saving splice graph index...")
-   open("$(args["index"]).jls", "w+") do io
+=#
+   println(STDERR, "Serializing splice graph index...")
+   open("$(args["index"]).jls", "w") do io
       @timer serialize( io, graphome )
    end
 
-   println(STDERR, "Whippet $ver done.")
+   println(STDERR, "Saving splice graph index...")
+   @timer JLD.save("$(args["index"]).jld", "lib", graphome)
+   
+#=   indexpath = fixpath( args["index"] )
+   println(STDERR, "Loading splice graph index... $( indexpath ).jls")
+   @timer const lib = open(deserialize, "$( indexpath ).jls")
+
+   println(STDERR, "Loading annotation index... $( indexpath )_anno.jls")
+   @timer const anno = open(deserialize, "$( indexpath )_anno.jls")
+
+   @timer res = JLD.load("$(args["index"]).jld")
+   println(STDERR, "Whippet $ver done.")=#
 end
 
 main()

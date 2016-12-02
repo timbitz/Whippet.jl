@@ -8,6 +8,7 @@ immutable GraphLib <: SeqLibrary
    offset::Vector{CoordInt}
    names::Vector{GeneName}
    info::Vector{GeneInfo}
+   lengths::Vector{Float64}
    graphs::Vector{SpliceGraph}
    edges::Edges
    index::FMIndex
@@ -78,6 +79,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
+   xlength = Vector{Float64}()
    xgraph  = Vector{SpliceGraph}()
    # set up splice graphs
    runoffset = 0
@@ -97,6 +99,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
          push!(xgraph, curgraph)
          push!(xgenes, g)
          push!(xinfo, ref[g].info )
+         push!(xlength, ref[g].length )
          push!(xoffset, runoffset)
          runoffset += length(curgraph.seq) 
       end
@@ -111,7 +114,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    println( STDERR, "Building edges.." ) 
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
-   GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer )
+   GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer )
 end
 
 function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
@@ -120,7 +123,7 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
       to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
    else
       println(STDERR, "Indexing $filename...")
-      to_open = filename
+      to_open = open( filename ) |> BufferedInputStream
    end
    # iterate through fasta entries
    index = @time trans_index!(FASTAReader{Bio.Seq.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)

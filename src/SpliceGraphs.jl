@@ -1,12 +1,12 @@
-#__precompile__()
+__precompile__()
 
 module SpliceGraphs
 
-import Bio
+importall Bio
 
+using Bio.Seq
 using DataStructures
 using BufferedStreams
-using Bio.Seq
 using FMIndexes
 using IntArrays
 using IntervalTrees
@@ -57,6 +57,7 @@ export SpliceGraph,
        SGNucleotide,
        SGNucleotideSequence,
        @sg_str,
+       reverse_complement,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
        Multimap,

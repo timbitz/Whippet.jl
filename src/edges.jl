@@ -86,14 +86,14 @@ function add_kmer_edge!{S <: NucleotideSequence}( kmers::Vector{SGNodeSet},
       curkmer = SGKmer( s ) 
       ind = kmer_index(curkmer)
    catch
-      abstr = AbstractString(s)
+      abstr = String(s)
       ismatch( r"S|N", abstr ) && return(zero(UInt64))
       sub = replace( abstr, r"L|R", "" )
       #println("Caught $abstr replaced to $sub , $ksize")
       curl,curr = l-1,r+1
       while length(sub) < ksize && curl >= 1 && curr <= length(seq)
-         sub = left ? AbstractString(seq[curl:curl]) * sub :
-                      sub * AbstractString(seq[curr:curr])
+         sub = left ? String(seq[curl:curl]) * sub :
+                      sub * String(seq[curr:curr])
          #println("Sub looks like $sub")
          sub = replace( sub, r"L|R", "" )
          curr += 1

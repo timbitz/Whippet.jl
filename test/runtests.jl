@@ -9,6 +9,7 @@ using IntervalTrees
 using Libz
 using Distributions
 using Requests
+using JLD
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -39,16 +40,16 @@ include("../src/diff.jl")
       @test fullset[i] == fullarr[i]
       @test convert(UInt8, fullset[i]) == UInt8(n)
       @test convert(SGNucleotide, UInt8(n)) == fullset[i]
-   end
+   end 
    @test fullset[1:4] == sg"ACGT"
    @test fullset.data == fullset[1:4].data
-   @test reverse_complement(sg"GATGCA") == sg"TGCATC"
+   @test reverse_complement(sg"GATGCA") == sg"TGCATC" 
    @test reverse_complement(sg"LRS")    == sg"SRL"
    @test sg"AT" * sg"TA" == sg"ATTA"
-   @test sg"AT" ^ 2 == sg"ATAT"
+   @test sg"AT" ^ 2 == sg"ATAT" 
    @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
    @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
-   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide)
+   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide) 
    dnaset = BioSequence{DNAAlphabet{2}}("ACGT") # from Bio.Seq
    refset = ReferenceSequence("ACGT")           #
    sgset  = sg"ACGT"
@@ -62,7 +63,7 @@ include("../src/diff.jl")
       @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
    end
 end
-@testset "Splice Graphs" begin
+#=@testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
 chr0\tTEST\texon\t31\t40\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
@@ -168,6 +169,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
+   xlength = Vector{Float64}()
    xgraph  = Vector{SpliceGraph}()
 
    runoffset = 0
@@ -178,6 +180,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       push!(xgraph, curgraph)
       push!(xgenes, g)
       push!(xinfo, gtfref[g].info )
+      push!(xlength, gtfref[g].length )
       push!(xoffset, runoffset)
       runoffset += length(curgraph.seq)   
    end
@@ -189,7 +192,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    #println(edges.left)
    #println(edges.right)
 
-   lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
+   lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
       left  = [sg"CA", sg"AG", sg"AG", sg"TC", sg"AA"]
@@ -218,23 +221,17 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       exon2_rind = rkmer[1]
       @test intersect( edges.left[exon1_lind], edges.right[exon2_rind] ) == edges.right[exon2_rind]
       @test edges.left[exon1_lind] ∩ edges.right[exon2_rind] == edges.right[exon2_rind]
-   end
+   end=#
 
    @testset "Saving and Loading Index" begin
-      println(STDERR, "Saving test annotations...")
-      open("test_index_anno.jls", "w+") do fh
-         @timer serialize(fh, gtfref)
-      end
-
-      println(STDERR, "Saving test index...")
+#=      println(STDERR, "Saving test index...")
       open("test_index.jls", "w+") do io
-         @timer serialize( io, lib )
-      end 
+         serialize( io, lib )
+      end=#
 
       println(STDERR, "Loading test index...")
-      @timer const load_lib = open(deserialize, "test_index.jls")
-      println(STDERR, "Loading test annotations...")
-      @timer const load_anno = open(deserialize, "test_index_anno.jls")
+      @timer const lib = open(deserialize, "test_index.jls")
+      println(lib)
    end
 
    @testset "Alignment" begin
@@ -284,7 +281,7 @@ IIIIIIIIIIII
       score_range = 0.05
       param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                         false, false, true, false, true )
-      quant = GraphLibQuant( lib, gtfref )
+      quant = GraphLibQuant( lib )
       multi = Vector{Multimap}()
 
       typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}

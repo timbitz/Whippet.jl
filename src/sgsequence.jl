@@ -295,11 +295,11 @@ end
 
 
 """
-`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide, seq::AbstractString, startpos::Int, stoppos::Int)`
+`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide, seq::String, startpos::Int, stoppos::Int)`
 
 Construct a nucleotide sequence from the `seq[startpos:stoppos]` string
 """
-function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{AbstractString, Vector{UInt8}},
+function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{String, Vector{UInt8}},
                                            startpos::Int, stoppos::Int,
                                            unsafe::Bool=false; mutable::Bool=false)
     len = stoppos - startpos + 1
@@ -318,7 +318,7 @@ function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{AbstractStrin
     return NucleotideSequence{T}(data, ns, ls, rs, ss, 1:len, mutable, false)
 end
 
-function NucleotideSequence{T<:SGNucleotide}(t::Type{T}, seq::Union{AbstractString, Vector{UInt8}}; mutable::Bool=false)
+function NucleotideSequence{T<:SGNucleotide}(t::Type{T}, seq::Union{String, Vector{UInt8}}; mutable::Bool=false)
     return NucleotideSequence(t, seq, 1, length(seq), mutable=mutable)
 end
 
@@ -568,15 +568,15 @@ SGSequence(; mutable::Bool=true) =
 SGSequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
     NucleotideSequence(SGNucleotide, other, part, mutable=mutable)
 
-"Construct a SG nucleotide sequence from an AbstractString"
-SGSequence(seq::AbstractString; mutable=false) =
+"Construct a SG nucleotide sequence from an String"
+SGSequence(seq::String; mutable=false) =
     NucleotideSequence(SGNucleotide, seq, mutable=mutable)
 
 "Construct a SG nucleotide sequence from other sequences"
 SGSequence(chunk1::SGSequence, chunks::SGSequence...) = NucleotideSequence(chunk1, chunks...)
-SGSequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
+SGSequence(seq::Union{Vector{UInt8}, String}; mutable::Bool=false) =
     NucleotideSequence(SGNucleotide, seq, mutable=mutable)
-SGSequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
+SGSequence(seq::Union{Vector{UInt8}, String}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
     NucleotideSequence(SGNucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
 SGSequence(seq::AbstractVector{SGNucleotide}; mutable::Bool=false) =
     NucleotideSequence(seq, mutable=mutable)
@@ -592,13 +592,13 @@ Base.convert{T<:SGNucleotide}(::Type{NucleotideSequence{T}}, seq::AbstractVector
 Base.convert{T<:SGNucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [x for x in seq]
 
 # Convert from/to Strings
-Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
-Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
+Base.convert(::Type{SGSequence}, seq::String) = SGSequence(seq)
+Base.convert(::Type{String}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
 
 # Convert between DNA/RNA and SG
-#Base.convert(::Type{SGSequence}, seq::NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
-Base.convert(::Type{SGSequence}, seq::Bio.Seq.BioSequence) = SGSequence( convert(AbstractString, seq) )
-Base.convert(::Type{SGSequence}, seq::Bio.Seq.ReferenceSequence) = SGSequence( convert(AbstractString, seq) )
+#Base.convert(::Type{SGSequence}, seq::NucleotideSequence) = SGSequence( convert(String, seq) )
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.BioSequence) = SGSequence( convert(String, seq) )
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.ReferenceSequence) = SGSequence( convert(String, seq) )
 
 # Basic Functions
 # ---------------
@@ -1204,7 +1204,7 @@ Base.read{T <: Kmer}(io::Base.TCPSocket, t::Type{T}) = convert(T, Base.read(io, 
 
 # Conversion to/from String
 
-function Base.convert{T, K}(::Type{Kmer{T, K}}, seq::AbstractString)
+function Base.convert{T, K}(::Type{Kmer{T, K}}, seq::String)
     @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
     @assert length(seq) == K error("Cannot construct a $(K)-mer from a string of length $(length(seq))")
 
@@ -1224,8 +1224,8 @@ function Base.convert{T, K}(::Type{Kmer{T, K}}, seq::AbstractString)
     return convert(Kmer{T, K}, x)
 end
 
-Base.convert{T}(::Type{Kmer{T}}, seq::AbstractString) = convert(Kmer{T, length(seq)}, seq)
-Base.convert{T, K}(::Type{AbstractString}, seq::Kmer{T, K}) = convert(AbstractString, [convert(Char, x) for x in seq])
+Base.convert{T}(::Type{Kmer{T}}, seq::String) = convert(Kmer{T, length(seq)}, seq)
+Base.convert{T, K}(::Type{String}, seq::Kmer{T, K}) = convert(String, [convert(Char, x) for x in seq])
 
 # Conversion to/from NucleotideSequence
 
@@ -1259,8 +1259,8 @@ Base.convert{T, K}(::Type{NucleotideSequence}, x::Kmer{T, K}) = convert(Nucleoti
 
 # From strings
 
-"Construct a SGKmer to an AbstractString"
-sgkmer(seq::AbstractString) = convert(SGKmer, seq)
+"Construct a SGKmer to an String"
+sgkmer(seq::String) = convert(SGKmer, seq)
 
 "Construct a Kmer from a sequence of Nucleotides"
 function kmer{T <: Nucleotide}(nts::T...)
@@ -1682,7 +1682,7 @@ Base.setindex!{T}(counts::NucleotideCounts{T}, c::Integer, nt::T) = setfield!(co
 
 # Pad strings so they are right justified when printed
 function format_counts(xs)
-    strings = AbstractString[string(x) for x in xs]
+    strings = String[string(x) for x in xs]
     len = maximum(map(length, strings))
     for i in 1:length(strings)
         strings[i] = string(repeat(" ", len - length(strings[i])), strings[i])
@@ -1745,7 +1745,7 @@ end
 function Base.show{T, K}(io::IO, counts::KmerCounts{T, K})
     println(io, (T == SGNucleotide ? "SG" : "DEPRECATED"), "KmerCounts{", K, "}:")
     for x in UInt64(1):UInt64(4^K)
-        s = convert(AbstractString, convert(Kmer{T, K}, x - 1))
+        s = convert(String, convert(Kmer{T, K}, x - 1))
         println(io, "  ", s, " => ", counts.data[x])
     end
 end

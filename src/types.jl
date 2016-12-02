@@ -15,6 +15,7 @@ end
 typealias CoordTuple Tuple{Vararg{CoordInt}}
 typealias CoordArray Vector{CoordInt}
 typealias CoordTree  IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
+typealias CoordSet   Set{Tuple{CoordInt,CoordInt}}
 
 typealias ExonInt    UInt16
 typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
@@ -22,6 +23,7 @@ typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 typealias GeneName   String
 typealias SeqName    String
 typealias RefSeqId   String
+typealias ASCIIString String
 
 typealias GeneMeta   Tuple{GeneName, SeqName, Char}
 
