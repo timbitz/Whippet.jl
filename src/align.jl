@@ -156,12 +156,12 @@ end
                                   ispos::Bool=true, geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
 
    align = ungapped_fwd_extend( p, lib, geneind,
-                                indx - lib.offset[geneind],
-                                read, readloc, ispos=ispos )
+                                indx - lib.offset[geneind] + 1,
+                                read, readloc + 1, ispos=ispos )
 
    align = ungapped_rev_extend( p, lib, geneind,
-                                indx - lib.offset[geneind] - 1,
-                                read, readloc - 1, ispos=ispos, align=align,
+                                indx - lib.offset[geneind],
+                                read, readloc, ispos=ispos, align=align,
                                 nodeidx=align.path[1].node )
 
    align
