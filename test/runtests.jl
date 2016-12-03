@@ -14,7 +14,7 @@ include("../src/types.jl")
 include("../src/timer.jl")
 include("../src/sgkmer.jl")
 include("../src/sgsequence.jl")
-#include("../src/fmindex_patch.jl")
+include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
@@ -141,17 +141,17 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    genome = fwd * rev
 
-   expected_one = dna"SD" * utr5 * exon1 * dna"DD" * 
-               int1 * dna"RR" *
-               exon2 * dna"DR" * 
-               exon3alt3 * dna"RR" * 
-               exon3def * dna"DD" * 
-               exon3alt5 * dna"DR" *
-               exon4 * dna"RS" * 
-               apa * dna"RS"
+   expected_one = utr5 * exon1 * 
+               int1 *
+               exon2 *
+               exon3alt3 * 
+               exon3def *  
+               exon3alt5 *
+               exon4 * 
+               apa 
 
-   expected_sin = dna"SDGCGGATTACARS"
-   expected_kis = dna"SDAAAAAAAAAADDRRTGTAATCCGCRS"
+   expected_sin = dna"GCGGATTACA"
+   expected_kis = dna"AAAAAAAAAATGTAATCCGC"
 
    kmer_size = 2 # good test size
 
@@ -192,7 +192,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       runoffset += length(curgraph.seq)   
    end
 
-   fm = FMIndex(threebit_enc(xcript), 16, r=1, program=:SuffixArrays, mmap=true)
+   fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true)
 
    edges = build_edges( xgraph, kmer_size )
 
@@ -298,12 +298,12 @@ IIIIIIIIIIII
 
       @test length(reads) == 10
       for r in reads
-#         println(r)
+         println(r)
 #         println(r.metadata)
          align = ungapped_align( param, lib, r )
-         #println(align)
+         println(align)
 
-         #flush(STDERR)
+         flush(STDERR)
          @test !isnull( align )
          @test length( align.value ) >= 1
          @test all(map( x->x.isvalid, align.value))

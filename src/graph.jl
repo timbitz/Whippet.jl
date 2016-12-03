@@ -22,7 +22,7 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x03  for _ in 1:4 ];
                                                   [0x05  for _ in 1:4 ];
                                                   [0x00  for _ in 1:4 ] ], (4,4)))
 
-# As of Dec 1st 2016, L is encoded as D using BioSequence
+# DEPRECATED
 const EDGETYPE_TO_SG = SGSequence[ dna"SD", dna"SR", dna"DS", dna"RS",
                                    dna"DR", dna"DD", dna"RR", dna"SS" ]
 
@@ -141,11 +141,6 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       if secval == Inf
          termedge = strand ? EdgeType(0x03) : EdgeType(0x00)
          stranded_push!(edgetype, termedge, strand)
-         if strand
-            seq *= SGSequence(termedge)
-         else
-            seq = SGSequence(termedge) * seq
-         end
          break
       end
       
@@ -170,9 +165,9 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       end
 
       if strand
-         seq *= SGSequence(edge) * nodeseq
+         seq *= nodeseq
       else # '-' strand
-         seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
+         seq = reverse_complement(nodeseq) * seq
       end
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
@@ -181,10 +176,10 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    end # end while
 
    # calculate node offsets-->
-   curoffset = 3
+   curoffset = 1
    for n in nodelen
       push!(nodeoffset, curoffset)
-      curoffset += n + 2
+      curoffset += n
    end
 
    eleft  = Vector{SGKmer{k}}(length(edgetype))
