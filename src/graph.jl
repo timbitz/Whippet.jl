@@ -22,8 +22,9 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x03  for _ in 1:4 ];
                                                   [0x05  for _ in 1:4 ];
                                                   [0x00  for _ in 1:4 ] ], (4,4)))
 
-const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
-                                   sg"LR", sg"LL", sg"RR", sg"SS" ]
+# As of Dec 1st 2016, L is encoded as D using BioSequence
+const EDGETYPE_TO_SG = SGSequence[ dna"SD", dna"SR", dna"DS", dna"RS",
+                                   dna"DR", dna"DD", dna"RR", dna"SS" ]
 
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
@@ -31,10 +32,10 @@ function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    EDGETYPE_TO_UINT8[one-3,two-3]
 end
 
-Base.convert( ::Type{EdgeType}, one::SGNucleotide, two::SGNucleotide ) = 
-               Base.convert( EdgeType, convert(UInt8, one), convert(UInt8, two) )
-Base.convert( ::Type{EdgeType}, edge::UInt8 ) = box(EdgeType, unbox(UInt8, edge ))
-Base.convert( ::Type{UInt8}, edge::EdgeType ) = box(UInt8, unbox(EdgeType, edge ))
+Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) = 
+              Base.convert( EdgeType, convert(UInt8, trailing_zeros(one)), convert(UInt8, trailing_zeros(two)) )
+Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
+Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)
 Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
 Base.convert( ::Type{SGSequence}, edge::EdgeType ) = EDGETYPE_TO_SG[Base.convert(UInt8, edge)+1]
 
@@ -96,7 +97,7 @@ end
 # empty constructor
 SpliceGraph(k::Int) = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
                                    Vector{CoordInt}(), Vector{EdgeType}(),
-                                   Vector{SGKmer{k}}(),Vector{SGKmer{k}}(), sg"" )
+                                   Vector{SGKmer{k}}(),Vector{SGKmer{k}}(), dna"" )
 
 # Main constructor
 # Build splice graph here.
@@ -106,7 +107,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    nodecoord  = Vector{CoordInt}()
    nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
-   seq        = sg""
+   seq        = dna""
 
    strand = gene.info.strand  # Bool
    
@@ -143,7 +144,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          if strand
             seq *= SGSequence(termedge)
          else
-            seq = SGSequence(termedge) * seq
+            seq = SGSequence(termedge) * copy(seq)
          end
          break
       end
@@ -171,7 +172,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       if strand
          seq *= SGSequence(edge) * nodeseq
       else # '-' strand
-         seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
+         seq = reverse_complement(nodeseq) * SGSequence(edge) * copy(seq)
       end
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)

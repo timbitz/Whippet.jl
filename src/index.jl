@@ -75,7 +75,7 @@ end
 
 function trans_index!( fhIter, ref::RefSet; kmer=9 )
    seqdic  = build_chrom_dict( ref )
-   xcript  = sg""
+   xcript  = dna""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
@@ -88,7 +88,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       #Bio.Seq.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
-      r.seq = dna""
+      r.seq = ReferenceSequence()
       gc() # free
 
       println(STDERR, "Building Splice Graphs for $( r.name ).." )
@@ -108,7 +108,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    @time fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true) 
 
    # clean up
-   xcript = sg""
+   xcript = DNASequence()
    gc()
 
    println( STDERR, "Building edges.." ) 

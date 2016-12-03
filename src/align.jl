@@ -237,7 +237,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
          align.matches += 1
          passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
-         const curedge = nodeidx+0x00000001
+         const curedge = nodeidx+0x01
          if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
                 readlen - ridx + 1   >= p.kmer_size
@@ -253,7 +253,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                   align.matches += p.kmer_size
                   ridx    += p.kmer_size - 1
                   sgidx   += 1 + p.kmer_size
-                  nodeidx += 0x00000001
+                  nodeidx += 0x01
                   push!( align.path, SGNode( geneind, nodeidx ) )
                   align.isvalid = true
                else
@@ -276,7 +276,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                push!(get(passed_edges), curedge)
                sgidx   += 1
                ridx    -= 1
-               nodeidx += 0x00000001
+               nodeidx += 0x01
                push!( align.path, SGNode( geneind, nodeidx ) )
          elseif sg.edgetype[curedge] == EDGETYPE_LS && # 'LS'
                 readlen - ridx + 1   >= p.kmer_size
@@ -293,7 +293,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                # ignore 'RR' and 'SL'
                sgidx += 1
                ridx  -= 1 # offset the lower ridx += 1
-               nodeidx += 0x00000001
+               nodeidx += 0x01
                nodeidx <= length(sg.nodelen) && push!( align.path, SGNode( geneind, nodeidx ) )  
          end
          # ignore 'N'
@@ -413,7 +413,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
          align.matches += 1
          passed_extend  += 1
       elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
-         const leftnode = nodeidx - 0x00000001
+         const leftnode = nodeidx - 0x01
          if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
                                 ridx >= p.kmer_size 
@@ -424,7 +424,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                   align.matches += p.kmer_size
                   ridx    -= p.kmer_size - 1 
                   sgidx   -= p.kmer_size + 1 
-                  nodeidx -= 0x00000001
+                  nodeidx -= 0x01
                   unshift!( align.path, SGNode( geneind, nodeidx ) )
                   align.isvalid = true
                else
@@ -442,7 +442,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                push!(get(passed_edges), nodeidx)
                sgidx   -= 1
                ridx    += 1
-               nodeidx -= 0x00000001
+               nodeidx -= 0x01
                unshift!( align.path, SGNode( geneind, nodeidx ) )
          elseif sg.edgetype[nodeidx] == EDGETYPE_SR && # 'SR'
                                 ridx >= p.kmer_size
@@ -458,7 +458,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                # ignore 'LL' and 'RS'
                sgidx -= 1
                ridx  += 1 # offset the lower ridx += 1
-               nodeidx -= 0x00000001
+               nodeidx -= 0x01
                nodeidx > 0 && unshift!( align.path, SGNode( geneind, nodeidx ) )  
          end
          # ignore 'N'
@@ -534,7 +534,7 @@ end
       const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node-1] + lib.graphs[rn.gene].nodelen[rn.node-1] - 1
 
       res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
-                                                    align=deepcopy(align), nodeidx=rn.node-0x00000001 )
+                                                    align=deepcopy(align), nodeidx=rn.node-0x01 )
       best = res_align > best ? res_align : best
    end
    if score(best) >= score(align) + p.kmer_size
