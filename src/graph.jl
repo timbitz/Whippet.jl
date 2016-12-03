@@ -107,7 +107,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    nodecoord  = Vector{CoordInt}()
    nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
-   seq        = dna""
+   seq        = SGSequence()
 
    strand = gene.info.strand  # Bool
    
@@ -169,7 +169,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          pushval  = secval
       end
 
-      println(STDERR, nodeseq)
+      println(STDERR, "node $nodeseq")
 
       if strand
          seq *= SGSequence(edge) * nodeseq
