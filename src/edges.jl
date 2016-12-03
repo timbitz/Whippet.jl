@@ -59,6 +59,7 @@ end
 function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet}, 
                                           seq::S, l, r, left::Bool,
                                           entry::SGNode )
+   (l <= 0 || r > length(seq)) && return(zero(UInt64))
    s = copy(seq[l:r])
    ksize = r-l+1
    ind = 0 #default

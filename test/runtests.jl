@@ -192,7 +192,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       runoffset += length(curgraph.seq)   
    end
 
-   fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true)
+   fm = FMIndex(threebit_enc(xcript), 16, r=1, program=:SuffixArrays, mmap=true)
 
    edges = build_edges( xgraph, kmer_size )
 

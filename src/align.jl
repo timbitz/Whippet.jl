@@ -231,13 +231,12 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
 
    #println(STDERR, "VERBOSE: FWD EXTENSION")
 
-   @inbounds while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
+   while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
       if read.seq[ridx] == sg.seq[sgidx]
          # match
-         println(STDERR, "YES WE HAVE A MATCH")
          align.matches += 1
-         passed_extend  += 1
-      elseif isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == SG_N) # L,R,S
+         passed_extend += 1
+      elseif isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const curedge = nodeidx + 0x01
          if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
@@ -408,10 +407,9 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
       unshift!( align.path, SGNode( geneind, nodeidx ) ) # starting node if not already there
    end
 
-   @inbounds while( align.mismatches <= p.mismatches && ridx > 0 && sgidx > 0 )
+   while( align.mismatches <= p.mismatches && ridx > 0 && sgidx > 0 )
       if read.seq[ridx] == sg.seq[sgidx]
          # match
-         println(STDERR, "YES A REV MATCH")
          align.matches += 1
          passed_extend  += 1
       elseif isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
@@ -514,7 +512,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
       align.isvalid = true 
    end
    if sgidx < align.offset
-      align.offset = sgidx
+      align.offset = convert(UInt32, sgidx + 1)
    end
    align
 end

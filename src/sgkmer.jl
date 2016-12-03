@@ -7,7 +7,7 @@ Base.read{T <: Bio.Seq.Kmer}(io::IO, ::Type{T}) = convert(T, Base.read(io, UInt6
 # Conversion
 # ----------
 
-kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(UInt64(kmer)) + 1
+kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(reinterpret(UInt64, kmer)) + 1
 
 kmer_index( seq::BioSequence ) = Int(kmer_index_trailing( seq )) + 1
 #kmer_index( seq::SGSequence  ) = Int(kmer_index_straight( seq )) + 1
