@@ -42,7 +42,7 @@ end
 # encode 3-bit sequence with L,R,S,N,A,T,G,C
 function threebit_enc(seq)
    len = length(seq)
-   ret = IntVector{3,UInt8}(len)
+   ret = IntVector{4,UInt8}(len)
    for i in 1:len
       ret[i] = convert(UInt8, seq[i])
    end
