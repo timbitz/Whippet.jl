@@ -12,8 +12,8 @@ using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
-include("../src/sgsequence.jl")
 include("../src/sgkmer.jl")
+include("../src/sgsequence.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
@@ -28,9 +28,10 @@ include("../src/events.jl")
 include("../src/io.jl")
 include("../src/diff.jl")
 
+#= # Deprecated as of Julia v0.5
 @testset "SG Sequence" begin
-   @test typeof(sg"GATGCA") == NucleotideSequence{SGNucleotide}
-   fullset = sg"ACGTNLRS"
+   @test typeof(dna"GATGCA") == NucleotideSequence{SGNucleotide}
+   fullset = dna"ACGTNLRS"
    fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
    for nt in fullset
       @test typeof(nt) == SGNucleotide
@@ -41,18 +42,18 @@ include("../src/diff.jl")
       @test convert(UInt8, fullset[i]) == UInt8(n)
       @test convert(SGNucleotide, UInt8(n)) == fullset[i]
    end 
-   @test fullset[1:4] == sg"ACGT"
+   @test fullset[1:4] == dna"ACGT"
    @test fullset.data == fullset[1:4].data
-   @test reverse_complement(sg"GATGCA") == sg"TGCATC" 
-   @test reverse_complement(sg"LRS")    == sg"SRL"
-   @test sg"AT" * sg"TA" == sg"ATTA"
-   @test sg"AT" ^ 2 == sg"ATAT" 
+   @test reverse_complement(dna"GATGCA") == dna"TGCATC" 
+   @test reverse_complement(dna"LRS")    == dna"SRL"
+   @test dna"AT" * dna"TA" == dna"ATTA"
+   @test dna"AT" ^ 2 == dna"ATAT" 
    @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
    @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
    @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide) 
    dnaset = BioSequence{DNAAlphabet{2}}("ACGT") # from Bio.Seq
    refset = ReferenceSequence("ACGT")           #
-   sgset  = sg"ACGT"
+   sgset  = dna"ACGT"
    @test SGSequence( dnaset ) == sgset
    @test SGSequence( refset ) == sgset
    # Make sure the encodings are consistent
@@ -75,7 +76,7 @@ end
       curkmer = sgkmer(seq)
       @test isa( curkmer, SGKmer{i} )
    end
-end
+end =#
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
@@ -125,19 +126,19 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    end
 
                               # fwd     rev
-   buffer1   = sg"AAAAA"      # 1-5     96-100
-   utr5      = sg"TTATT"      # 6-10    91-95
-   exon1     = sg"GCGGATTACA" # 11-20   81-90
-   int1      = sg"TTTTTTTTTT" # 21-30   71-80
-   exon2     = sg"GCATTAGAAG" # 31-40   61-70
-   int2      = sg"GGGGGGGGGG" # 41-50   51-60
-   exon3alt3 = sg"CCT"        # 51-53   48-50
-   exon3def  = sg"CTATGCTAG"  # 54-62   39-47
-   exon3alt5 = sg"TTC"        # 63-65   36-38
-   int3      = sg"CCCCCCCCCC" # 66-75   26-35
-   exon4     = sg"TTAGACAAGA" # 76-85   16-25
-   apa       = sg"AATAA"      # 86-90   11-15
-   buffer2   = sg"AAAAAAAAAA" # 91-100  1-10
+   buffer1   = dna"AAAAA"      # 1-5     96-100
+   utr5      = dna"TTATT"      # 6-10    91-95
+   exon1     = dna"GCGGATTACA" # 11-20   81-90
+   int1      = dna"TTTTTTTTTT" # 21-30   71-80
+   exon2     = dna"GCATTAGAAG" # 31-40   61-70
+   int2      = dna"GGGGGGGGGG" # 41-50   51-60
+   exon3alt3 = dna"CCT"        # 51-53   48-50
+   exon3def  = dna"CTATGCTAG"  # 54-62   39-47
+   exon3alt5 = dna"TTC"        # 63-65   36-38
+   int3      = dna"CCCCCCCCCC" # 66-75   26-35
+   exon4     = dna"TTAGACAAGA" # 76-85   16-25
+   apa       = dna"AATAA"      # 86-90   11-15
+   buffer2   = dna"AAAAAAAAAA" # 91-100  1-10
 
    fwd = buffer1 * utr5 * exon1 * int1 * 
          exon2 * int2 * 
@@ -147,17 +148,17 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    genome = fwd * rev
 
-   expected_one = sg"SL" * utr5 * exon1 * sg"LL" * 
-               int1 * sg"RR" *
-               exon2 * sg"LR" * 
-               exon3alt3 * sg"RR" * 
-               exon3def * sg"LL" * 
-               exon3alt5 * sg"LR" *
-               exon4 * sg"RS" * 
-               apa * sg"RS"
+   expected_one = utr5 * exon1 * 
+               int1 *
+               exon2 *
+               exon3alt3 * 
+               exon3def *  
+               exon3alt5 *
+               exon4 * 
+               apa 
 
-   expected_sin = sg"SLGCGGATTACARS"
-   expected_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
+   expected_sin = dna"GCGGATTACA"
+   expected_kis = dna"AAAAAAAAAATGTAATCCGC"
 
    kmer_size = 2 # good test size
 
@@ -178,7 +179,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    end
 
    # Build Index (from index.jl)
-   xcript  = sg""
+   xcript  = dna""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
@@ -198,7 +199,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       runoffset += length(curgraph.seq)   
    end
 
-   fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true)
+   fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true)
 
    edges = build_edges( xgraph, kmer_size )
 
@@ -208,8 +209,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
-      left  = [sg"CA", sg"AG", sg"AG", sg"TC", sg"AA"]
-      right = [sg"GC", sg"CC", sg"CT", sg"TT", sg"TG"]
+      left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA"]
+      right = [dna"GC", dna"CC", dna"CT", dna"TT", dna"TG"]
       lkmer = map( x->kmer_index(SGKmer(x)), left )
       rkmer = map( x->kmer_index(SGKmer(x)), right )
       #println(lkmer[1])
@@ -240,6 +241,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(STDERR, "Saving test index...")
       println(STDERR, lib)
       @timer open("test_index.jls", "w+") do io
+      open("test_index.jls", "w+") do io
          serialize( io, lib )
       end
       println(STDERR, "Loading test index...")
@@ -304,12 +306,12 @@ IIIIIIIIIIII
 
       @test length(reads) == 10
       for r in reads
-#         println(r)
+         println(r)
 #         println(r.metadata)
          align = ungapped_align( param, lib, r )
-         #println(align)
+         println(align)
 
-         #flush(STDERR)
+         flush(STDERR)
          @test !isnull( align )
          @test length( align.value ) >= 1
          @test all(map( x->x.isvalid, align.value))

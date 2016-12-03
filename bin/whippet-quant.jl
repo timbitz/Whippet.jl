@@ -12,7 +12,6 @@ using ArgParse
 push!( LOAD_PATH, dir * "/../src" )
 using SpliceGraphs
 
-
 function parse_cmd()
   s = ArgParseSettings()
   # TODO finish options...

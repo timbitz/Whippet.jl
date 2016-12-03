@@ -3,8 +3,8 @@ const COMPLEX_CHAR = 'K'
 
 bitstype 8 EdgeMotif
 
-Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = box(EdgeMotif, unbox(UInt8, motif ))
-Base.convert( ::Type{UInt8}, motif::EdgeMotif ) = box(UInt8, unbox(EdgeMotif, motif ))
+Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = reinterpret(EdgeMotif, motif )
+Base.convert( ::Type{UInt8}, motif::EdgeMotif ) = reinterpret(UInt8, motif )
 
 # OBLIGATE MOTIFS (provided the cognate nodes both have reads):
 
