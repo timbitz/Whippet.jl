@@ -107,7 +107,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    nodecoord  = Vector{CoordInt}()
    nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
-   seq        = SGSequence()
+   seq        = DNASequence()
 
    strand = gene.info.strand  # Bool
    
@@ -155,7 +155,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
          nodesize = Int(secval - minval) - leftadj - rightadj + 1
          #println("$minval, $secval, $leftadj, $rightadj, $nodesize")
-         nodeseq  = genome[(Int(minval)+leftadj):(Int(secval)-rightadj)] # collect slice
+         nodeseq  = copy(genome[(Int(minval)+leftadj):(Int(secval)-rightadj)]) # collect slice
          edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval  = minval + leftadj
          thridx = 0
@@ -164,12 +164,10 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          thridx,thrval = getmin_ind_val( gene, idx )
          rightadj = (thridx == 2 || thridx == 4) && secval != thrval ? 1 : 0
          nodesize = Int(thrval - secval) - rightadj + 1
-         nodeseq  = genome[Int(secval):(Int(thrval)-rightadj)]
+         nodeseq  = copy(genome[Int(secval):(Int(thrval)-rightadj)])
          edge     = get_edgetype( minidx, secidx, false, strand )
          pushval  = secval
       end
-
-      println(STDERR, "node $nodeseq")
 
       if strand
          seq *= SGSequence(edge) * nodeseq

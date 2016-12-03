@@ -59,7 +59,7 @@ end
 function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet}, 
                                           seq::S, l, r, left::Bool,
                                           entry::SGNode )
-   s = seq[l:r]
+   s = copy(seq[l:r])
    ksize = r-l+1
    ind = 0 #default
    #println( "$(seq[(l-4):(l-1)]) + $(seq[l:r]) + $(seq[(r+1):(r+4)])" )
@@ -73,8 +73,8 @@ function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet},
       #println("Caught $abstr replaced to $sub , $ksize")
       curl,curr = l-1,r+1
       while length(sub) < ksize && curl >= 1 && curr <= length(seq)
-         sub = left ? String(seq[curl:curl]) * sub :
-                      sub * String(seq[curr:curr])
+         sub = left ? String(copy(seq[curl:curl])) * sub :
+                      sub * String(copy(seq[curr:curr]))
          #println("Sub looks like $sub")
          sub = replace( sub, r"D|R", "" )
          curr += 1
