@@ -17,7 +17,7 @@ function kmer_index_trailing( seq )
    x     = UInt64(0)
    for nt in seq
       ntint = convert(UInt8, trailing_zeros(nt))
-      if ntint > 0x03 | isambiguous(nt)
+      if ntint > 0x03 || isambiguous(nt)
          return 0
       else
          x = x << 2 | ntint
@@ -38,13 +38,8 @@ end
       end
    end
    x
-end
-
-Base.convert(::Type{SGKmer}, seq::SGSequence) = sgkmer(seq)
+end=#
 
 kmer(seq::SGSequence) = sgkmer(seq)
 sgkmer(seq::String) = convert(SGKmer, seq)
-function sgkmer(seq::SGSequence)
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(SGKmer{length(seq)}, kmer_index_straight(seq))
-end=#
+sgkmer(seq::SGSequence) = convert(SGKmer, seq)

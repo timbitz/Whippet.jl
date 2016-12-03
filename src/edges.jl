@@ -62,9 +62,9 @@ function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet},
    s = copy(seq[l:r])
    ksize = r-l+1
    ind = 0 #default
-   #println( "$(seq[(l-4):(l-1)]) + $(seq[l:r]) + $(seq[(r+1):(r+4)])" )
+   #println( "$(seq[(l-4):(l-1)]) + $(s) + $(seq[(r+1):(r+4)])" )
    try
-      curkmer = sgkmer( s ) 
+      curkmer = sgkmer( s )
       ind = kmer_index(curkmer)
    catch
       abstr = String(s)

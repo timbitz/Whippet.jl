@@ -234,10 +234,11 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
    @inbounds while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
       if read.seq[ridx] == sg.seq[sgidx]
          # match
+         println(STDERR, "YES WE HAVE A MATCH")
          align.matches += 1
          passed_extend  += 1
-      elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
-         const curedge = nodeidx+0x01
+      elseif isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == SG_N) # L,R,S
+         const curedge = nodeidx + 0x01
          if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
                 readlen - ridx + 1   >= p.kmer_size
@@ -410,9 +411,10 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
    @inbounds while( align.mismatches <= p.mismatches && ridx > 0 && sgidx > 0 )
       if read.seq[ridx] == sg.seq[sgidx]
          # match
+         println(STDERR, "YES A REV MATCH")
          align.matches += 1
          passed_extend  += 1
-      elseif (UInt8(sg.seq[sgidx]) & 0b100) == 0b100 && !(sg.seq[sgidx] == SG_N) # L,R,S
+      elseif isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const leftnode = nodeidx - 0x01
          if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K

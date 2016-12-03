@@ -28,7 +28,8 @@ include("../src/events.jl")
 include("../src/io.jl")
 include("../src/diff.jl")
 
-#=@testset "SG Sequence" begin
+#= # Deprecated as of Julia v0.5
+@testset "SG Sequence" begin
    @test typeof(dna"GATGCA") == NucleotideSequence{SGNucleotide}
    fullset = dna"ACGTNLRS"
    fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
