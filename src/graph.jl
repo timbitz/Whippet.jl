@@ -144,7 +144,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          if strand
             seq *= SGSequence(termedge)
          else
-            seq = SGSequence(termedge) * copy(seq)
+            seq = SGSequence(termedge) * seq
          end
          break
       end
@@ -169,10 +169,12 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          pushval  = secval
       end
 
+      println(STDERR, nodeseq)
+
       if strand
          seq *= SGSequence(edge) * nodeseq
       else # '-' strand
-         seq = reverse_complement(nodeseq) * SGSequence(edge) * copy(seq)
+         seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
       end
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
