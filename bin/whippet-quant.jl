@@ -10,26 +10,26 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using ArgParse
 
 push!( LOAD_PATH, dir * "/../src" )
-import SpliceGraphs
 using SpliceGraphs
+
 
 function parse_cmd()
   s = ArgParseSettings()
   # TODO finish options...
   @add_arg_table s begin
     "filename.fastq[.gz]"
-      arg_type = ASCIIString
+      arg_type = String
       required = true
     "paired_mate.fastq[.gz]"
-      arg_type = ASCIIString
+      arg_type = String
       required = false
     "--index", "-x"
       help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
-      arg_type = ASCIIString
-      default  = fixpath( "$(dir)/../index/graph" )
+      arg_type = String
+      default  = fixpath( "$dir/../index/graph" )
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
-      arg_type = ASCIIString
+      arg_type = String
       default  = fixpath( "./output" )
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
@@ -107,13 +107,10 @@ function main()
    println(STDERR, "Loading splice graph index... $( indexpath ).jls")
    @timer const lib = open(deserialize, "$( indexpath ).jls")
 
-   println(STDERR, "Loading annotation index... $( indexpath )_anno.jls")
-   @timer const anno = open(deserialize, "$( indexpath )_anno.jls")
-
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
-   const quant = GraphLibQuant( lib, anno )
+   const quant = GraphLibQuant( lib )
    const multi = Vector{Multimap}()
 
    const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
@@ -124,22 +121,22 @@ function main()
       ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
       ispaired = ebi_res.paired
       args["curl"] = true
-      args["filename.fastq[.gz]"] = ebi_res.fastq_1_url
+      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
       if ispaired
-         args["paired_mate.fastq[.gz]"] = ebi_res.fastq_2_url
+         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
       end
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
    end
 
-   const parser,iobuf,rref = args["curl"] ? make_http_fqparser( args["filename.fastq[.gz]"],
-                                                           encoding=enc, forcegzip=args["force-gz"] ) : 
-                                            make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
-                                                           encoding=enc, forcegzip=args["force-gz"] )
+   const parser,response = args["curl"] ? make_http_fqparser( args["filename.fastq[.gz]"],
+                                                         encoding=enc, forcegzip=args["force-gz"] ) : 
+                                          make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
+                                                         encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser,mate_iobuf,mate_rref = args["curl"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
-                                                                             encoding=enc, forcegzip=args["force-gz"] ) :
-                                                              make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
-                                                                             encoding=enc, forcegzip=args["force-gz"] )
+      const mate_parser,mate_response = args["curl"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+                                                                      encoding=enc, forcegzip=args["force-gz"] ) :
+                                                       make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
+                                                                      encoding=enc, forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -150,14 +147,14 @@ function main()
       if ispaired
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
                                                               sam=args["sam"], qualoffset=enc_offset, 
-                                                              iobuf=iobuf, mate_iobuf=mate_iobuf,
-                                                              rref=rref, mate_rref=mate_rref, http=args["curl"] )
+                                                              response=response, mate_response=mate_response,
+                                                              http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
                                                        sam=args["sam"], qualoffset=enc_offset,
-                                                       iobuf=iobuf, rref=rref, http=args["curl"] )
+                                                       response=response, http=args["curl"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end

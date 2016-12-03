@@ -78,13 +78,13 @@ end
 
 # This holds a representation of the splice graph
 # which is a directed multigraph
-immutable SpliceGraph
+immutable SpliceGraph{K}
    nodeoffset::Vector{CoordInt} # SG offset
    nodecoord::Vector{CoordInt}  # Genome offset
    nodelen::Vector{CoordInt}
    edgetype::Vector{EdgeType}
-   edgeleft::Vector{SGKmer}
-   edgeright::Vector{SGKmer}
+   edgeleft::Vector{SGKmer{K}}
+   edgeright::Vector{SGKmer{K}}
    annopath::Vector{IntSet}
    seq::SGSequence
 end
@@ -94,13 +94,13 @@ end
 # Node coord:  chr   100 200     300 400      500 600 700
 
 # empty constructor
-SpliceGraph() = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
-                             Vector{CoordInt}(), Vector{EdgeType}(),
-                             Vector{SGKmer}(),   Vector{SGKmer}(), sg"" )
+SpliceGraph(k::Int) = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
+                                   Vector{CoordInt}(), Vector{EdgeType}(),
+                                   Vector{SGKmer{k}}(),Vector{SGKmer{k}}(), sg"" )
 
 # Main constructor
 # Build splice graph here.
-function SpliceGraph( gene::RefGene, genome::SGSequence )
+function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    # splice graph variables
    nodeoffset = Vector{CoordInt}()
    nodecoord  = Vector{CoordInt}()
@@ -186,8 +186,8 @@ function SpliceGraph( gene::RefGene, genome::SGSequence )
       curoffset += n + 2
    end
 
-   eleft  = Vector{SGKmer}(length(edgetype))
-   eright = Vector{SGKmer}(length(edgetype))
+   eleft  = Vector{SGKmer{k}}(length(edgetype))
+   eright = Vector{SGKmer{k}}(length(edgetype))
 
    paths = build_paths_edges( nodecoord, nodelen, gene )
 

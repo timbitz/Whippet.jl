@@ -1,23 +1,24 @@
-#__precompile__()
+__precompile__()
 
 module SpliceGraphs
 
-import Bio
+importall Bio
 
+using Bio.Seq
 using DataStructures
 using BufferedStreams
-using Bio.Seq
 using FMIndexes
 using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-using HTTPClient
-using HTTPClient.HTTPC
+using Requests
 
 include("types.jl")
 include("timer.jl")
-include("bio_nuc_safepatch.jl")
+include("sgsequence.jl")
+include("sgkmer.jl")
+include("fmindex_patch.jl")
 include("refset.jl")
 include("graph.jl")
 include("edges.jl") 
@@ -31,10 +32,10 @@ include("events.jl")
 include("io.jl")
 include("diff.jl")
 
-if VERSION >= v"0.5.0-dev"
+#=if VERSION >= v"0.5.0"
    using Base.Threads
    include("threaded.jl")
-end
+end=#
 
 export SpliceGraph,
        SpliceGraphQuant,
@@ -57,6 +58,8 @@ export SpliceGraph,
        SGNucleotide,
        SGNucleotideSequence,
        @sg_str,
+       reverse_complement,
+       kmer,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
        Multimap,

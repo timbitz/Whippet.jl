@@ -1,28 +1,17 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
-const ver = chomp(readline(open(splitdir(@__FILE__)[1] * "/VERSION")))
-const dir = abspath( splitdir(@__FILE__)[1] * "/../src" )
+const dir = abspath( splitdir(@__FILE__)[1] )
+const ver = chomp(readline(open(dir * "/VERSION")))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
 
-using DataStructures
-using IntervalTrees
-using Bio.Seq
-using FMIndexes
-using IntArrays
-using Libz
-
 using ArgParse
 
-include("$dir/types.jl")
-include("$dir/bio_nuc_safepatch.jl")
-include("$dir/refset.jl")
-include("$dir/graph.jl")
-include("$dir/edges.jl")
-include("$dir/index.jl")
-include("$dir/timer.jl")
+push!( LOAD_PATH, dir * "/../src" )
+using SpliceGraphs
+using Libz
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -78,17 +67,17 @@ function main()
    println(STDERR, "Indexing transcriptome...")
    @timer graphome = fasta_to_index( fixpath( args["fasta"] ), ref, kmer=args["kmer"] )
 
+   #=
    println(STDERR, "Saving Annotations...")
-   open("$(args["index"])_anno.jls", "w+") do fh
+   open("$(args["index"])_anno.jls", "w") do fh
       @timer serialize(fh, ref)
    end
-
-   println(STDERR, "Saving splice graph index...")
-   open("$(args["index"]).jls", "w+") do io
+=#
+   println(STDERR, "Serializing splice graph index...")
+   open("$(args["index"]).jls", "w") do io
       @timer serialize( io, graphome )
    end
 
-   println(STDERR, "Whippet $ver done.")
 end
 
 main()

@@ -1,9 +1,4 @@
-if VERSION >= v"0.5-"
-   using Base.Test
-else        
-   using BaseTestNext 
-   const Test = BaseTestNext            
-end
+using Base.Test
 
 using DataStructures
 using BufferedStreams
@@ -13,11 +8,13 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-using HTTPClient
+using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
-include("../src/bio_nuc_safepatch.jl")
+include("../src/sgsequence.jl")
+include("../src/sgkmer.jl")
+include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
@@ -31,7 +28,7 @@ include("../src/events.jl")
 include("../src/io.jl")
 include("../src/diff.jl")
 
-@testset "Bio.Seq Patch" begin
+@testset "SG Sequence" begin
    @test typeof(sg"GATGCA") == NucleotideSequence{SGNucleotide}
    fullset = sg"ACGTNLRS"
    fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
@@ -43,23 +40,41 @@ include("../src/diff.jl")
       @test fullset[i] == fullarr[i]
       @test convert(UInt8, fullset[i]) == UInt8(n)
       @test convert(SGNucleotide, UInt8(n)) == fullset[i]
-   end
+   end 
    @test fullset[1:4] == sg"ACGT"
    @test fullset.data == fullset[1:4].data
-   @test reverse_complement(sg"GATGCA") == sg"TGCATC"
+   @test reverse_complement(sg"GATGCA") == sg"TGCATC" 
    @test reverse_complement(sg"LRS")    == sg"SRL"
    @test sg"AT" * sg"TA" == sg"ATTA"
-   @test sg"AT" ^ 2 == sg"ATAT"
+   @test sg"AT" ^ 2 == sg"ATAT" 
    @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
    @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
-   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide)
-   dnaset = dna"ACGT" # from Bio.Seq
+   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide) 
+   dnaset = BioSequence{DNAAlphabet{2}}("ACGT") # from Bio.Seq
+   refset = ReferenceSequence("ACGT")           #
    sgset  = sg"ACGT"
+   @test SGSequence( dnaset ) == sgset
+   @test SGSequence( refset ) == sgset
    # Make sure the encodings are consistent
    for i in 1:length(dnaset)
-      @test UInt8(dnaset[i]) == UInt8(sgset[i])
+      @test Bio.Seq.encode(DNAAlphabet{2}, refset[i]) == UInt8(sgset[i])
+      @test Bio.Seq.encode(DNAAlphabet{2}, dnaset[i]) == UInt8(sgset[i])
+      @test refset[i] == sgset[i] && sgset[i] == refset[i]
+      @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
    end
-   println(STDERR, sgset)
+end
+@testset "SG Kmers" begin
+   @test sgkmer(sg"ATG") == Bio.Seq.DNAKmer(dna"ATG")
+   @test sgkmer("ATG") == Bio.Seq.DNAKmer(dna"ATG")
+   @test isa(sgkmer(sg"ATG"), SGKmer{3})
+   @test kmer_index( sgkmer(sg"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test kmer_index( sg"ATG" ) == kmer_index( dna"ATG" )
+   seq = sg""
+   for i in 1:32
+      seq = i % 2 == 0 ? seq * sg"C" : seq * sg"T"
+      curkmer = sgkmer(seq)
+      @test isa( curkmer, SGKmer{i} )
+   end
 end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
@@ -144,10 +159,12 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    expected_sin = sg"SLGCGGATTACARS"
    expected_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
 
-   graph_one = SpliceGraph( gtfref["one"], genome )
-   graph_sin = SpliceGraph( gtfref["single"], genome )
-   graph_rev = SpliceGraph( gtfref["single_rev"], genome)
-   graph_kis = SpliceGraph( gtfref["kissing"], genome )
+   kmer_size = 2 # good test size
+
+   graph_one = SpliceGraph( gtfref["one"], genome, kmer_size )
+   graph_sin = SpliceGraph( gtfref["single"], genome, kmer_size )
+   graph_rev = SpliceGraph( gtfref["single_rev"], genome, kmer_size )
+   graph_kis = SpliceGraph( gtfref["kissing"], genome, kmer_size )
 
    @testset "Graph Building" begin
       @test graph_one.seq == expected_one
@@ -160,23 +177,23 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # path of apa_alt5
    end
 
-   kmer_size = 2 # good test size
-
    # Build Index (from index.jl)
    xcript  = sg""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
+   xlength = Vector{Float64}()
    xgraph  = Vector{SpliceGraph}()
 
    runoffset = 0
 
    for g in keys(gtfref)
-      curgraph = SpliceGraph( gtfref[g], genome )
+      curgraph = SpliceGraph( gtfref[g], genome, kmer_size )
       xcript  *= curgraph.seq
       push!(xgraph, curgraph)
       push!(xgenes, g)
       push!(xinfo, gtfref[g].info )
+      push!(xlength, gtfref[g].length )
       push!(xoffset, runoffset)
       runoffset += length(curgraph.seq)   
    end
@@ -188,7 +205,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    #println(edges.left)
    #println(edges.right)
 
-   lib = GraphLib( xoffset, xgenes, xinfo, xgraph, edges, fm, true, kmer_size )
+   lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
       left  = [sg"CA", sg"AG", sg"AG", sg"TC", sg"AA"]
@@ -217,6 +234,17 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       exon2_rind = rkmer[1]
       @test intersect( edges.left[exon1_lind], edges.right[exon2_rind] ) == edges.right[exon2_rind]
       @test edges.left[exon1_lind] ∩ edges.right[exon2_rind] == edges.right[exon2_rind]
+   end
+
+   @testset "Saving and Loading Index" begin
+      println(STDERR, "Saving test index...")
+      println(STDERR, lib)
+      @timer open("test_index.jls", "w+") do io
+         serialize( io, lib )
+      end
+      println(STDERR, "Loading test index...")
+      @timer lib = open(deserialize, "test_index.jls")
+      println(STDERR, lib)
    end
 
    @testset "Alignment" begin
@@ -266,10 +294,11 @@ IIIIIIIIIIII
       score_range = 0.05
       param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                         false, false, true, false, true )
-      quant = GraphLibQuant( lib, gtfref )
+      quant = GraphLibQuant( lib )
       multi = Vector{Multimap}()
 
-      fqparse = open( BufferedInputStream(fastq), FASTQ, Bio.Seq.ILLUMINA18_QUAL_ENCODING, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
+      typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
+      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_A )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
@@ -334,13 +363,11 @@ IIIIIIIIIIII
          @test !ebi_res.paired
 
          println(STDERR, "Streaming fastq file from $(ebi_res.fastq_1_url)")
-         parser, iobuf, rref = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
-         @test typeof(iobuf) <: IOBuffer
-         @test typeof(rref) <: RemoteRef
+         parser, response = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
          reads  = allocate_chunk( parser, size=50 )
          cnt    = 0
          while length(reads) > 0
-            read_http_chunk!( reads, parser, iobuf, rref )
+            read_http_chunk!( reads, parser, response )
             cnt += length(reads)
          end
          @test cnt == 128482 # correct number of reads in file

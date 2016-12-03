@@ -3,7 +3,7 @@ os:
   - linux
   - osx
 julia:
-  - 0.4.6
+  - 0.5
 install:
   julia ./dependencies.jl
 notifications:

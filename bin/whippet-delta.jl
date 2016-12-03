@@ -11,7 +11,6 @@ using ArgParse
 using Glob
 
 push!( LOAD_PATH, dir * "/../src" )
-import SpliceGraphs
 using SpliceGraphs
 
 function parse_cmd()

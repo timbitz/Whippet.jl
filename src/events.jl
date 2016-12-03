@@ -309,11 +309,11 @@ type AmbigCounts
    multiplier::Float64
 end
 
-Base.(:(==))( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
-Base.(:(==))( a::AmbigCounts, b::IntSet ) = ( a.paths == b )
-Base.(:(==))( a::IntSet, b::AmbigCounts ) = ( a == b.paths )
-Base.(:(==)){I <: Integer}( a::Vector{I}, b::IntSet ) = ( b == a )
-function Base.(:(==)){I <: Integer}( iset::IntSet, ivec::Vector{I} )
+Base.:(==)( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
+Base.:(==)( a::AmbigCounts, b::IntSet ) = ( a.paths == b )
+Base.:(==)( a::IntSet, b::AmbigCounts ) = ( a == b.paths )
+Base.:(==){I <: Integer}( a::Vector{I}, b::IntSet ) = ( b == a )
+function Base.:(==){I <: Integer}( iset::IntSet, ivec::Vector{I} )
    length(iset) != length(ivec) && return false
    for intv in ivec
       !(intv in iset) && return false
@@ -792,12 +792,6 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    end
    # process back-splicing
    iscircok && output_circular( io, sg, sgquant, info )
-end
-
-function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
-   for i in 1:length(src)
-      dest[i+indx_shift] = src[i]
-   end
 end
 
 function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, divisor::D, sig::I )

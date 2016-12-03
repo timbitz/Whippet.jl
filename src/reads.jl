@@ -1,7 +1,7 @@
 
 # this is an alternative to tryread! from Bio.Seq that doesn't
 # create any new objects to return.
-function tryread_bool!(parser::Bio.Seq.AbstractParser, output)
+function tryread_bool!(parser::Bio.IO.AbstractReader, output)
    T = eltype(parser)
    try
       read!(parser, output)
@@ -22,7 +22,9 @@ function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, for
    else
       to_open = filename
    end 
-   open( to_open, FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} ), PipeBuffer(1), RemoteRef()
+   FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
+                                                             encoding,
+                                                             DNA_A ), Requests.ResponseStream{TCPSocket}()
 end
 
 # modified for Bio v0.2 with tryread_bool!
@@ -39,41 +41,36 @@ end
 end
 
 # This function specifically tries to download a fastq file from a url string and returns
-# the Bio.Seq parser, the IOBuffer, and the RemoteRef to the HTTPC.get
+# the Bio.Seq parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
 function make_http_fqparser( url::String; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
-   iobuf = PipeBuffer()
-   rref = HTTPClient.HTTPC.get(url, HTTPClient.HTTPC.RequestOptions(ostream=iobuf, blocking=false))
+   response = Requests.get_streaming(url)
    if isgzipped( url ) || forcegzip
-      zlibstr  = ZlibInflateInputStream( iobuf, reset_on_end=true )
-      fqparser = open( zlibstr, FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
+      zlibstr  = ZlibInflateInputStream( response.buffer, reset_on_end=true )
+      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
    else
-      fqparser = open( iobuf,   FASTQ, encoding, Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{4}} )
+      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
    end
-   fqparser, iobuf, rref
+   fqparser, response
 end
 
 # Use this version to parse reads from a parser that is reliant on the state
-# of a iobuf::PipeBuffer and a rref::RemoteRef containing the http get request
-function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
+function read_http_chunk!( chunk, parser, resp; maxtime=24 )
    i = 1
+   const iobuf      = resp.buffer
    const nb_needed  = 8192
-   const start_mark  = iobuf.mark
+   const start_mark = iobuf.mark
    const start_size = iobuf.size
    const start_time = time()
-   while i <= length(chunk) && !(isready(rref) && eof(parser))
-      if !isready(rref) && nb_available(iobuf) < nb_needed
+   if !(200 <= resp.response.status < 300)
+      error("HTTP Code $(resp.response.status)! Download failed!")
+   end
+   while i <= length(chunk) && !(eof(iobuf) && eof(parser))
+      if resp.state!=Requests.BodyDone && nb_available(iobuf) < nb_needed
          sleep(eps(Float64))
          if time() - start_time > maxtime
             error("HTTP Timeout! Unable to download file!")
          end
          continue
-      elseif isready(rref) && nb_available(iobuf) < nb_needed
-          res = fetch(rref)
-          if typeof(res) <: HTTPClient.HTTPC.Response && !(200 <= res.http_code < 300) 
-              error("HTTP Code $(res.http_code)! Download failed!")
-          elseif typeof(res) <: RemoteException
-              error(res.captured.ex * "... Download failed!")
-          end
       end
       read!( parser, chunk[i] )
       i += 1
@@ -84,7 +81,6 @@ function read_http_chunk!( chunk, parser, iobuf, rref; maxtime=24 )
    parser
 end
 
-
 function allocate_chunk( parser; size=100000 )
   chunk = Vector{eltype(parser)}( size )
   for i in 1:length(chunk)
@@ -93,7 +89,7 @@ function allocate_chunk( parser; size=100000 )
   chunk
 end
 
-allocate_rref( size=250000; rreftype=RemoteRef{Channel{Any}} ) = Vector{rreftype}( size )
+allocate_rref( size=250000; rreftype=RemoteChannel{Channel{Any}} ) = Vector{rreftype}( size )
 
 function resize_rref!( rref, subsize )
    @assert subsize <= length(rref)
@@ -128,7 +124,7 @@ end
 =#
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
                          multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                         iobuf=PipeBuffer(1), rref=RemoteRef(), http=false )
+                         response=Requests.ResponseStream{TCPSocket}(), http=false )
   
    const reads  = allocate_chunk( parser, size=bufsize )
    mean_readlen = 0.0
@@ -140,7 +136,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
    end
    while length(reads) > 0
       if http
-         read_http_chunk!( reads, parser, iobuf, rref )
+         read_http_chunk!( reads, parser, response )
       else
          read_chunk!( reads, parser )
       end
@@ -180,8 +176,9 @@ process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib,
 
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
                                 multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                                iobuf=PipeBuffer(1), mate_iobuf=PipeBuffer(1), 
-                                rref=RemoteRef(), mate_rref=RemoteRef(), http=false )
+                                     response=Requests.ResponseStream{TCPSocket}(), 
+                                mate_response=Requests.ResponseStream{TCPSocket}(), 
+                                http=false )
 
    const fwd_reads  = allocate_chunk( fwd_parser, size=bufsize )
    const rev_reads  = allocate_chunk( rev_parser, size=bufsize )
@@ -194,8 +191,8 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
    end
    while length(fwd_reads) > 0 && length(rev_reads) > 0
       if http
-         read_http_chunk!( fwd_reads, fwd_parser, iobuf, rref )
-         read_http_chunk!( rev_reads, rev_parser, mate_iobuf, mate_rref )
+         read_http_chunk!( fwd_reads, fwd_parser, response )
+         read_http_chunk!( rev_reads, rev_parser, mate_response )
       else
          read_chunk!( fwd_reads, fwd_parser )
          read_chunk!( rev_reads, rev_parser )

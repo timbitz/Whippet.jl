@@ -34,16 +34,13 @@ immutable GraphLibQuant
    quant::Vector{SpliceGraphQuant}
 end
 
-function GraphLibQuant( lib::GraphLib, ref::RefSet )
+function GraphLibQuant( lib::GraphLib )
    tpm    = zeros( length(lib.graphs) )
    count  = zeros( length(lib.graphs) )
    len    =  ones( length(lib.graphs) )
    quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
    for i in 1:length( lib.graphs )
-      name = lib.names[i]
-      if haskey( ref, name )
-         len[i] = ref[name].length
-      end
+      len[i] = lib.lengths[i] 
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end
    GraphLibQuant( tpm, count, len, quant )
@@ -180,12 +177,11 @@ function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int,
    end
 end
 
-
-function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T} )
+function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
    for i in 1:length(src)
-      dest[i] = src[i]
+      dest[i+indx_shift] = src[i]
    end
-end 
+end
 
 # This function recursively performs expectation maximization
 # and sets the quant.tpm array as the proposed expression set

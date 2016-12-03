@@ -13,15 +13,13 @@ import Base.length,Base.start,Base.*,Base.^,Base.done,Base.==,Base.next,Base.rev
 
 # Single nucleotides are represented in bytes using just the two low-order bits
 #abstract Nucleotide
-bitstype 8 SGNucleotide <: Bio.Seq.Nucleotide
+bitstype 8 SGNucleotide
 
 # Conversion from/to integers
 # ---------------------------
 
 Base.convert(::Type{SGNucleotide}, nt::UInt8) = box(SGNucleotide, unbox(UInt8, nt))
 Base.convert(::Type{UInt8}, nt::SGNucleotide) = box(UInt8, unbox(SGNucleotide, nt))
-#Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{T}, nt::S) = box(T, Base.zext_int(T, unbox(S, nt)))
-#Base.convert{T<:Unsigned, S<:Nucleotide}(::Type{S}, nt::T) = convert(S, convert(UInt8, nt))
 
 
 # Nucleotide encoding definition
@@ -74,6 +72,8 @@ function Base.isvalid(nt::SGNucleotide)
     return convert(UInt8, nt) ≤ convert(UInt8, SG_S)
 end
 
+isambiguous(nt::Bio.Seq.DNANucleotide) = Bio.Seq.isambiguous(nt)
+isambiguous(nt::SGNucleotide) = nt == SG_L || nt == SG_R || nt == SG_S ? true : false
 
 
 # Conversion from Char
@@ -113,8 +113,8 @@ Base.convert(::Type{Char}, nt::SGNucleotide) = sg_to_char[convert(UInt8, nt) + 1
 
 # Converstion to DNANucleotide
 # ----------------------------
-==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = box(UInt8, a) == box(UInt8, b)
-==( a::SGNucleotide, b::Bio.Seq.DNANucleotide ) = box(UInt8, a) == box(UInt8, b)
+==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = Bio.Seq.encode(DNAAlphabet{2}, a) == convert(UInt8, b)
+==( a::SGNucleotide, b::Bio.Seq.DNANucleotide ) = convert(UInt8, a) == Bio.Seq.encode(DNAAlphabet{2}, b)
 
 
 # Basic functions
@@ -266,7 +266,7 @@ macro encode_seq(nt_convert_expr, strdata, seqdata, ns, ls, rs, ss)
                         $(ss).chunks[d + 1] |= UInt64(1) << r
                     else
                         ored_nucs |= convert(UInt8, nt)
-                        data_i |= convert(UInt64, nt) << shift
+                        data_i |= convert(UInt64, convert(UInt8, nt)) << shift
                     end
 
                     j += 1
@@ -292,11 +292,11 @@ end
 
 
 """
-`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide, seq::AbstractString, startpos::Int, stoppos::Int)`
+`NucleotideSequence(SGNucleotide|DEPRECATEDNucleotide, seq::String, startpos::Int, stoppos::Int)`
 
 Construct a nucleotide sequence from the `seq[startpos:stoppos]` string
 """
-function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{AbstractString, Vector{UInt8}},
+function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{String, Vector{UInt8}},
                                            startpos::Int, stoppos::Int,
                                            unsafe::Bool=false; mutable::Bool=false)
     len = stoppos - startpos + 1
@@ -315,7 +315,7 @@ function NucleotideSequence{T<:SGNucleotide}(::Type{T}, seq::Union{AbstractStrin
     return NucleotideSequence{T}(data, ns, ls, rs, ss, 1:len, mutable, false)
 end
 
-function NucleotideSequence{T<:SGNucleotide}(t::Type{T}, seq::Union{AbstractString, Vector{UInt8}}; mutable::Bool=false)
+function NucleotideSequence{T<:SGNucleotide}(t::Type{T}, seq::Union{String, Vector{UInt8}}; mutable::Bool=false)
     return NucleotideSequence(t, seq, 1, length(seq), mutable=mutable)
 end
 
@@ -565,15 +565,15 @@ SGSequence(; mutable::Bool=true) =
 SGSequence(other::NucleotideSequence, part::UnitRange; mutable::Bool=false) =
     NucleotideSequence(SGNucleotide, other, part, mutable=mutable)
 
-"Construct a SG nucleotide sequence from an AbstractString"
-SGSequence(seq::AbstractString; mutable=false) =
+"Construct a SG nucleotide sequence from an String"
+SGSequence(seq::String; mutable=false) =
     NucleotideSequence(SGNucleotide, seq, mutable=mutable)
 
 "Construct a SG nucleotide sequence from other sequences"
 SGSequence(chunk1::SGSequence, chunks::SGSequence...) = NucleotideSequence(chunk1, chunks...)
-SGSequence(seq::Union{Vector{UInt8}, AbstractString}; mutable::Bool=false) =
+SGSequence(seq::Union{Vector{UInt8}, String}; mutable::Bool=false) =
     NucleotideSequence(SGNucleotide, seq, mutable=mutable)
-SGSequence(seq::Union{Vector{UInt8}, AbstractString}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
+SGSequence(seq::Union{Vector{UInt8}, String}, startpos::Int, endpos::Int, unsafe::Bool=false; mutable::Bool=false) =
     NucleotideSequence(SGNucleotide, seq, startpos, endpos, unsafe, mutable=mutable)
 SGSequence(seq::AbstractVector{SGNucleotide}; mutable::Bool=false) =
     NucleotideSequence(seq, mutable=mutable)
@@ -589,13 +589,13 @@ Base.convert{T<:SGNucleotide}(::Type{NucleotideSequence{T}}, seq::AbstractVector
 Base.convert{T<:SGNucleotide}(::Type{Vector{T}}, seq::NucleotideSequence{T}) = [x for x in seq]
 
 # Convert from/to Strings
-Base.convert(::Type{SGSequence}, seq::AbstractString) = SGSequence(seq)
-Base.convert(::Type{AbstractString}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
+Base.convert(::Type{SGSequence}, seq::String) = SGSequence(seq)
+Base.convert(::Type{String}, seq::NucleotideSequence) = convert(String, [convert(Char, x) for x in seq])
 
 # Convert between DNA/RNA and SG
-Base.convert(::Type{SGSequence}, seq::Bio.Seq.NucleotideSequence) = SGSequence( convert(AbstractString, seq) )
-Base.convert(::Type{SGSequence}, seq::Bio.Seq.BioSequence) = SGSequence( convert(AbstractString, seq) )
-Base.convert(::Type{SGSequence}, seq::Bio.Seq.ReferenceSequence) = SGSequence( convert(AbstractString, seq) )
+#Base.convert(::Type{SGSequence}, seq::NucleotideSequence) = SGSequence( convert(String, seq) )
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.BioSequence) = SGSequence( convert(String, seq) )
+Base.convert(::Type{SGSequence}, seq::Bio.Seq.ReferenceSequence) = SGSequence( convert(String, seq) )
 
 # Basic Functions
 # ---------------
@@ -612,7 +612,7 @@ function Base.show{T}(io::IO, seq::NucleotideSequence{T})
 
     # don't show more than this many characters to avoid filling the screen
     # with junk
-    const maxcount = Base.tty_size()[2] - 2
+    const maxcount = Base.displaysize(io)[2] - 2
     if len > maxcount
         for nt in seq[1:div(maxcount, 2) - 1]
             write(io, convert(Char, nt))
@@ -654,7 +654,7 @@ end
 
 # This function returns true if there are no n's in the sequence
 # it returns false if there are. TODO use parts. for now use hasn?
-function iskmersafe{T <: Bio.Seq.NucleotideSequence}( seq::T )
+function iskmersafe{T <: NucleotideSequence}( seq::T )
    for i in 1:length( seq.ns.chunks )
       seq.ns.chunks[i] == 0 || return false
    end
@@ -850,7 +850,7 @@ end
 
 The nucleotide complement of the sequence `seq`
 """
-Base.complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(copy(seq))
+complement!{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(copy(seq))
 
 # Nucleotide reverse. Reverse a kmer stored in a UInt64.
 function nucrev(x::UInt64)
@@ -902,33 +902,6 @@ Reversed complement of the nucleotide sequence `seq`
 """
 reverse_complement{T<:SGNucleotide}(seq::NucleotideSequence{T}) = unsafe_complement!(reverse(copy(seq)))
 
-reverse_complement!{T<:Bio.Seq.DNANucleotide}(seq::Bio.Seq.NucleotideSequence{T}) = Bio.Seq.unsafe_complement!(reverse!(seq))
-function Base.reverse!{T<:Bio.Seq.DNANucleotide}(seq::Bio.Seq.NucleotideSequence{T})
-    if isempty(seq)
-       return seq
-    end
-
-    Bio.Seq.orphan!(seq)
-
-    k = (2 * length(seq) + 63) % 64 + 1
-    h = 64 - k
-
-    data = zeros(UInt64, length(seq.data))
-    j = length(data)
-    i = 1
-    @inbounds while true
-       x = Bio.Seq.nucrev(seq.data[i])
-       data[j] |= x >>> h
-       if (j -= 1) == 0
-           break
-       end
-       data[j] |= x << k;
-       i += 1
-    end
-    seq.data = data
-    reverse!(seq.ns)
-    return seq
-end
 
 # SequenceNIterator
 # -----------------
@@ -1018,8 +991,6 @@ function hasn(seq::NucleotideSequence)
     return !done(it, start(it))
 end
 
-# TODO: Implement length for SequenceNIterators to use comprehensions
-
 
 # Mismatch counting
 # -----------------
@@ -1035,715 +1006,8 @@ function makemask(k::Integer)
     return 0xffffffffffffffff >> (64 - k)
 end
 
-"""
-`mismatches(a::NucleotideSequence, b::NucleotideSequence, [nmatches=false])`
-
-Return the number of mismatches between `a` and `b`.
-
-If `a` and `b` are of differing lengths, only the first `min(length(a), length(b))`
-nucleotides are compared.
-
-### Arguments
-  * `a`: first sequence to compare
-  * `b`: second sequence to compare
-  * `nmatches`: if true, N matches anything, if false, N matches only itself (false)
-
-### Returns
-The number of mismatches
-"""
-#=
-function mismatches{T}(a::NucleotideSequence{T}, b::NucleotideSequence{T},
-                       nmatches::Bool=false)
-
-    # we need to assume that a is aligned with its data, rearrange the
-    # comparison if that's not the case.
-    if a.part.start != 1
-        if b.part.start == 1
-            return mismatches(b, a)
-        else
-            if length(a) < b
-                orphan!(a)
-            else
-                orphan!(b)
-                return mismatches(b, a)
-            end
-        end
-    end
-
-    # Count mismatches, ignoring the presence of 'N's in the sequence.
-    d0, r0 = divrem64(b.part.start - 1)
-    h = 64 - r0
-    k = r0
-
-    hmask = makemask(h)
-    kmask = makemask(k)
-    count = 0
-    j = d0 + 1
-    for i in 1:length(a.data)
-        count += nucmismatches(a.data[i] & hmask, b.data[j] >>> k)
-        j += 1
-        if j > length(b.data)
-            break
-        end
-        count += nucmismatches(a.data[i] & kmask, b.data[j] << h)
-    end
-
-    # Here's the ugly part. We've just counted mismtaches without taking the N
-    # mask into account. If 'N's are present in the sequence, that mismatch
-    # count may be too high or too low, so we walk through all N positions in
-    # both sequences in unision, correcting the count where needed.
-    nsa       = npositions(a)
-    nsb       = npositions(b)
-    nsa_state = start(nsa)
-    nsb_state = start(nsb)
-    a_done    = done(nsa, nsa_state)
-    b_done    = done(nsb, nsb_state)
-
-    i, nsa_state = a_done ? (0, nsa_state) : next(nsa, nsa_state)
-    j, nsb_state = b_done ? (0, nsb_state) : next(nsb, nsb_state)
-
-    while true
-        a_hasnext = !done(nsa, nsa_state)
-        b_hasnext = !done(nsb, nsb_state)
-
-        if !a_done && (b_done || i < j)
-            nucsmatch = getnuc(T, a.data, i + a.part.start - 1) ==
-                        getnuc(T, b.data, i + b.part.start - 1)
-            if nucsmatch
-                if !nmatches
-                    count += 1
-                end
-            else
-                if nmatches
-                    count -= 1
-                end
-            end
-
-            if a_hasnext; i, nsa_state = next(nsa, nsa_state)
-            else; a_done = true; end
-        elseif !b_done && (a_done || j < i)
-            nucsmatch = getnuc(T, a.data, j + a.part.start - 1) ==
-                        getnuc(T, b.data, j + b.part.start - 1)
-            if nucsmatch
-                if !nmatches
-                    count += 1
-                end
-            else
-                if nmatches
-                    count -= 1
-                end
-            end
-
-            if b_hasnext; j, nsb_state = next(nsb, nsb_state)
-            else; b_done = true; end
-        elseif !a_done && !b_done
-            nucsmatch = getnuc(T, a.data, i + a.part.start - 1) ==
-                        getnuc(T, b.data, i + b.part.start - 1)
-            if !nucsmatch
-                count -= 1
-            end
-
-            if a_hasnext; i, nsa_state = next(nsa, nsa_state)
-            else; a_done = true; end
-            if b_hasnext; j, nsb_state = next(nsb, nsb_state)
-            else; b_done = true; end
-        else
-            break
-        end
-    end
-
-    return count
-end
-=#
-
 # Additional read/write functions
 Base.write(io::Base.TCPSocket, nt::Bio.Seq.QualityEncoding) = Base.write(io, convert(UInt16, nt))
 Base.read{T <: Bio.Seq.QualityEncoding}(io::Base.TCPSocket, t::Type{T}) = convert(T, Base.read(io, UInt16))
 
-# K-mer
-# =====
-
-
-# A Kmer is a sequence <= 32nt, without any 'N's, packed in a single 64 bit value.
-#
-# While NucleotideSequence is an efficient general-purpose sequence
-# representation, Kmer is useful for applications like assembly, k-mer counting,
-# k-mer based quantification in DEPRECATED-Seq, etc that rely on manipulating many
-# short sequences as efficiently (space and time) as possible.
-
-bitstype 64 Kmer{T <: Nucleotide, K}
-
-typealias SGKmer{K} Kmer{SGNucleotide, K}
-
-
-
-# Conversion
-# ----------
-
-# Conversion to/from UInt64
-
-Base.convert{K}(::Type{SGKmer{K}}, x::UInt64) = box(SGKmer{K}, unbox(UInt64, x))
-Base.convert{K}(::Type{UInt64}, x::SGKmer{K}) = box(UInt64, unbox(SGKmer{K}, x))
-
-
-Base.write{T <: Bio.Seq.Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
-Base.write{T <: Kmer}(io::Base.IOStream, k::T) = Base.write(io, convert(UInt64, k))
-Base.write{T <: Kmer}(io::Base.TCPSocket, k::T) = Base.write(io, convert(UInt64, k))
-
-Base.read{T <: Bio.Seq.Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
-Base.read{T <: Kmer}(io::Base.IOStream, t::Type{T}) = convert(T, Base.read(io, UInt64))
-Base.read{T <: Kmer}(io::Base.TCPSocket, t::Type{T}) = convert(T, Base.read(io, UInt64))
-
-==( a::Bio.Seq.DNAKmer, b::SGKmer ) = convert(UInt64, a) == convert(UInt64, b)
-==( a::SGKmer, b::Bio.Seq.DNAKmer ) = convert(UInt64, a) == convert(UInt64, b)
-
-# Conversion to/from String
-
-function Base.convert{T, K}(::Type{Kmer{T, K}}, seq::AbstractString)
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    @assert length(seq) == K error("Cannot construct a $(K)-mer from a string of length $(length(seq))")
-
-    x     = UInt64(0)
-    shift = 0
-    for (i, c) in enumerate(seq)
-        nt = convert(T, c)
-        @assert nt != nnucleotide(T) error("A K-mer may not contain an N in its sequence")
-        @assert nt != lnucleotide(T) error("A K-mer may not contain an L in its sequence")
-        @assert nt != rnucleotide(T) error("A K-mer may not contain an R in its sequence")
-        @assert nt != snucleotide(T) error("A K-mer may not contain an S in its sequence")
-
-        x |= convert(UInt64, nt) << shift
-        shift += 2
-    end
-
-    return convert(Kmer{T, K}, x)
-end
-
-Base.convert{T}(::Type{Kmer{T}}, seq::AbstractString) = convert(Kmer{T, length(seq)}, seq)
-Base.convert{T, K}(::Type{AbstractString}, seq::Kmer{T, K}) = convert(AbstractString, [convert(Char, x) for x in seq])
-
-# Conversion to/from NucleotideSequence
-
-"Convert a NucleotideSequence to an SGKmer"
-function Base.convert{T, K}(::Type{Kmer{T,K}}, seq::NucleotideSequence{T})
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    @assert length(seq) == K error("Cannot construct a $(K)-mer from a NucleotideSequence of length $(length(seq))")
-
-    x     = UInt64(0)
-    for (i, nt) in enumerate(seq)
-        if nt == nnucleotide(T) || nt == lnucleotide(T) || nt == rnucleotide(T) || nt == snucleotide(T)
-            error("A K-mer may not contain an N,L,R,S in its sequence")
-        end
-        x = x << 2 | convert(UInt64, nt)
-    end
-    return convert(Kmer{T, K}, x)
-end
-
-Base.convert{T}(::Type{Kmer},    seq::NucleotideSequence{T}) = convert(Kmer{T, length(seq)}, seq)
-Base.convert{T}(::Type{Kmer{T}}, seq::NucleotideSequence{T}) = convert(Kmer{T, length(seq)}, seq)
-
-function Base.convert{T, K}(::Type{NucleotideSequence{T}}, x::Kmer{T, K})
-    ns = falses(K)
-    return NucleotideSequence{T}([convert(UInt64, x)], ns, 1:K, false, false)
-end
-Base.convert{T, K}(::Type{NucleotideSequence}, x::Kmer{T, K}) = convert(NucleotideSequence{T}, x)
-
-
-==( a::Bio.Seq.DNANucleotide, b::SGNucleotide ) = convert(UInt64, a) == convert(UInt64, b)
-
-# Constructors
-# ------------
-
-# From strings
-
-"Construct a SGKmer to an AbstractString"
-sgkmer(seq::AbstractString) = convert(SGKmer, seq)
-
-"Construct a Kmer from a sequence of Nucleotides"
-function kmer{T <: Nucleotide}(nts::T...)
-    K = length(nts)
-    if K > 32
-        error(string("Cannot construct a K-mer longer than 32nt."))
-    end
-
-    x = UInt64(0)
-    shift = 0
-    for (i, nt) in enumerate(nts)
-        if nt == nnucleotide(T)
-            error("A Kmer may not contain an N in its sequence")
-        end
-        x |= convert(UInt64, nt) << shift
-        shift += 2
-    end
-    return convert(Kmer{T, K}, x)
-end
-
-"Construct a Kmer from a SGSequence"
-function kmer(seq::SGSequence)
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(SGKmer{length(seq)}, seq)
-end
-
-
-# call kmer with @inline macro would reduce the performance significantly?
-# Would the compiler inline even without @inline?
-"Construct a SGKmer from a SGSequence"
-function sgkmer(seq::SGSequence)
-    @assert length(seq) <= 32 error("Cannot construct a K-mer longer than 32nt.")
-    return convert(SGKmer{length(seq)}, seq)
-end
-
-
-
-# Basic Functions
-# ---------------
-
-function =={T, K}(a::NucleotideSequence{T}, b::Kmer{T, K})
-    if length(a) != K
-        return false
-    end
-
-    for (u, v) in zip(a, b)
-        if u != v
-            return false
-        end
-    end
-
-    return true
-end
-
-
-function =={T, K}(a::Kmer{T, K}, b::NucleotideSequence{T})
-    return b == a
-end
-
-function Base.getindex{T, K}(x::Kmer{T, K}, i::Integer)
-    if i < 1 || i > K
-        throw(BoundsError())
-    end
-    return convert(T, (convert(UInt64, x) >>> (2*(i-1))) & 0b11)
-end
-
-
-function Base.show{K}(io::IO, x::SGKmer{K})
-    write(io, "SG $(K)-mer:\n ")
-    for i in 1:K
-        write(io, convert(Char, x[i]))
-    end
-end
-
-
-
-Base.isless{T, K}(x::Kmer{T, K}, y::Kmer{T, K}) = convert(UInt64, x) < convert(UInt64, y)
-
-Base.length{T, K}(x::Kmer{T, K}) = K
-
-# Iterating over nucleotides
-Base.start(x::Kmer) = 1
-
-function Base.next{T, K}(x::Kmer{T, K}, i::Int)
-    nt = convert(T, (convert(UInt64, x) >>> (2*(i-1))) & 0b11)
-    return (nt, i + 1)
-end
-
-Base.done{T, K}(x::Kmer{T, K}, i::Int) = i > K
-
-
-# Other functions
-# ---------------
-
-"""
-`complement(kmer::Kmer)`
-
-The Kmer complement of `kmer`
-"""
-function complement{T, K}(x::Kmer{T, K})
-    return convert(Kmer{T, K},
-        (~convert(UInt64, x)) & (0xffffffffffffffff >>> (2 * (32 - K))))
-end
-
-"""
-`reverse(kmer::Kmer)`
-
-Reversed copy of `kmer`
-"""
-reverse{T, K}(x::Kmer{T, K}) = convert(Kmer{T, K}, nucrev(convert(UInt64, x)) >>> (2 * (32 - K)))
-
-"""
-`reverse_complement(kmer::Kmer)`
-
-Reversed complement of `kmer`
-"""
-reverse_complement{T, K}(x::Kmer{T, K}) = complement(reverse(x))
-
-"""
-`mismatches(x::Kmer, y::Kmer)`
-
-Return the number of mismatches between `x` and `y`.
-
-### Arguments
-* `a`: first sequence to compare
-* `b`: second sequence to compare
-
-### Returns
-The number of mismatches
-"""
-mismatches{T, K}(a::Kmer{T, K}, b::Kmer{T, K}) = nucmismatches(convert(UInt64, a), convert(UInt64, b))
-
-"""
-Canonical k-mer of `x`
-
-A canonical k-mer is the numerical lesser of a k-mer and its reverse complement.
-This is useful in hashing/counting k-mers in data that is not strand specific,
-and thus observing k-mer is equivalent to observing its reverse complement.
-"""
-function canonical{T, K}(x::Kmer{T, K})
-    y = reverse_complement(x)
-    return x < y ? x : y
-end
-
-
-"""
-Iterate through k-mers neighboring `x` on a de Bruijn graph.
-"""
-function neighbors{T, K}(x::Kmer{T, K})
-    return KmerNeighborIterator{T, K}(x)
-end
-
-
-immutable KmerNeighborIterator{T, K}
-    x::Kmer{T, K}
-end
-
-
-Base.start(it::KmerNeighborIterator) = UInt64(0)
-Base.done(it::KmerNeighborIterator, i) = i == 4
-Base.length(::KmerNeighborIterator) = 4
-Base.next{T, K}(it::KmerNeighborIterator{T, K}, i) =
-    convert(Kmer{T, K}, (convert(UInt64, it.x) >>> 2) | (i << (2 * K - 2))), i + 1
-
-
-# EachKmerIterator and EachKmerIteratorState
-# ==========================================
-
-# Iterate through every k-mer in a nucleotide sequence
-immutable EachKmerIterator{T, K}
-    seq::NucleotideSequence{T}
-    step::Int
-end
-
-
-immutable EachKmerIteratorState{T, K}
-    i::Int
-    npos::Int
-    x::UInt64
-end
-
-# Maybe this function should replace the default constructor.
-# Is the (unsafe) default constructor used throughout our code?
-"""
-Initialize an iterator over all k-mers in a sequence.
-
-Any k-mer containing an N will be skipped over.
-
-### Arguments
-  * `t`: Kmer type to enumerate.
-  * `seq`: A NucleotideSequence
-  * `step`: number of positions between iterated k-mers (default: 1)
-
-### Returns
-A EachKmerIterator constructed with these parameters
-
-### Examples
-```{.julia execute="false"}
-# iterate over codons
-for x in each(SGKmer{3}, sg"ATCCTANAGNTACT", 3)
-    @show x
-end
-```
-"""
-function each{T, K}(t::Type{Kmer{T, K}}, seq::NucleotideSequence{T}, step::Integer=1)
-    @assert K >= 0 "K must be ≥ 0 in EachKmer"
-    @assert K <= 32 "K must be ≤ 32 in EachKmer"
-    @assert step >= 1 "step must be ≥ 1"
-
-    return EachKmerIterator{T, K}(seq, step)
-end
-
-
-function eachkmer{T}(seq::NucleotideSequence{T}, k::Integer, step::Integer=1)
-    return each(Kmer{T, K}, seq, step)
-end
-
-
-@inline function nextkmer{T, K}(it::EachKmerIterator{T, K},
-                                state::EachKmerIteratorState{T, K}, skip::Int)
-    i = state.i + 1
-    npos = state.npos
-    x = state.x >>> (2 * skip)
-
-    if i > it.seq.part.stop
-        return EachKmerIteratorState{T, K}(i, npos, x)
-    end
-
-    shift = 2 * (K - 1)
-    d, r = divrem32(i - 1)
-    data_d = it.seq.data[d + 1] >> 2*r
-
-    lastn = 0
-    @inbounds while true
-        if i == npos
-            npos = nextone(it.seq.ns, i + 1)
-            lastn = i
-        else
-            shift = 2 * (K - skip)
-            x |= (((data_d) & 0b11) << shift)
-        end
-
-        skip -= 1
-        if skip == 0
-            if i - lastn < K
-                x >>= (2 * it.step)
-                skip = it.step
-            else
-                break
-            end
-        end
-
-        i += 1
-        if i > it.seq.part.stop
-            break
-        end
-
-        r += 1
-        data_d >>= 2
-        if r == 32
-            r = 0
-            d += 1
-            if d < length(it.seq.data)
-                data_d = it.seq.data[d + 1]
-            end
-        end
-    end
-
-    return EachKmerIteratorState{T, K}(i, npos, x)
-end
-
-
-@inline function start{T, K}(it::EachKmerIterator{T, K})
-    i = it.seq.part.start
-    npos = nextone(it.seq.ns, i)
-    state = EachKmerIteratorState{T, K}(i - 1, npos, UInt64(0))
-    if i <= it.seq.part.stop
-        return nextkmer(it, state, K)
-    else
-        return EachKmerIteratorState{T, K}(i, npos, 0)
-    end
-end
-
-
-@inline function next{T, K}(it::EachKmerIterator{T, K},
-                            state::EachKmerIteratorState{T, K})
-    value = convert(Kmer{T, K}, state.x)
-    next_state = nextkmer(it, state, it.step)
-    return (state.i - it.seq.part.start - K + 2, value), next_state
-end
-
-
-@inline function done{T, K}(it::EachKmerIterator{T, K},
-                            state::EachKmerIteratorState{T, K})
-    return state.i > it.seq.part.stop
-end
-
-
-# Nucleotide Composition
-# ======================
-
-type NucleotideCounts{T <: Nucleotide}
-    a::UInt
-    c::UInt
-    g::UInt
-    t::UInt # also hold 'U' count when T == DEPRECATEDNucleotide
-    n::UInt
-
-    function NucleotideCounts()
-        new(0, 0, 0, 0, 0)
-    end
-end
-
-
-# Aliases
-# -------
-
-typealias SGNucleotideCounts NucleotideCounts{SGNucleotide}
-
-
-# Constructors
-# ------------
-
-# Count A, C, T/U, G respectively in a kmer stored in a UInt64
-function count_a(x::UInt64)
-    xinv = ~x
-    return count_ones(((xinv >>> 1) & xinv) & 0x5555555555555555)
-end
-count_c(x::UInt64) = count_ones((((~x) >>> 1) & x) & 0x5555555555555555)
-count_g(x::UInt64) = count_ones(((x >>> 1) & (~x)) & 0x5555555555555555)
-count_t(x::UInt64) = count_ones((x    & (x >>> 1)) & 0x5555555555555555)
-
-"""
-`NucleotideCounts(seq::NucleotideSequence)`
-
-Constructs a NucleotideCounts object from a NucleotideSequence `seq`.
-"""
-function NucleotideCounts{T}(seq::NucleotideSequence{T})
-    dn, rn = divrem64(seq.part.start - 1)
-
-    d = 2*dn
-    r = 2*dn
-
-    i = 1
-    counts = NucleotideCounts{T}()
-
-    # count leading unaligned bases
-    for i in 1:r
-        counts[seq[i]] += 1
-        i += 1
-    end
-    if r > 0
-        d += 1
-    end
-
-    # maybe just skip over blocks of Ns as I go?
-    while i + 63 <= length(seq)
-        # handle the all-N case
-        if seq.ns.chunks[dn + 1] == 0xffffffffffffffff
-            counts.n += 64
-        else
-            counts.a += count_a(seq.data[d + 1]) + count_a(seq.data[d + 2])
-            counts.c += count_c(seq.data[d + 1]) + count_c(seq.data[d + 2])
-            counts.g += count_g(seq.data[d + 1]) + count_g(seq.data[d + 2])
-            counts.t += count_t(seq.data[d + 1]) + count_t(seq.data[d + 2])
-
-            x = seq.ns.chunks[dn + 1]
-            if x != 0
-                for j in 1:64
-                    if x & 0x01 != 0
-                        counts.n += 1
-                        counts[getnuc(T, seq.data, seq.part.start + i + j - 2)] -= 1
-                    end
-
-                    x >>= 1
-                    if x == 0
-                        break
-                    end
-                end
-            end
-        end
-
-        dn += 1
-        d += 2
-        i += 64
-    end
-
-    # count trailing unaligned bases
-    while i <= length(seq)
-        counts[seq[i]] += 1
-        i += 1
-    end
-
-    return counts
-end
-
-"""
-`NucleotideCounts(seq::Kmer)`
-
-Constructs a NucleotideCounts object from a Kmer `seq`.
-"""
-function NucleotideCounts{T,K}(seq::Kmer{T, K})
-    x         = convert(UInt64, seq)
-    counts    = NucleotideCounts{T}()
-    counts.a += count_a(x) - 32 + K # Take leading zeros into account
-    counts.c += count_c(x)
-    counts.g += count_g(x)
-    counts.t += count_t(x)
-    return counts
-end
-
-
-
-# Basic Functions
-# ---------------
-
-Base.setindex!{T}(counts::NucleotideCounts{T}, nt::T) = getfield(counts, Int(convert(UInt, nt) + 1))
-Base.setindex!{T}(counts::NucleotideCounts{T}, c::Integer, nt::T) = setfield!(counts, Int(convert(UInt, nt) + 1), c)
-
-# Pad strings so they are right justified when printed
-function format_counts(xs)
-    strings = AbstractString[string(x) for x in xs]
-    len = maximum(map(length, strings))
-    for i in 1:length(strings)
-        strings[i] = string(repeat(" ", len - length(strings[i])), strings[i])
-    end
-    return strings
-end
-
-
-# Pretty printing of NucleotideCounts
-function Base.show(io::IO, counts::SGNucleotideCounts)
-    count_strings = format_counts(
-        [counts[SG_A], counts[SG_C], counts[SG_G], counts[SG_T], counts[SG_N]])
-
-    write(io,
-        """
-        SGNucleotideCounts:
-          A => $(count_strings[1])
-          C => $(count_strings[2])
-          G => $(count_strings[3])
-          T => $(count_strings[4])
-          N => $(count_strings[5])
-        """)
-end
-
-
-
-# Kmer Composition
-# ----------------
-
-"""
-Count ocurrences of short (<= 32) k-mers in a sequence.
-
-This method uses a dense table to store counts, requiring O(4^k) memory, so is
-not recommended for large k-mer sizes.
-
-### Arguments:
-  * 'seq`: A NucleotideSequence
-  * `step`: K-mers counted are separated by this many nucleotides (deafult: 1)
-"""
-immutable KmerCounts{T, K}
-    data::Vector{UInt32}
-
-    function KmerCounts(seq::NucleotideSequence{T}, step::Integer=1)
-        data = zeros(UInt32, 4^K)
-        @inbounds for (_, x) in each(Kmer{T, K}, seq, step)
-            data[convert(UInt64, x) + 1] += 1
-        end
-        return new(data)
-    end
-end
-
-typealias SGKmerCounts{K} KmerCounts{SGNucleotide, K}
-
-function Base.getindex{T, K}(counts::KmerCounts{T, K}, x::Kmer{T, K})
-    @inbounds c = counts.data[convert(UInt64, x) + 1]
-    return c
-end
-
-
-function Base.show{T, K}(io::IO, counts::KmerCounts{T, K})
-    println(io, (T == SGNucleotide ? "SG" : "DEPRECATED"), "KmerCounts{", K, "}:")
-    for x in UInt64(1):UInt64(4^K)
-        s = convert(AbstractString, convert(Kmer{T, K}, x - 1))
-        println(io, "  ", s, " => ", counts.data[x])
-    end
-end
 
