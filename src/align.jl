@@ -49,7 +49,7 @@ abstract UngappedAlignment
 
 type SGAlignment <: UngappedAlignment
    matches::UInt16
-   mismatches::Float32
+   mismatches::Float64
    offset::UInt32
    path::Vector{SGNode}
    strand::Bool
@@ -75,9 +75,9 @@ Base.isless( a::SGAlignment, b::SGAlignment ) = a < b
 @inline phred_to_prob( phred::Int8 ) = @fastmath 1-10^(-phred/10)
 
 function Base.empty!( align::SGAlignment ) 
-   align.matches = 0 
-   align.mismatches = 0.0
-   align.offset = 0 
+   align.matches = zero(UInt16) 
+   align.mismatches = zero(Float32)
+   align.offset = zero(UInt32) 
    empty!( align.path ) 
    align.strand = true 
    align.isvalid = false 
@@ -218,7 +218,7 @@ end
 # Returns: SGAlignment
 function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos::Bool=true,
-                                align::SGAlignment=SGAlignment(0,0,sgidx,SGNode[],ispos,false),
+                                align::SGAlignment=SGAlignment(0, 0.0, sgidx,SGNode[],ispos,false),
                                 nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
    const sg       = lib.graphs[geneind]
    const readlen  = convert(UInt16, length(read.seq))
@@ -232,7 +232,6 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
    #println(STDERR, "VERBOSE: FWD EXTENSION")
 
    while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
-
       if sgidx == sg.nodeoffset[nodeidx] + sg.nodelen[nodeidx] # hit next edge
          # DEPRECATED isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const curedge = nodeidx + 0x01
@@ -270,7 +269,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                   passed_edges = Nullable(Vector{UInt32}())
                end
                passed_extend = 0
-               passed_mismat = 0.0
+               passed_mismat = zero(Float32)
                push!(get(passed_edges), curedge)
                #sgidx   += 1
                #ridx    -= 1
@@ -397,7 +396,7 @@ end
 # Returns: SGAlignment
 function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos::Bool=true,
-                                align::SGAlignment=SGAlignment(0,0,sgidx,SGNode[],ispos,false),
+                                align::SGAlignment=SGAlignment(0, 0.0, sgidx, SGNode[], ispos, false),
                                 nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
    const sg       = lib.graphs[geneind]
    const readlen  = convert(UInt16,length(read.seq))
@@ -438,7 +437,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                   passed_edges = Nullable(Vector{UInt32}())
                end
                passed_extend = 0
-               passed_mismat = 0.0
+               passed_mismat = zero(Float32)
                push!(get(passed_edges), nodeidx)
                #sgidx   -= 1
                #ridx    += 1

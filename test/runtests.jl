@@ -241,7 +241,6 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(STDERR, "Saving test index...")
       println(STDERR, lib)
       @timer open("test_index.jls", "w+") do io
-      open("test_index.jls", "w+") do io
          serialize( io, lib )
       end
       println(STDERR, "Loading test index...")
