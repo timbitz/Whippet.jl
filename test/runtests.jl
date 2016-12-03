@@ -299,7 +299,7 @@ IIIIIIIIIIII
       multi = Vector{Multimap}()
 
       typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
-      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_A )
+      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_T )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
