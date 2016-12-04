@@ -20,7 +20,7 @@ function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, for
       fopen = open( filename, "r" ) 
       to_open = ZlibInflateInputStream( fopen, reset_on_end=true )
    else
-      to_open = filename
+      to_open = BufferedInputStream( filename )
    end 
    FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
                                                              encoding,
