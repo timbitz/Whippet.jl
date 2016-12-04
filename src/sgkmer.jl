@@ -10,7 +10,6 @@ Base.read{T <: Bio.Seq.Kmer}(io::IO, ::Type{T}) = convert(T, Base.read(io, UInt6
 kmer_index{T,K}( kmer::Bio.Seq.Kmer{T,K} ) = Int(reinterpret(UInt64, kmer)) + 1
 
 kmer_index( seq::BioSequence ) = Int(kmer_index_trailing( seq )) + 1
-#kmer_index( seq::SGSequence  ) = Int(kmer_index_straight( seq )) + 1
 
 # calculate kmer index directly
 function kmer_index_trailing( seq )
@@ -25,20 +24,6 @@ function kmer_index_trailing( seq )
    end
    x
 end
-
-# calculate kmer index directly
-#=function kmer_index_straight( seq )
-   x     = UInt64(0)
-   for nt in seq
-      ntint = convert(UInt8, nt)
-      if ntint > 0x03 | isambiguous(nt)
-         return 0
-      else
-         x = x << 2 | ntint
-      end
-   end
-   x
-end=#
 
 kmer(seq::SGSequence) = sgkmer(seq)
 sgkmer(seq::String) = convert(SGKmer, seq)
