@@ -514,16 +514,16 @@ function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
    end
 
    function write_junction( sg::SpliceGraph, edg::IntervalValue, i::Int, str::String )
-      donor    = sg.nodecoord[edg.first]+sg.nodelen[edg.first]-1
-      acceptor = sg.nodecoord[edg.last]
       tab_write( io, lib.info[i].name )
-      if donor < acceptor
-         tab_write( io, string(donor) )
-         tab_write( io, string(acceptor) )
+      if lib.info[i].strand
+         donor    = sg.nodecoord[edg.first]+sg.nodelen[edg.first]-1
+         acceptor = sg.nodecoord[edg.last]
       else
-         tab_write( io, string(acceptor) )
-         tab_write( io, string(donor) )
+         donor    = sg.nodecoord[edg.last]+sg.nodelen[edg.last]-1
+         acceptor = sg.nodecoord[edg.first]
       end
+      tab_write( io, string(donor) )
+      tab_write( io, string(acceptor) )
       plug_write( io, lib.info[i].gene, plug=':' )
       plug_write( io, string(edg.first), plug='-' )
       plug_write( io, string(edg.last), plug=':' )
