@@ -491,3 +491,48 @@ function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::
    write( io, "Novel_Junc_Percent\t$(signif(((jcnt-acnt)/jcnt)*100,2))%\n" )
 end
 
+
+function output_junctions( filename::String, lib::GraphLib, graphq::GraphLibQuant )
+   io = open( filename, "w" )
+   stream = ZlibDeflateOutputStream( io )
+
+   output_junctions( stream, lib, graphq )
+
+   close(stream)
+   close(io)
+end
+
+function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
+   function write_junctions( sg::SpliceGraph, sgquant::SpliceGraphQuant, i::Int )
+      for edg in sgquant.edge
+         if edg in sg.annopath
+            write_junction( sg, edg, i, "ANNO" )
+         else # unique edge
+            write_junction( sg, edg, i, "UNIQ" )
+         end
+      end
+   end
+
+   function write_junction( sg::SpliceGraph, edg::IntervalValue, i::Int, str::String )
+      tab_write( io, lib.info[i].name )
+      if lib.info[i].strand
+         donor    = sg.nodecoord[edg.first]+sg.nodelen[edg.first]-1
+         acceptor = sg.nodecoord[edg.last]
+      else
+         donor    = sg.nodecoord[edg.last]+sg.nodelen[edg.last]-1
+         acceptor = sg.nodecoord[edg.first]
+      end
+      tab_write( io, string(donor) )
+      tab_write( io, string(acceptor) )
+      plug_write( io, lib.info[i].gene, plug=':' )
+      plug_write( io, string(edg.first), plug='-' )
+      plug_write( io, string(edg.last), plug=':' )
+      tab_write( io, str )
+      tab_write( io, string(edg.value) )
+      end_write( io, lib.info[i].strand ? '+' : '-' )
+   end
+
+   for i in 1:length(lib.graphs)
+      write_junctions( lib.graphs[i], graphq.quant[i], i )
+   end
+end
