@@ -491,12 +491,19 @@ function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::
    write( io, "Novel_Junc_Percent\t$(signif(((jcnt-acnt)/jcnt)*100,2))%\n" )
 end
 
-function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
-   for i in 1:length(lib.graphs)
-      output_junctions( io, lib.graphs[i], graphq.quant[i] )
-   end
 
-   function output_junctions( sg::SpliceGraph, sgquant::SpliceGraphQuant, i::Int )
+function output_junctions( filename::String, lib::GraphLib, graphq::GraphLibQuant )
+   io = open( filename, "w" )
+   stream = ZlibDeflateOutputStream( io )
+
+   output_junctions( stream, lib, graphq )
+
+   close(stream)
+   close(io)
+end
+
+function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
+   function write_junctions( sg::SpliceGraph, sgquant::SpliceGraphQuant, i::Int )
       for edg in sgquant.edge
          if edg in sg.annopath
             write_junction( sg, edg, i, "ANNO" )
@@ -511,17 +518,21 @@ function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
       acceptor = sg.nodecoord[edg.last]
       tab_write( io, lib.info[i].name )
       if donor < acceptor
-         tab_write( io, donor )
-         tab_write( io, acceptor )
+         tab_write( io, string(donor) )
+         tab_write( io, string(acceptor) )
       else
-         tab_write( io, acceptor )
-         tab_write( io, donor )
+         tab_write( io, string(acceptor) )
+         tab_write( io, string(donor) )
       end
-      plug_write( io, lib.info[i].gene, ':' )
-      plug_write( io, string(edg.first), '-' )
-      plug_write( io, string(edg.last), ':' )
+      plug_write( io, lib.info[i].gene, plug=':' )
+      plug_write( io, string(edg.first), plug='-' )
+      plug_write( io, string(edg.last), plug=':' )
       tab_write( io, str )
       tab_write( io, string(edg.value) )
       end_write( io, lib.info[i].strand ? '+' : '-' )
+   end
+
+   for i in 1:length(lib.graphs)
+      write_junctions( lib.graphs[i], graphq.quant[i], i )
    end
 end
