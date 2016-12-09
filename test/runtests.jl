@@ -12,7 +12,6 @@ using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
-include("../src/sgsequence.jl")
 include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
@@ -28,50 +27,16 @@ include("../src/events.jl")
 include("../src/io.jl")
 include("../src/diff.jl")
 
-@testset "SG Sequence" begin
-   @test typeof(sg"GATGCA") == NucleotideSequence{SGNucleotide}
-   fullset = sg"ACGTNLRS"
-   fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
-   for nt in fullset
-      @test typeof(nt) == SGNucleotide
-   end
-   for n in 0:(length(fullset)-1)
-      i = n+1
-      @test fullset[i] == fullarr[i]
-      @test convert(UInt8, fullset[i]) == UInt8(n)
-      @test convert(SGNucleotide, UInt8(n)) == fullset[i]
-   end 
-   @test fullset[1:4] == sg"ACGT"
-   @test fullset.data == fullset[1:4].data
-   @test reverse_complement(sg"GATGCA") == sg"TGCATC" 
-   @test reverse_complement(sg"LRS")    == sg"SRL"
-   @test sg"AT" * sg"TA" == sg"ATTA"
-   @test sg"AT" ^ 2 == sg"ATAT" 
-   @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
-   @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
-   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide) 
-   dnaset = BioSequence{DNAAlphabet{2}}("ACGT") # from Bio.Seq
-   refset = ReferenceSequence("ACGT")           #
-   sgset  = sg"ACGT"
-   @test SGSequence( dnaset ) == sgset
-   @test SGSequence( refset ) == sgset
-   # Make sure the encodings are consistent
-   for i in 1:length(dnaset)
-      @test Bio.Seq.encode(DNAAlphabet{2}, refset[i]) == UInt8(sgset[i])
-      @test Bio.Seq.encode(DNAAlphabet{2}, dnaset[i]) == UInt8(sgset[i])
-      @test refset[i] == sgset[i] && sgset[i] == refset[i]
-      @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
-   end
-end
-@testset "SG Kmers" begin
-   @test sgkmer(sg"ATG") == Bio.Seq.DNAKmer(dna"ATG")
+@testset "SG Kmers & Seq" begin
+   @test sgkmer(dna"ATG") == Bio.Seq.DNAKmer(dna"ATG")
    @test sgkmer("ATG") == Bio.Seq.DNAKmer(dna"ATG")
-   @test isa(sgkmer(sg"ATG"), SGKmer{3})
-   @test kmer_index( sgkmer(sg"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
-   @test kmer_index( sg"ATG" ) == kmer_index( dna"ATG" )
-   seq = sg""
+   @test isa(sgkmer(dna"ATG"), SGKmer{3})
+   @test kmer_index( sgkmer(dna"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test Int(kmer_index_trailing( dna"ATG" ))+1 == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test Int(kmer_index_trailing( dna"ATGR" )) == 0
+   seq = dna""
    for i in 1:32
-      seq = i % 2 == 0 ? seq * sg"C" : seq * sg"T"
+      seq = i % 2 == 0 ? seq * dna"C" : seq * dna"T"
       curkmer = sgkmer(seq)
       @test isa( curkmer, SGKmer{i} )
    end
@@ -125,19 +90,19 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    end
 
                               # fwd     rev
-   buffer1   = sg"AAAAA"      # 1-5     96-100
-   utr5      = sg"TTATT"      # 6-10    91-95
-   exon1     = sg"GCGGATTACA" # 11-20   81-90
-   int1      = sg"TTTTTTTTTT" # 21-30   71-80
-   exon2     = sg"GCATTAGAAG" # 31-40   61-70
-   int2      = sg"GGGGGGGGGG" # 41-50   51-60
-   exon3alt3 = sg"CCT"        # 51-53   48-50
-   exon3def  = sg"CTATGCTAG"  # 54-62   39-47
-   exon3alt5 = sg"TTC"        # 63-65   36-38
-   int3      = sg"CCCCCCCCCC" # 66-75   26-35
-   exon4     = sg"TTAGACAAGA" # 76-85   16-25
-   apa       = sg"AATAA"      # 86-90   11-15
-   buffer2   = sg"AAAAAAAAAA" # 91-100  1-10
+   buffer1   = dna"AAAAA"      # 1-5     96-100
+   utr5      = dna"TTATT"      # 6-10    91-95
+   exon1     = dna"GCGGATTACA" # 11-20   81-90
+   int1      = dna"TTTTTTTTTT" # 21-30   71-80
+   exon2     = dna"GCATTAGAAG" # 31-40   61-70
+   int2      = dna"GGGGGGGGGG" # 41-50   51-60
+   exon3alt3 = dna"CCT"        # 51-53   48-50
+   exon3def  = dna"CTATGCTAG"  # 54-62   39-47
+   exon3alt5 = dna"TTC"        # 63-65   36-38
+   int3      = dna"CCCCCCCCCC" # 66-75   26-35
+   exon4     = dna"TTAGACAAGA" # 76-85   16-25
+   apa       = dna"AATAA"      # 86-90   11-15
+   buffer2   = dna"AAAAAAAAAA" # 91-100  1-10
 
    fwd = buffer1 * utr5 * exon1 * int1 * 
          exon2 * int2 * 
@@ -147,17 +112,17 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    genome = fwd * rev
 
-   expected_one = sg"SL" * utr5 * exon1 * sg"LL" * 
-               int1 * sg"RR" *
-               exon2 * sg"LR" * 
-               exon3alt3 * sg"RR" * 
-               exon3def * sg"LL" * 
-               exon3alt5 * sg"LR" *
-               exon4 * sg"RS" * 
-               apa * sg"RS"
+   expected_one = utr5 * exon1 * 
+               int1 *
+               exon2 *
+               exon3alt3 * 
+               exon3def *  
+               exon3alt5 *
+               exon4 * 
+               apa 
 
-   expected_sin = sg"SLGCGGATTACARS"
-   expected_kis = sg"SLAAAAAAAAAALLRRTGTAATCCGCRS"
+   expected_sin = dna"GCGGATTACA"
+   expected_kis = dna"AAAAAAAAAATGTAATCCGC"
 
    kmer_size = 2 # good test size
 
@@ -178,7 +143,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    end
 
    # Build Index (from index.jl)
-   xcript  = sg""
+   xcript  = dna""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
@@ -198,7 +163,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       runoffset += length(curgraph.seq)   
    end
 
-   fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true)
+   fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true)
 
    edges = build_edges( xgraph, kmer_size )
 
@@ -208,8 +173,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size )
 
    @testset "Kmer Edges" begin
-      left  = [sg"CA", sg"AG", sg"AG", sg"TC", sg"AA"]
-      right = [sg"GC", sg"CC", sg"CT", sg"TT", sg"TG"]
+      left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA"]
+      right = [dna"GC", dna"CC", dna"CT", dna"TT", dna"TG"]
       lkmer = map( x->kmer_index(SGKmer(x)), left )
       rkmer = map( x->kmer_index(SGKmer(x)), right )
       #println(lkmer[1])
@@ -298,18 +263,18 @@ IIIIIIIIIIII
       multi = Vector{Multimap}()
 
       typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
-      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_A )
+      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_T )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
       @test length(reads) == 10
       for r in reads
-#         println(r)
+         println(r)
 #         println(r.metadata)
          align = ungapped_align( param, lib, r )
-         #println(align)
+         println(align)
 
-         #flush(STDERR)
+         flush(STDERR)
          @test !isnull( align )
          @test length( align.value ) >= 1
          @test all(map( x->x.isvalid, align.value))

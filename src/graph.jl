@@ -1,5 +1,4 @@
 # requires:
-# include("bio_nuc_safepatch.jl")
 
 bitstype 8 EdgeType
 
@@ -22,21 +21,17 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x03  for _ in 1:4 ];
                                                   [0x05  for _ in 1:4 ];
                                                   [0x00  for _ in 1:4 ] ], (4,4)))
 
-const EDGETYPE_TO_SG = SGSequence[ sg"SL", sg"SR", sg"LS", sg"RS",
-                                   sg"LR", sg"LL", sg"RR", sg"SS" ]
-
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
    EDGETYPE_TO_UINT8[one-3,two-3]
 end
 
-Base.convert( ::Type{EdgeType}, one::SGNucleotide, two::SGNucleotide ) = 
-               Base.convert( EdgeType, convert(UInt8, one), convert(UInt8, two) )
-Base.convert( ::Type{EdgeType}, edge::UInt8 ) = box(EdgeType, unbox(UInt8, edge ))
-Base.convert( ::Type{UInt8}, edge::EdgeType ) = box(UInt8, unbox(EdgeType, edge ))
+Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) = 
+              Base.convert( EdgeType, convert(UInt8, trailing_zeros(one)), convert(UInt8, trailing_zeros(two)) )
+Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
+Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)
 Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
-Base.convert( ::Type{SGSequence}, edge::EdgeType ) = EDGETYPE_TO_SG[Base.convert(UInt8, edge)+1]
 
 const EDGETYPE_SL = convert(EdgeType, 0b000)
 const EDGETYPE_SR = convert(EdgeType, 0b001)
@@ -96,7 +91,7 @@ end
 # empty constructor
 SpliceGraph(k::Int) = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
                                    Vector{CoordInt}(), Vector{EdgeType}(),
-                                   Vector{SGKmer{k}}(),Vector{SGKmer{k}}(), sg"" )
+                                   Vector{SGKmer{k}}(),Vector{SGKmer{k}}(), dna"" )
 
 # Main constructor
 # Build splice graph here.
@@ -106,7 +101,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    nodecoord  = Vector{CoordInt}()
    nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
-   seq        = sg""
+   seq        = DNASequence()
 
    strand = gene.info.strand  # Bool
    
@@ -140,11 +135,6 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       if secval == Inf
          termedge = strand ? EdgeType(0x03) : EdgeType(0x00)
          stranded_push!(edgetype, termedge, strand)
-         if strand
-            seq *= SGSequence(termedge)
-         else
-            seq = SGSequence(termedge) * seq
-         end
          break
       end
       
@@ -154,7 +144,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
          nodesize = Int(secval - minval) - leftadj - rightadj + 1
          #println("$minval, $secval, $leftadj, $rightadj, $nodesize")
-         nodeseq  = genome[(Int(minval)+leftadj):(Int(secval)-rightadj)] # collect slice
+         nodeseq  = copy(genome[(Int(minval)+leftadj):(Int(secval)-rightadj)]) # collect slice
          edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval  = minval + leftadj
          thridx = 0
@@ -163,15 +153,15 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          thridx,thrval = getmin_ind_val( gene, idx )
          rightadj = (thridx == 2 || thridx == 4) && secval != thrval ? 1 : 0
          nodesize = Int(thrval - secval) - rightadj + 1
-         nodeseq  = genome[Int(secval):(Int(thrval)-rightadj)]
+         nodeseq  = copy(genome[Int(secval):(Int(thrval)-rightadj)])
          edge     = get_edgetype( minidx, secidx, false, strand )
          pushval  = secval
       end
 
       if strand
-         seq *= SGSequence(edge) * nodeseq
+         seq *= nodeseq
       else # '-' strand
-         seq = reverse_complement(nodeseq) * SGSequence(edge) * seq
+         seq = reverse_complement(nodeseq) * seq
       end
       stranded_push!(nodecoord, pushval,  strand)
       stranded_push!(nodelen,   nodesize, strand)
@@ -180,10 +170,10 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    end # end while
 
    # calculate node offsets-->
-   curoffset = 3
+   curoffset = 1
    for n in nodelen
       push!(nodeoffset, curoffset)
-      curoffset += n + 2
+      curoffset += n
    end
 
    eleft  = Vector{SGKmer{k}}(length(edgetype))

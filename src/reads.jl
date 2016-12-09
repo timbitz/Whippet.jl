@@ -16,11 +16,11 @@ function tryread_bool!(parser::Bio.IO.AbstractReader, output)
 end
 
 function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
+   fopen = open( filename, "r" )
    if isgzipped( filename ) || forcegzip
-      fopen = open( filename, "r" ) 
       to_open = ZlibInflateInputStream( fopen, reset_on_end=true )
    else
-      to_open = filename
+      to_open = BufferedInputStream( fopen )
    end 
    FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
                                                              encoding,

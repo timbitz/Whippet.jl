@@ -16,7 +16,6 @@ using Requests
 
 include("types.jl")
 include("timer.jl")
-include("sgsequence.jl")
 include("sgkmer.jl")
 include("fmindex_patch.jl")
 include("refset.jl")
@@ -80,6 +79,7 @@ export SpliceGraph,
        gene_em!,
        output_tpm,
        output_stats,
+       output_junctions,
        assign_ambig!,
        effective_lengths!,
        global_bias,

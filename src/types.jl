@@ -20,6 +20,8 @@ typealias CoordSet   Set{Tuple{CoordInt,CoordInt}}
 typealias ExonInt    UInt16
 typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 
+typealias SGSequence Bio.Seq.BioSequence{DNAAlphabet{4}}
+
 typealias GeneName   String
 typealias SeqName    String
 typealias RefSeqId   String

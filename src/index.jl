@@ -17,16 +17,6 @@ immutable GraphLib <: SeqLibrary
 end
 
 
-function build_offset_dict{I <: Integer, 
-                           S <: AbstractString}( offset::Vector{I}, names::Vector{S} )
-   ret = Dict{S,I}()
-   for i in 1:length(names)
-      cname,coffset = names[i],offset[i]
-      ret[cname] = coffset
-   end
-   ret
-end
-
 function build_chrom_dict( ref::RefSet )
    ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
    for g in keys(ref)
@@ -39,12 +29,12 @@ function build_chrom_dict( ref::RefSet )
    ret
 end
 
-# encode 3-bit sequence with L,R,S,N,A,T,G,C
-function threebit_enc(seq)
+function twobit_enc(seq)
    len = length(seq)
-   ret = IntVector{3,UInt8}(len)
+   ret = IntVector{2,UInt8}(len)
    for i in 1:len
-      ret[i] = convert(UInt8, seq[i])
+      val = isambiguous(seq[i]) ? 0x00 : convert(UInt8, trailing_zeros(seq[i]))
+      ret[i] = val
    end
    ret
 end
@@ -75,7 +65,7 @@ end
 
 function trans_index!( fhIter, ref::RefSet; kmer=9 )
    seqdic  = build_chrom_dict( ref )
-   xcript  = sg""
+   xcript  = dna""
    xoffset = Vector{UInt64}()
    xgenes  = Vector{GeneName}()
    xinfo   = Vector{GeneInfo}()
@@ -88,7 +78,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       #Bio.Seq.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
-      r.seq = dna""
+      r.seq = ReferenceSequence()
       gc() # free
 
       println(STDERR, "Building Splice Graphs for $( r.name ).." )
@@ -105,10 +95,10 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       end
    end
    println( STDERR, "Building full sg-index.." )
-   @time fm = FMIndex(threebit_enc(xcript), 8, r=1, program=:SuffixArrays, mmap=true) 
+   @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true) 
 
    # clean up
-   xcript = sg""
+   xcript = DNASequence()
    gc()
 
    println( STDERR, "Building edges.." ) 
