@@ -16,7 +16,6 @@ using Requests
 
 include("types.jl")
 include("timer.jl")
-include("sgsequence.jl")
 include("sgkmer.jl")
 include("fmindex_patch.jl")
 include("refset.jl")

@@ -17,16 +17,6 @@ immutable GraphLib <: SeqLibrary
 end
 
 
-function build_offset_dict{I <: Integer, 
-                           S <: AbstractString}( offset::Vector{I}, names::Vector{S} )
-   ret = Dict{S,I}()
-   for i in 1:length(names)
-      cname,coffset = names[i],offset[i]
-      ret[cname] = coffset
-   end
-   ret
-end
-
 function build_chrom_dict( ref::RefSet )
    ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
    for g in keys(ref)
@@ -39,17 +29,6 @@ function build_chrom_dict( ref::RefSet )
    ret
 end
 
-# encode 4-bit sequence with L,R,S,N,A,T,G,C
-function fourbit_enc(seq)
-   len = length(seq)
-   ret = IntVector{4,UInt8}(len)
-   for i in 1:len
-      ret[i] = convert(UInt8, seq[i])
-   end
-   ret
-end
-
-# encode 2-bit sequence with L,R,S,N,A,T,G,C
 function twobit_enc(seq)
    len = length(seq)
    ret = IntVector{2,UInt8}(len)

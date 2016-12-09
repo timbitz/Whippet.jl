@@ -13,7 +13,6 @@ using Requests
 include("../src/types.jl")
 include("../src/timer.jl")
 include("../src/sgkmer.jl")
-include("../src/sgsequence.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
@@ -28,55 +27,20 @@ include("../src/events.jl")
 include("../src/io.jl")
 include("../src/diff.jl")
 
-#= # Deprecated as of Julia v0.5
-@testset "SG Sequence" begin
-   @test typeof(dna"GATGCA") == NucleotideSequence{SGNucleotide}
-   fullset = dna"ACGTNLRS"
-   fullarr = [ SG_A, SG_C, SG_G, SG_T, SG_N, SG_L, SG_R, SG_S ]
-   for nt in fullset
-      @test typeof(nt) == SGNucleotide
-   end
-   for n in 0:(length(fullset)-1)
-      i = n+1
-      @test fullset[i] == fullarr[i]
-      @test convert(UInt8, fullset[i]) == UInt8(n)
-      @test convert(SGNucleotide, UInt8(n)) == fullset[i]
-   end 
-   @test fullset[1:4] == dna"ACGT"
-   @test fullset.data == fullset[1:4].data
-   @test reverse_complement(dna"GATGCA") == dna"TGCATC" 
-   @test reverse_complement(dna"LRS")    == dna"SRL"
-   @test dna"AT" * dna"TA" == dna"ATTA"
-   @test dna"AT" ^ 2 == dna"ATAT" 
-   @test convert(SGNucleotide, 'L') == lnucleotide(SGNucleotide)
-   @test convert(SGNucleotide, 'R') == rnucleotide(SGNucleotide)
-   @test convert(SGNucleotide, 'S') == snucleotide(SGNucleotide) 
-   dnaset = BioSequence{DNAAlphabet{2}}("ACGT") # from Bio.Seq
-   refset = ReferenceSequence("ACGT")           #
-   sgset  = dna"ACGT"
-   @test SGSequence( dnaset ) == sgset
-   @test SGSequence( refset ) == sgset
-   # Make sure the encodings are consistent
-   for i in 1:length(dnaset)
-      @test Bio.Seq.encode(DNAAlphabet{2}, refset[i]) == UInt8(sgset[i])
-      @test Bio.Seq.encode(DNAAlphabet{2}, dnaset[i]) == UInt8(sgset[i])
-      @test refset[i] == sgset[i] && sgset[i] == refset[i]
-      @test dnaset[i] == sgset[i] && sgset[i] == dnaset[i]
-   end
-end
-@testset "SG Kmers" begin
-   @test sgkmer(sg"ATG") == Bio.Seq.DNAKmer(dna"ATG")
+@testset "SG Kmers & Seq" begin
+   @test sgkmer(dna"ATG") == Bio.Seq.DNAKmer(dna"ATG")
    @test sgkmer("ATG") == Bio.Seq.DNAKmer(dna"ATG")
-   @test isa(sgkmer(sg"ATG"), SGKmer{3})
-   @test kmer_index( sgkmer(sg"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
-   @test kmer_index( sg"ATG" ) == kmer_index( dna"ATG" )
-   seq = sg""
+   @test isa(sgkmer(dna"ATG"), SGKmer{3})
+   @test kmer_index( sgkmer(dna"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test Int(kmer_index_trailing( dna"ATG" ))+1 == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test Int(kmer_index_trailing( dna"ATGR" )) == 0
+   seq = dna""
    for i in 1:32
-      seq = i % 2 == 0 ? seq * sg"C" : seq * sg"T"
+      seq = i % 2 == 0 ? seq * dna"C" : seq * dna"T"
       curkmer = sgkmer(seq)
       @test isa( curkmer, SGKmer{i} )
    end
-end =#
+end
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";

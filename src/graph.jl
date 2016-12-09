@@ -1,5 +1,4 @@
 # requires:
-# include("bio_nuc_safepatch.jl")
 
 bitstype 8 EdgeType
 
@@ -22,10 +21,6 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x03  for _ in 1:4 ];
                                                   [0x05  for _ in 1:4 ];
                                                   [0x00  for _ in 1:4 ] ], (4,4)))
 
-# DEPRECATED
-const EDGETYPE_TO_SG = SGSequence[ dna"SD", dna"SR", dna"DS", dna"RS",
-                                   dna"DR", dna"DD", dna"RR", dna"SS" ]
-
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
@@ -37,7 +32,6 @@ Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) =
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)
 Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
-Base.convert( ::Type{SGSequence}, edge::EdgeType ) = EDGETYPE_TO_SG[Base.convert(UInt8, edge)+1]
 
 const EDGETYPE_SL = convert(EdgeType, 0b000)
 const EDGETYPE_SR = convert(EdgeType, 0b001)
