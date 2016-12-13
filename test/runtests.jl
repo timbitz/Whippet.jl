@@ -258,7 +258,7 @@ IIIIIIIIIIII
 
       score_range = 0.05
       param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
-                        false, false, true, false, true )
+                          false, false, true, false, true )
       quant = GraphLibQuant( lib )
       multi = Vector{Multimap}()
 
