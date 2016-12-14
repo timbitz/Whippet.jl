@@ -93,13 +93,13 @@ end
    pad > 0 ? string(pad) * "S" : ""
 end
 
-# Lets build a pseudo spliced CIGAR string from an SGAlignment
+# Lets build a spliced CIGAR string from an SGAlignment
 function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.matches )
-   matchleft = align.matches     # matches to account for in cigar string
-   curpos    = align.offset      # left most position
-   leftover  = 0                 # matches left over from previous iteration
-   total     = 0                 # total matches accounted for
-   cigar     = soft_pad( align ) # build cigar string here
+   matchleft = align.matches        # matches to account for in cigar string
+   curpos    = align.offset         # left most position
+   leftover  = 0                    # matches left over from previous iteration
+   total     = align.offsetread - 1 # total positions accounted for
+   cigar     = soft_pad( align )    # build cigar string here
    # step through nodes in the path
    for idx in 1:length( align.path )
       const i = align.path[idx].node # current node
@@ -108,8 +108,8 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 
       const adjacent_edge_pos   = sg.nodeoffset[i] + sg.nodelen[i] - 1
       const adjacent_edge_coord = strand ? sg.nodecoord[i] + sg.nodelen[i] - 1 : sg.nodecoord[i]
-
-      if curpos + matchleft <= adjacent_edge_pos
+      
+      if curpos + matchleft - 1 <= adjacent_edge_pos
          # finish in this node
          matches_to_add = min( matchleft + leftover, readlen - total ) 
          cigar *= string( matches_to_add ) * "M"
@@ -127,9 +127,9 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
             curpos = sg.nodeoffset[ nexti ]
             const next_edge_coord = strand ? sg.nodecoord[nexti] : 
                                              sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
-            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) : 
-                                    Int(adjacent_edge_coord) - Int(next_edge_coord)
-            if intron > 1
+            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) - 1 : 
+                                    Int(adjacent_edge_coord) - Int(next_edge_coord) - 1
+            if intron >= 1
                matches_to_add = min( cur_matches, readlen - total )
               # end
                cigar *= string( matches_to_add ) * "M" * string( intron ) * "N"
@@ -141,7 +141,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       end
 
    end # nodes in path
-   
+
    if matchleft + leftover > 0
       matches_to_add = min( matchleft + leftover, readlen - total )
       cigar *= string( matches_to_add ) * "M"

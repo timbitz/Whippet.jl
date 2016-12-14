@@ -214,35 +214,35 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Alignment and SAM Format" begin
       # reads
-      fastq = IOBuffer("@exon1
+      fastq = IOBuffer("@1S10M%exon1
 NGCGGATTACA
 +
 #BBBBBBBBBB
-@exon3def
+@1S9M%exon3def
 NCTATGCTAG
 +
 #BBBBBBBBB
-@alt3-exon3-alt5
+@1S15M%alt3-exon3-alt5
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
-@exon1-exon2
+@11M10N9M1S%exon1-exon2
 NGCGGATTACAGCATTAGAAG
 +
 #BBBBBBBBBBBBBBBBBBBB
-@exon1trunc-exon2trunc
+@5M10N5M1S%exon1trunc-exon2trunc
 TTACAGCATTN
 +
 BBBBBBBBBB#
-@exon1-exon3def
+@10M33N9M1S%exon1-exon3def
 GCGGATTACACTATGCTAGN
 +
 BBBBBBBBBBBBBBBBBBB#
-@exon1-exon3def:rc
+@10M33N9M1S%exon1-exon3def:rc
 CTAGCATAGTGTAATCCGCN
 +
 BBBBBBBBBBBBBBBBBBB#
-@exon1-exon4full
+@10M55N10M1S%exon1-exon4full-1mm
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
@@ -263,7 +263,7 @@ IIIIIIIIIIII
       multi = Vector{Multimap}()
 
       typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
-      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_T )
+      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_C )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
@@ -294,11 +294,12 @@ IIIIIIIIIIII
 
          count!( quant, align.value[best_ind] )
 
-
+         cigar = split(r.name, '%', keep=false)[1]
          # Test SAM Format
          const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
-         println( cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) ))
-
+         @test cigar == cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) )
+         println(STDERR, "cigar = $( cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) ) )")
+          
       end 
 
       @testset "Quantification" begin

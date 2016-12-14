@@ -477,6 +477,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
       #print(STDERR, " $(read.seq[ridx+1]),$ridx\_$(sg.seq[sgidx+1]),$sgidx ")
    end
 
+   cur_ridx = ridx + 1
    # if passed_extend < K, spliced_extension for each in length(edges)
    if !isnull(passed_edges)
       if passed_extend < p.kmer_size + p.mismatches
@@ -492,7 +493,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                shift!( align.path ) # extension into current node failed
                @fastmath align.mismatches -= passed_mismat
                align.matches -= ext_len[c]
-               const cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx)
+               cur_ridx = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx)
                (cur_ridx - p.kmer_size) > 0 || continue
             
                const lkmer_ind  = kmer_index(read.seq[(cur_ridx-p.kmer_size):(cur_ridx-1)])
@@ -518,8 +519,8 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
    if sgidx < align.offset
       align.offset = convert(UInt32, sgidx + 1)
    end
-   if ridx < align.offsetread
-      align.offsetread = convert(UInt16, ridx + 1)
+   if cur_ridx < align.offsetread
+      align.offsetread = convert(UInt16, cur_ridx)
    end
    align
 end
