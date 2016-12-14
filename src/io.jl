@@ -117,7 +117,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
          matchleft = 0
          leftover = 0
       else # next_edge_pos is past the current node edge
-         cur_matches = adjacent_edge_pos - curpos
+         cur_matches = adjacent_edge_pos - curpos + 1
          matchleft -= cur_matches # remove the current node range
          curpos += cur_matches #?
          # is the read spliced and is there another node left

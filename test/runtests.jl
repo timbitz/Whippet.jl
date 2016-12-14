@@ -246,10 +246,10 @@ BBBBBBBBBBBBBBBBBBB#
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
-@exon1-exon4_2bp
-GCGGATTACATTN
+@exon1-exon4_3bp
+NGCGGATTACATTA
 +
-IIIIIIIIIIII#
+#IIIIIIIIIIIII
 @exon1_2bp-exon4:rc
 TCTTGTCTAATG
 +
@@ -257,7 +257,7 @@ IIIIIIIIIIII
 ")
 
       score_range = 0.05
-      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
+      param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                           false, false, true, false, true )
       quant = GraphLibQuant( lib )
       multi = Vector{Multimap}()
@@ -287,15 +287,17 @@ IIIIIIIIIIII
             @test align.value[1].strand == true
          end
 
-         ex_num = length(split(r.name, '-', keep=false))
-         @test length(align.value[1].path) == ex_num
+         best_ind = indmax(scores)
 
-         count!( quant, align.value[1] )
+         ex_num = length(split(r.name, '-', keep=false))
+         @test length(align.value[best_ind].path) == ex_num
+
+         count!( quant, align.value[best_ind] )
 
 
          # Test SAM Format
-         const curgraph = lib.graphs[ align.value[1].path[1].gene ]
-         println( cigar_string( align.value[1], curgraph, align.value[1].strand, length(r.seq) ))
+         const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
+         println( cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) ))
 
       end 
 
