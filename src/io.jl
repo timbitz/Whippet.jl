@@ -112,7 +112,9 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       if curpos + matchleft - 1 <= adjacent_edge_pos
          # finish in this node
          matches_to_add = min( matchleft + leftover, readlen - total ) 
-         cigar *= string( matches_to_add ) * "M"
+         if matches_to_add > 0
+            cigar *= string( matches_to_add ) * "M"
+         end
          total += matches_to_add
          matchleft = 0
          leftover = 0
@@ -167,7 +169,7 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
    tab_write( io, string(mapq) )
-   tab_write( io, cigar_string( align, sg, lib.info[geneind].strand ) )
+   tab_write( io, cigar_string( align, sg, lib.info[geneind].strand, length(read.seq) ) )
    tab_write( io, '*' )
    tab_write( io, '0' )
    tab_write( io, '0' )

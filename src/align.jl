@@ -480,7 +480,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
    cur_ridx = ridx + 1
    # if passed_extend < K, spliced_extension for each in length(edges)
    if !isnull(passed_edges)
-      if passed_extend < p.kmer_size + p.mismatches
+      if passed_extend <= p.kmer_size + p.mismatches
          # go back.
          const ext_len = UInt16[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend

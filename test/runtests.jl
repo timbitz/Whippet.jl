@@ -246,11 +246,11 @@ BBBBBBBBBBBBBBBBBBB#
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
-@exon1-exon4_3bp
-NGCGGATTACATTA
+@11M55N3M1S%exon1-exon4_4bp
+NGCGGATTACATTAG
 +
-#IIIIIIIIIIIII
-@exon1_2bp-exon4:rc
+#IIIIIIIIIIIIII
+@2M55N10M%exon1_2bp-exon4:rc
 TCTTGTCTAATG
 +
 IIIIIIIIIIII
@@ -297,7 +297,7 @@ IIIIIIIIIIII
          cigar = split(r.name, '%', keep=false)[1]
          # Test SAM Format
          const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
-         @test cigar == cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) )
+         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
          println(STDERR, "cigar = $( cigar_string( align.value[best_ind], curgraph, true, length(r.seq) ) )")
           
       end 
