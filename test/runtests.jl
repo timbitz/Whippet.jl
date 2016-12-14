@@ -298,7 +298,7 @@ IIIIIIIIIIII
          # Test SAM Format
          const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
          @test cigar == cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) )
-         println(STDERR, "cigar = $( cigar_string( align.value[best_ind], curgraph, align.value[1].strand, length(r.seq) ) )")
+         println(STDERR, "cigar = $( cigar_string( align.value[best_ind], curgraph, true, length(r.seq) ) )")
           
       end 
 
