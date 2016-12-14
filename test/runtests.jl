@@ -212,7 +212,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(STDERR, lib)
    end
 
-   @testset "Alignment" begin
+   @testset "Alignment and SAM Format" begin
       # reads
       fastq = IOBuffer("@exon1
 NGCGGATTACA
@@ -291,8 +291,14 @@ IIIIIIIIIIII
          @test length(align.value[1].path) == ex_num
 
          count!( quant, align.value[1] )
+
+
+         # Test SAM Format
+         const curgraph = lib.graphs[ align.value[1].path[1].gene ]
+         println( cigar_string( align.value[1], curgraph, align.value[1].strand, length(r.seq) ))
+
       end 
-   
+
       @testset "Quantification" begin
          calculate_tpm!( quant, readlen=20 )
 
@@ -318,10 +324,6 @@ IIIIIIIIIIII
          end
       end
 
-      @testset "SAM Output" begin
-         
-      end
-     
       @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success

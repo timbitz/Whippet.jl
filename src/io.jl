@@ -88,14 +88,18 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
    flag   
 end
 
+@inline function soft_pad( align::SGAlignment )
+   pad = align.offsetread - 1
+   pad > 0 ? string(pad) * "S" : ""
+end
 
 # Lets build a pseudo spliced CIGAR string from an SGAlignment
 function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.matches )
-   matchleft = align.matches # matches to account for in cigar string
-   curpos    = align.offset  # left most position
-   leftover  = 0             # matches left over from previous iteration
-   total     = 0             # total matches accounted for
-   cigar     = ""            # build cigar string here
+   matchleft = align.matches     # matches to account for in cigar string
+   curpos    = align.offset      # left most position
+   leftover  = 0                 # matches left over from previous iteration
+   total     = 0                 # total matches accounted for
+   cigar     = soft_pad( align ) # build cigar string here
    # step through nodes in the path
    for idx in 1:length( align.path )
       const i = align.path[idx].node # current node
@@ -163,7 +167,7 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
    tab_write( io, string(mapq) )
-   tab_write( io, cigar_string( align, sg, lib.info[geneind].strand, length(read.seq) ) )
+   tab_write( io, cigar_string( align, sg, lib.info[geneind].strand ) )
    tab_write( io, '*' )
    tab_write( io, '0' )
    tab_write( io, '0' )
