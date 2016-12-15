@@ -95,11 +95,11 @@ end
 
 # Lets build a spliced CIGAR string from an SGAlignment
 function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.matches )
-   matchleft = align.matches        # matches to account for in cigar string
-   curpos    = align.offset         # left most position
-   leftover  = 0                    # matches left over from previous iteration
-   total     = align.offsetread - 1 # total positions accounted for
-   cigar     = soft_pad( align )    # build cigar string here
+   matchleft = align.matches             # matches to account for in cigar string
+   curpos    = align.offset              # left most position
+   leftover  = 0                         # matches left over from previous iteration
+   total     = align.offsetread - 1      # total positions accounted for
+   cigar     = String[ soft_pad(align) ] # build cigar string here
    # step through nodes in the path
    for idx in 1:length( align.path )
       const i = align.path[idx].node # current node
@@ -113,16 +113,17 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
          # finish in this node
          matches_to_add = min( matchleft + leftover, readlen - total ) 
          if matches_to_add > 0
-            cigar *= string( matches_to_add ) * "M"
+            push!( cigar, string( matches_to_add ) * "M" )
          end
-         total += matches_to_add
+         total  += matches_to_add
+         curpos += matches_to_add - 1
          matchleft = 0
          leftover = 0
       else # next_edge_pos is past the current node edge
 
          avail_matches = adjacent_edge_pos - curpos + 1
          matchleft -= avail_matches # remove the current node range
-         curpos += avail_matches #?
+         curpos    += avail_matches #?
          # is the read spliced and is there another node left
          if idx < length( align.path )
             nexti = align.path[idx+1].node
@@ -135,8 +136,9 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
             if intron >= 1
                matches_to_add = min( avail_matches, readlen - total )
               # end
-               cigar *= string( matches_to_add ) * "M" * string( intron ) * "N"
-               total += avail_matches
+               push!( cigar, string( matches_to_add ) * "M" ) 
+               push!( cigar, string( intron ) * "N" )
+               total  += avail_matches
             else
                leftover += avail_matches
             end
@@ -147,30 +149,36 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 
    if matchleft + leftover > 0
       matches_to_add = min( matchleft + leftover, readlen - total )
-      cigar *= string( matches_to_add ) * "M"
-      total += matches_to_add
+      push!( cigar, string( matches_to_add ) * "M" )
+      total  += matches_to_add
+      curpos += matches_to_add - 1
    end
    if total < readlen
       soft = readlen - total
-      cigar *= string( soft ) * "S"
+      push!( cigar, string( soft ) * "S" )
+      curpos += soft - 1
    end
-   cigar
+   !strand && reverse!( cigar ) 
+   join( cigar, "" ), curpos
 end
 
 # Write single SAM entry for one SGAlignment
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
                     mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33,
                     supplemental=false )
+   const strand  = lib.info[geneind].strand
    const geneind = align.path[1].gene
-   const nodeind = align.path[1].node
-   align.path[end].node < nodeind && return # TODO: allow circular SAM output
+   const nodeind = strand ? align.path[1].node : align.path[end].node
+   (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
+   const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
+   const offset = strand ? align.offset : endpos
    tab_write( io, read.name )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
-   tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
+   tab_write( io, string( sg.nodecoord[nodeind] + (offset - sg.nodeoffset[nodeind]) ) ) 
    tab_write( io, string(mapq) )
-   tab_write( io, cigar_string( align, sg, lib.info[geneind].strand, length(read.seq) ) )
+   tab_write( io, cigar )
    tab_write( io, '*' )
    tab_write( io, '0' )
    tab_write( io, '0' )
