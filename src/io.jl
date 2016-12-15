@@ -107,7 +107,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       # do the remaining alignment matches fit into the current node width
 
       const adjacent_edge_pos   = sg.nodeoffset[i] + sg.nodelen[i] - 1
-      const adjacent_edge_coord = strand ? sg.nodecoord[i] + sg.nodelen[i] - 1 : sg.nodecoord[i]
+      const adjacent_edge_coord = sg.nodecoord[i] + sg.nodelen[i] - 1
       
       if curpos + matchleft - 1 <= adjacent_edge_pos
          # finish in this node
@@ -119,25 +119,26 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
          matchleft = 0
          leftover = 0
       else # next_edge_pos is past the current node edge
-         cur_matches = adjacent_edge_pos - curpos + 1
-         matchleft -= cur_matches # remove the current node range
-         curpos += cur_matches #?
+
+         avail_matches = adjacent_edge_pos - curpos + 1
+         matchleft -= avail_matches # remove the current node range
+         curpos += avail_matches #?
          # is the read spliced and is there another node left
          if idx < length( align.path )
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar # this shouldn't happen
             curpos = sg.nodeoffset[ nexti ]
-            const next_edge_coord = strand ? sg.nodecoord[nexti] : 
-                                             sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
-            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) - 1 : 
-                                    Int(adjacent_edge_coord) - Int(next_edge_coord) - 1
+
+            const next_edge_coord = sg.nodecoord[nexti] 
+            const intron = Int(next_edge_coord) - Int(adjacent_edge_coord)
+
             if intron >= 1
-               matches_to_add = min( cur_matches, readlen - total )
+               matches_to_add = min( avail_matches, readlen - total )
               # end
                cigar *= string( matches_to_add ) * "M" * string( intron ) * "N"
-               total += cur_matches
+               total += avail_matches
             else
-               leftover += cur_matches
+               leftover += avail_matches
             end
          end
       end
