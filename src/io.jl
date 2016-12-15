@@ -130,7 +130,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
             curpos = sg.nodeoffset[ nexti ]
 
             const next_edge_coord = sg.nodecoord[nexti] 
-            const intron = Int(next_edge_coord) - Int(adjacent_edge_coord)
+            const intron = Int(next_edge_coord) - Int(adjacent_edge_coord) - 1
 
             if intron >= 1
                matches_to_add = min( avail_matches, readlen - total )

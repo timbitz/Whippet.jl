@@ -298,8 +298,11 @@ IIIIIIIIIIII
          # Test SAM Format
          const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
          @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
-         println(STDERR, "cigar = $( cigar_string( align.value[best_ind], curgraph, true, length(r.seq) ) )")
-          
+         test_cigar = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
+         println(STDERR, "cigar = $test_cigar")
+         # test readlength = number of M and S entries in cigar  
+         # test SAM offset is correct for both '+' and '-' genes.
+         # test that cigar reversal works for '-' strand genes.
       end 
 
       @testset "Quantification" begin
