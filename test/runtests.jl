@@ -214,43 +214,43 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Alignment and SAM Format" begin
       # reads
-      fastq = IOBuffer("@1S10M%exon1
+      fastq = IOBuffer("@1S10M%10,20%exon1
 NGCGGATTACA
 +
 #BBBBBBBBBB
-@1S9M%exon3def
+@1S9M%54,62%exon3def
 NCTATGCTAG
 +
 #BBBBBBBBB
-@1S15M%alt3-exon3-alt5
+@1S15M%51,65%alt3-exon3-alt5
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
-@11M10N9M1S%exon1-exon2
+@11M10N9M1S%10,40%exon1-exon2
 NGCGGATTACAGCATTAGAAG
 +
 #BBBBBBBBBBBBBBBBBBBB
-@5M10N5M1S%exon1trunc-exon2trunc
+@5M10N5M1S%16,35%exon1trunc-exon2trunc
 TTACAGCATTN
 +
 BBBBBBBBBB#
-@10M33N9M1S%exon1-exon3def
+@10M33N9M1S%11,62%exon1-exon3def
 GCGGATTACACTATGCTAGN
 +
 BBBBBBBBBBBBBBBBBBB#
-@10M33N9M%exon1-exon3def:rc
+@10M33N9M%11,62%exon1-exon3def:rc
 CTAGCATAGTGTAATCCGC
 +
 BBBBBBBBBBBBBBBBBBB
-@10M55N10M1S%exon1-exon4full-1mm
+@10M55N10M1S%11,85%exon1-exon4full-1mm
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
-@11M55N3M1S%exon1-exon4_4bp
+@11M55N3M1S%10,79%exon1-exon4_4bp
 NGCGGATTACATTAG
 +
 #IIIIIIIIIIIIII
-@2M55N10M%exon1_2bp-exon4:rc
+@2M55N10M%19,85%exon1_2bp-exon4:rc
 TCTTGTCTAATG
 +
 IIIIIIIIIIII
@@ -269,10 +269,10 @@ IIIIIIIIIIII
 
       @test length(reads) == 10
       for r in reads
-         println(r)
-#         println(r.metadata)
+         println(STDERR, r)
+
          align = ungapped_align( param, lib, r )
-         println(align)
+         println(STDERR, align)
 
          flush(STDERR)
          @test !isnull( align )
@@ -294,12 +294,19 @@ IIIIIIIIIIII
 
          count!( quant, align.value[best_ind] )
 
-         cigar = split(r.name, '%', keep=false)[1]
+         const curgene   = align.value[best_ind].path[1].gene
+         const firstnode = align.value[best_ind].path[1].node
+         const lastnode  = align.value[best_ind].path[end].node
+
+         cigar,positions = split(r.name, '%', keep=false)[1:2]
+         first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
          # Test SAM Format
          const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
-         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
-         test_cigar = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
+         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
+         test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
          println(STDERR, "cigar = $test_cigar")
+         @test first == Int(align.value[best_ind].offset + lib.graphs[curgene].nodecoord[firstnode] - 1)
+         @test last  == Int((endpos - lib.graphs[curgene].nodeoffset[lastnode]) + lib.graphs[curgene].nodecoord[lastnode] - 1 )
          # test readlength = number of M and S entries in cigar  
          # test SAM offset is correct for both '+' and '-' genes.
          # test that cigar reversal works for '-' strand genes.
