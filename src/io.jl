@@ -171,11 +171,11 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
    const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
-   const offset = strand ? align.offset : endpos
+   const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
    tab_write( io, read.name )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
-   tab_write( io, string( sg.nodecoord[nodeind] + (offset - sg.nodeoffset[nodeind]) ) ) 
+   tab_write( io, string( sg.nodecoord[nodeind] + offset ) ) 
    tab_write( io, string(mapq) )
    tab_write( io, cigar )
    tab_write( io, '*' )
