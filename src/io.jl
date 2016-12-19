@@ -114,9 +114,9 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
          matches_to_add = min( matchleft + leftover, readlen - total ) 
          if matches_to_add > 0
             push!( cigar, string( matches_to_add ) * "M" )
+            total  += matches_to_add
+            curpos += matchleft
          end
-         total  += matches_to_add
-         curpos += matches_to_add - 1
          matchleft = 0
          leftover = 0
       else # next_edge_pos is past the current node edge
@@ -151,12 +151,10 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       matches_to_add = min( matchleft + leftover, readlen - total )
       push!( cigar, string( matches_to_add ) * "M" )
       total  += matches_to_add
-      curpos += matches_to_add - 1
    end
    if total < readlen
       soft = readlen - total
       push!( cigar, string( soft ) * "S" )
-      curpos += soft - 1
    end
    !strand && reverse!( cigar ) 
    join( cigar, "" ), curpos

@@ -89,7 +89,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    end
 
-                              # fwd     rev
+                               # fwd     rev
    buffer1   = dna"AAAAA"      # 1-5     96-100
    utr5      = dna"TTATT"      # 6-10    91-95
    exon1     = dna"GCGGATTACA" # 11-20   81-90
@@ -153,6 +153,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    runoffset = 0
 
    for g in keys(gtfref)
+      println(STDERR, g)
       curgraph = SpliceGraph( gtfref[g], genome, kmer_size )
       xcript  *= curgraph.seq
       push!(xgraph, curgraph)
@@ -214,7 +215,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Alignment and SAM Format" begin
       # reads
-      fastq = IOBuffer("@1S10M%10,20%exon1
+      fastq = IOBuffer("@1S10M%11,20%exon1
 NGCGGATTACA
 +
 #BBBBBBBBBB
@@ -226,7 +227,7 @@ NCTATGCTAG
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
-@11M10N9M1S%10,40%exon1-exon2
+@11M10N9M1S%10,39%exon1-exon2
 NGCGGATTACAGCATTAGAAG
 +
 #BBBBBBBBBBBBBBBBBBBB
@@ -246,7 +247,7 @@ BBBBBBBBBBBBBBBBBBB
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
-@11M55N3M1S%10,79%exon1-exon4_4bp
+@11M55N3M1S%10,78%exon1-exon4_4bp
 NGCGGATTACATTAG
 +
 #IIIIIIIIIIIIII
@@ -297,16 +298,17 @@ IIIIIIIIIIII
          const curgene   = align.value[best_ind].path[1].gene
          const firstnode = align.value[best_ind].path[1].node
          const lastnode  = align.value[best_ind].path[end].node
+         const curgraph  = lib.graphs[ curgene ]
 
          cigar,positions = split(r.name, '%', keep=false)[1:2]
          first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
          # Test SAM Format
-         const curgraph = lib.graphs[ align.value[best_ind].path[1].gene ]
          @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
          test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
          println(STDERR, "cigar = $test_cigar")
-         @test first == Int(align.value[best_ind].offset + lib.graphs[curgene].nodecoord[firstnode] - 1)
-         @test last  == Int((endpos - lib.graphs[curgene].nodeoffset[lastnode]) + lib.graphs[curgene].nodecoord[lastnode] - 1 )
+         #println(STDERR, "$first = $(Int(curgraph.nodecoord[firstnode])) + $(Int((align.value[best_ind].offset - curgraph.nodeoffset[firstnode])))")
+         @test first == Int(curgraph.nodecoord[firstnode] + (align.value[best_ind].offset - curgraph.nodeoffset[firstnode]))
+         @test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]) - 1 )
          # test readlength = number of M and S entries in cigar  
          # test SAM offset is correct for both '+' and '-' genes.
          # test that cigar reversal works for '-' strand genes.
