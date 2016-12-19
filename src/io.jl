@@ -157,7 +157,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       push!( cigar, string( soft ) * "S" )
    end
    !strand && reverse!( cigar ) 
-   join( cigar, "" ), curpos
+   join( cigar, "" ), curpos - 1
 end
 
 # Write single SAM entry for one SGAlignment

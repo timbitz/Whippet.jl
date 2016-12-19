@@ -307,13 +307,13 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
       #print(" $(read.seq[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
    end
 
-   println(passed_edges)   
-   println(passed_extend)
+   #println(passed_edges)   
+   #println(passed_extend)
    # if edgemat < K, spliced_extension for each in length(edges)
    if !isnull(passed_edges)
       if passed_extend <= p.kmer_size + p.mismatches
          # go back.
-         println("true")
+         #println("true")
          const ext_len = UInt16[sg.nodelen[ i ] for i in get(passed_edges)]
          ext_len[end] = passed_extend
          rev_cumarray!(ext_len)
@@ -376,7 +376,7 @@ end
 
       res_align::SGAlignment = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
                                                     align=deepcopy(align), nodeidx=rn.node )
-      println(res_align)
+      #println(res_align)
       best = res_align > best ? res_align : best
    end
    if score(best) >= score(align) + p.kmer_size
