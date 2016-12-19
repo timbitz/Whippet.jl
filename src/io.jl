@@ -164,8 +164,8 @@ end
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
                     mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33,
                     supplemental=false )
-   const strand  = lib.info[geneind].strand
    const geneind = align.path[1].gene
+   const strand  = lib.info[geneind].strand   
    const nodeind = strand ? align.path[1].node : align.path[end].node
    (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
