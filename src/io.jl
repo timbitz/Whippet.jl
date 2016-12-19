@@ -132,7 +132,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 
             const next_edge_coord = sg.nodecoord[nexti] 
             const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) - 1 :
-                                    Int(adjacent_edge_coord) - Int(next_edge_coord) - 1
+                                    Int(sg.nodecoord[i]) - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
 
             if intron >= 1
                matches_to_add = min( avail_matches, readlen - total )
