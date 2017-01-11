@@ -47,9 +47,21 @@ end
 
 abstract UngappedAlignment
 
+typealias MatchesInt    UInt16
+typealias MismatchInt   UInt8
+typealias MismatchFloat Float32
+
+type SGAlignScore
+   matches::MatchesInt
+   mismatches::MismatchInt
+   mistolerance::MismatchFloat
+end
+
+@inline Base.zero(t::Type{SGAlignScore}) = SGAlignScore(0x0000,zero(MismatchInt),zero(MismatchFloat))
+@inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
+
 type SGAlignment <: UngappedAlignment
-   matches::UInt16
-   mismatches::Float32
+   score::SGAlignScore
    offset::UInt32
    offsetread::UInt16
    path::Vector{SGNode}
@@ -57,14 +69,14 @@ type SGAlignment <: UngappedAlignment
    isvalid::Bool
 end
 
-SGAlignment() = SGAlignment(0x0000, zero(Float32), zero(UInt32), zero(UInt16), SGNode[], true, false)
+SGAlignment() = SGAlignment(zero(SGAlignScore), zero(UInt32), zero(UInt16), SGNode[], true, false)
 
 typealias SGAlignVec Nullable{Vector{SGAlignment}}
 
-const DEF_ALIGN = SGAlignment(0x0000, zero(Float32), zero(UInt32), zero(UInt16), SGNode[], true, false)
+const DEF_ALIGN = SGAlignment(zero(SGAlignScore), zero(UInt32), zero(UInt16), SGNode[], true, false)
 
-@inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.matches - align.mismatches
-@inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath ( align.matches - align.mismatches ) / readlen)
+@inline score{A <: UngappedAlignment}( align::A ) = @fastmath align.score.matches - align.score.mistolerance
+@inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath ( align.score.matches - align.score.mistolerance ) / readlen)
 
 Base.:>( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.:<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -76,8 +88,7 @@ Base.isless( a::SGAlignment, b::SGAlignment ) = a < b
 @inline phred_to_prob( phred::Int8 ) = convert(Float32, @fastmath 1-10^(-phred/10))
 
 function Base.empty!( align::SGAlignment ) 
-   align.matches = 0x0000
-   align.mismatches = zero(Float32)
+   align.score = zero(SGAlignScore)
    align.offset = zero(UInt32)
    align.offsetread = zero(UInt16)
    empty!( align.path ) 
@@ -215,20 +226,21 @@ end
 # Returns: SGAlignment
 function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos::Bool=true,
-                                align::SGAlignment=SGAlignment(0x0000, zero(Float32), sgidx, ridx, SGNode[],ispos,false),
+                                align::SGAlignment=SGAlignment(zero(SGAlignScore), sgidx, ridx, SGNode[],ispos,false),
                                 nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
    const sg       = lib.graphs[geneind]
    const readlen  = convert(UInt16, length(read.seq))
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
    passed_extend = 0
-   passed_mismat = 0.0
+   passed_mismat = 0x00
+   passed_mistol = 0.0
 
    push!( align.path, SGNode( geneind, nodeidx ) ) # starting node
 
    #println(STDERR, "VERBOSE: FWD EXTENSION")
 
-   while( align.mismatches <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
+   while( align.score.mistolerance <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
       if sgidx == sg.nodeoffset[nodeidx] + sg.nodelen[nodeidx] # hit next edge
          # DEPRECATED isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const curedge = nodeidx + 0x01
@@ -244,7 +256,7 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                const rkmer_ind = kmer_index(read.seq[ridx:(ridx+p.kmer_size-1)])
                rkmer_ind == 0 && break
                if kmer_index(sg.edgeright[curedge]) == rkmer_ind
-                  align.matches += convert(UInt16, p.kmer_size)
+                  align.score.matches += convert(UInt16, p.kmer_size)
                   ridx    += p.kmer_size - 1
                   sgidx   += p.kmer_size - 1
                   nodeidx += 0x01
@@ -266,7 +278,8 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                   passed_edges = Nullable(Vector{UInt32}())
                end
                passed_extend = 0
-               passed_mismat = 0.0
+               passed_mismat = 0x00
+               passed_mistol = 0.0
                push!(get(passed_edges), curedge)
                #sgidx   += 1
                #ridx    -= 1
@@ -294,13 +307,15 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
       end
       if read.seq[ridx] == sg.seq[sgidx]
          # match
-         align.matches += 0x01
+         align.score.matches += 0x01
          passed_extend += 1
       else
          # mismatch
          const prob  = phred_to_prob( read.metadata.quality[ridx] )
-         @fastmath align.mismatches += prob
-         @fastmath passed_mismat += prob
+         @fastmath align.score.mistolerance += prob
+         @fastmath passed_mistol += prob
+         align.score.mismatches += 0x01
+         passed_mismat += 0x01
       end
       ridx  += 1
       sgidx += 1
@@ -324,8 +339,9 @@ function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                break
             else
                pop!( align.path ) # extension into current node failed
-               @fastmath align.mismatches -= passed_mismat
-               align.matches -= ext_len[c]
+               @fastmath align.score.mistolerance -= passed_mistol
+               align.score.mismatches -= passed_mismat
+               align.score.matches -= ext_len[c]
                const cur_ridx = ridx - (sgidx - sg.nodeoffset[ get(passed_edges)[c] ])
                (cur_ridx + p.kmer_size - 1) <= readlen || continue
             
@@ -396,20 +412,21 @@ end
 # Returns: SGAlignment
 function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sgidx::Int, 
                                 read::SeqRecord, ridx::Int; ispos::Bool=true,
-                                align::SGAlignment=SGAlignment(0x0000, zero(Float32), sgidx, ridx, SGNode[], ispos, false),
+                                align::SGAlignment=SGAlignment(zero(SGAlignScore), sgidx, ridx, SGNode[], ispos, false),
                                 nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
    const sg       = lib.graphs[geneind]
    const readlen  = convert(UInt16,length(read.seq))
 
    passed_edges = Nullable{Vector{UInt32}}() # don't allocate array unless needed
    passed_extend = 0
-   passed_mismat = 0.0
+   passed_mismat = 0x00
+   passed_mistol = 0.0
 
    if align.path[1] != SGNode( geneind, nodeidx )
       unshift!( align.path, SGNode( geneind, nodeidx ) ) # starting node if not already there
    end
 
-   while( align.mismatches <= p.mismatches && ridx > 0 && sgidx > 0 )
+   while( align.score.mistolerance <= p.mismatches && ridx > 0 && sgidx > 0 )
       if sgidx == sg.nodeoffset[nodeidx] - 1 # hit right edge
         # DEPRECATED isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const leftnode = nodeidx - 0x01
@@ -420,7 +437,7 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                const lkmer_ind  = kmer_index(read.seq[(ridx-p.kmer_size+1):ridx])
                lkmer_ind == 0 && break 
                if kmer_index(sg.edgeleft[nodeidx]) == lkmer_ind
-                  align.matches += convert(UInt16, p.kmer_size)
+                  align.score.matches += convert(UInt16, p.kmer_size)
                   ridx    -= p.kmer_size - 1 
                   sgidx   -= p.kmer_size - 1 
                   nodeidx -= 0x01
@@ -437,7 +454,8 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                   passed_edges = Nullable(Vector{UInt32}())
                end
                passed_extend = 0
-               passed_mismat = 0.0
+               passed_mismat = 0x00
+               passed_mistol = 0.0
                push!(get(passed_edges), nodeidx)
                #sgidx   -= 1
                #ridx    += 1
@@ -464,13 +482,15 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
       end
       if read.seq[ridx] == sg.seq[sgidx]
          # match
-         align.matches += 0x01
+         align.score.matches += 0x01
          passed_extend += 1 
          # mismatch
       else
          const prob  = phred_to_prob( read.metadata.quality[ridx] )
-         @fastmath align.mismatches += prob
-         @fastmath passed_mismat += prob
+         @fastmath align.score.mistolerance += prob
+         @fastmath passed_mistol += prob
+         align.score.mismatches += 0x01
+         passed_mismat += 0x01
       end
       ridx  -= 1
       sgidx -= 1
@@ -492,8 +512,9 @@ function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sg
                break
             else
                shift!( align.path ) # extension into current node failed
-               @fastmath align.mismatches -= passed_mismat
-               align.matches -= ext_len[c]
+               @fastmath align.score.mistolerance -= passed_mistol
+               align.score.mismatches -= passed_mismat
+               align.score.matches -= ext_len[c]
                cur_ridx  = ridx + (sg.nodeoffset[ get(passed_edges)[c] ] - sgidx)
                cur_sgidx = sg.nodeoffset[ get(passed_edges)[c] ]
                (cur_ridx - p.kmer_size) > 0 || continue

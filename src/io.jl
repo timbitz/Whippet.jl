@@ -82,7 +82,8 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
          is_pair_rc && (flag $= 0x20)
       end
    else
-      lib.info[ ind ].strand || (flag |= 0x10)
+      lib.info[ ind ].strand || (flag $= 0x10)
+      align.strand || (flag $= 0x10)
    end
    is_supplemental && (flag |= 0x100)
    flag   
@@ -94,12 +95,12 @@ end
 end
 
 # Lets build a spliced CIGAR string from an SGAlignment
-function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.matches )
-   matchleft = align.matches             # matches to account for in cigar string
-   curpos    = align.offset              # left most position
-   leftover  = 0                         # matches left over from previous iteration
-   total     = align.offsetread - 1      # total positions accounted for
-   cigar     = String[ soft_pad(align) ] # build cigar string here
+function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.score.matches + align.score.mismatches )
+   matchleft = align.score.matches + align.score.mismatches # matches to account for in cigar string
+   curpos    = align.offset                                 # left most position
+   leftover  = 0                                            # matches left over from previous iteration
+   total     = align.offsetread - 1                         # total positions accounted for
+   cigar     = String[ soft_pad(align) ]                    # build cigar string here
    # step through nodes in the path
    for idx in 1:length( align.path )
       const i = align.path[idx].node # current node
@@ -135,7 +136,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
                                     Int(sg.nodecoord[i]) - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
 
             if intron >= 1
-               matches_to_add = min( avail_matches, readlen - total )
+               matches_to_add = avail_matches # min( avail_matches, readlen - total )
               # end
                push!( cigar, string( matches_to_add ) * "M" ) 
                push!( cigar, string( intron ) * "N" )
@@ -172,6 +173,10 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    const sg = lib.graphs[geneind] 
    const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
    const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
+   if !strand
+      Bio.Seq.reverse_complement!(read.seq)
+      Bio.Seq.reverse!(read.metadata.quality)
+   end
    tab_write( io, read.name )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
