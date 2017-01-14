@@ -98,6 +98,8 @@ end
 function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.score.matches + align.score.mismatches )
    matchleft = align.score.matches + align.score.mismatches # matches to account for in cigar string
    curpos    = align.offset                                 # left most position
+   endpos    = curpos
+   intcnt    = 0
    leftover  = 0                                            # matches left over from previous iteration
    total     = align.offsetread - 1                         # total positions accounted for
    cigar     = String[ soft_pad(align) ]                    # build cigar string here
@@ -108,7 +110,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       # do the remaining alignment matches fit into the current node width
 
       const adjacent_edge_pos   = sg.nodeoffset[i] + sg.nodelen[i] - 1
-      const adjacent_edge_coord = sg.nodecoord[i] + sg.nodelen[i] - 1
+      const adjacent_edge_coord = sg.nodecoord[i] +  sg.nodelen[i] - 1
       
       if curpos + matchleft - 1 <= adjacent_edge_pos
          # finish in this node
@@ -117,6 +119,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
             push!( cigar, string( matches_to_add ) * "M" )
             total  += matches_to_add
             curpos += matchleft
+            endpos += matchleft 
          end
          matchleft = 0
          leftover = 0
@@ -124,12 +127,13 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 
          avail_matches = adjacent_edge_pos - curpos + 1
          matchleft -= avail_matches # remove the current node range
-         curpos    += avail_matches #?
          # is the read spliced and is there another node left
          if idx < length( align.path )
             nexti = align.path[idx+1].node
             nexti <= length(sg.nodeoffset) || return cigar # this shouldn't happen
             curpos = sg.nodeoffset[ nexti ]
+            endpos = sg.nodeoffset[ nexti ]
+            intcnt += 1
 
             const next_edge_coord = sg.nodecoord[nexti] 
             const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) - 1 :
@@ -153,13 +157,14 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       matches_to_add = min( matchleft + leftover, readlen - total )
       push!( cigar, string( matches_to_add ) * "M" )
       total  += matches_to_add
+      endpos += matches_to_add 
    end
    if total < readlen
       soft = readlen - total
       push!( cigar, string( soft ) * "S" )
    end
    !strand && reverse!( cigar ) 
-   join( cigar, "" ), curpos - 1
+   join( cigar, "" ), endpos - intcnt
 end
 
 # Write single SAM entry for one SGAlignment
@@ -173,7 +178,7 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    const sg = lib.graphs[geneind] 
    const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
    const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
-   if !strand
+   if !strand && !supplemental
       Bio.Seq.reverse_complement!(read.seq)
       Bio.Seq.reverse!(read.metadata.quality)
    end
