@@ -303,11 +303,11 @@ IIIIIIIIIIII
          cigar,positions = split(r.name, '%', keep=false)[1:2]
          first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
          # Test SAM Format
-         #@test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
-         #test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
+         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
+         test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
          #println(STDERR, "cigar = $test_cigar")
          @test first == Int(curgraph.nodecoord[firstnode] + (align.value[best_ind].offset - curgraph.nodeoffset[firstnode]))
-         #@test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]))
+         @test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]))
          # test readlength = number of M and S entries in cigar  
          # test SAM offset is correct for both '+' and '-' genes.
          # test that cigar reversal works for '-' strand genes.

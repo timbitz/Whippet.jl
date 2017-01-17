@@ -59,6 +59,6 @@ fixpath( str::String ) = abspath( expanduser( str ) )
 
 function isgzipped( filename::String )
    restr = "\.gz\$"
-   re = match(Regex(restr), filename)
+   re = Base.match(Regex(restr), filename)
    return re == nothing ? false : true
 end

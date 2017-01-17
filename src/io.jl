@@ -93,7 +93,7 @@ end
    pad = align.offsetread - 1
    pad > 0 ? string(pad) * "S" : ""
 end
-
+#=
 # Lets build a spliced CIGAR string from an SGAlignment
 function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.score.matches + align.score.mismatches )
    matchleft = align.score.matches + align.score.mismatches # matches to account for in cigar string
@@ -166,6 +166,49 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
    !strand && reverse!( cigar ) 
    join( cigar, "" ), endpos - intcnt
 end
+=#
+function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=0 )
+   curpos    = align.offset                                 # left most position
+   running   = 0                                            # cur number of running matches
+   total     = align.offsetread - 1                         # total positions accounted for
+   cigar     = String[ soft_pad(align) ]                    # build cigar string here 
+
+   for idx in 1:length(align.path)
+
+      const matches = align.path[idx].score.matches + align.path[idx].score.mismatches
+      total  += matches
+      curpos += matches
+
+      if idx < length( align.path )
+         const curi = align.path[idx].node
+         const nexti = align.path[idx+1].node
+         const intron = strand ? Int(sg.nodecoord[nexti]) - Int(sg.nodecoord[curi] +  sg.nodelen[curi] - 1) - 1 :
+                                 Int(sg.nodecoord[curi])  - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
+         if intron >= 1
+            push!( cigar, string(running + matches) * "M" )
+            push!( cigar, string( intron ) * "N" )
+            running = 0
+            curpos  = sg.nodeoffset[nexti]
+         else
+            running += matches
+         end
+      else
+         push!( cigar, string(running + matches) * "M" )
+      end
+   end
+   if total < readlen
+      soft = readlen - total
+      push!( cigar, string( soft ) * "S" )
+   end
+
+   if total > readlen
+      println(STDERR, "$cigar : $align" )
+   end
+
+   !strand && reverse!( cigar )
+   join( cigar, "" ), curpos - 1
+end
+
 
 # Write single SAM entry for one SGAlignment
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
