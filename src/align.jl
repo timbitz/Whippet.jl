@@ -112,6 +112,18 @@ end
 @inline score{A <: UngappedAlignment}( aln::A ) = score( aln.path )
 @inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath score( align ) / readlen)
 
+@inline function cleanpath_fwd!( v::Vector{SGAlignNode} )
+   while length(v) >= 1 && v[end].score.mismatches >= v[end].score.matches
+      pop!( v )
+   end
+end
+
+@inline function cleanpath_rev!( v::Vector{SGAlignNode} )
+   while length(v) >= 1 && v[1].score.mismatches >= v[1].score.matches
+      shift!( v )
+   end
+end
+
 Base.:>( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.:<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
 Base.:>=( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
@@ -401,45 +413,15 @@ end
       end
    end
 
-   #TODO alignments that hit the end of the read but < p.kmer_size beyond an
-   # exon-exon junction should still be valid no?  Even if they aren't counted
-   # as junction spanning reads.  Currently they would not be.
-   if identity(align, readlen) >= p.score_min #&& length(align.path) == 1  
+   cleanpath_fwd!(align.path)
+
+   if identity(align, readlen) >= p.score_min  
       align.isvalid = true 
    end
    #println(STDERR, "VERBOSE: FWD RETURNING $align")
    align
 end
 
-
-#=
-@inline function spliced_fwd_extend( p::AlignParam, lib::GraphLib, geneind::CoordInt, edgeind::UInt32, 
-                             read::SeqRecord, ridx::Int, right_kmer_ind::Int, align::SGAlignment )
-   # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
-   # returns right nodes with matching genes
-   isdefined( lib.edges.right, right_kmer_ind ) || return align
-
-   best = align
-   const left_kmer_ind = kmer_index(lib.graphs[geneind].edgeleft[edgeind])
-   isdefined( lib.edges.left, left_kmer_ind ) || return align
-   const right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ right_kmer_ind ]
-
-   #println(STDERR, "VERBOSE: SPLICED_EXTENSION, $(kmer_index(lib.graphs[geneind].edgeleft[edgeind])) ∩ $(kmer_index(rkmer)) = $right_nodes")
-
-   for rn in right_nodes
-      rn.gene == align.path[1].gene || continue
-      const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
-
-      res_align::SGAlignment = ungapped_fwd_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
-                                                    align=deepcopy(align), nodeidx=rn.node )
-      #println(res_align)
-      best = res_align > best ? res_align : best
-   end
-   if score(best) >= score(align) + p.kmer_size
-      best.isvalid = true
-   end
-   best
-end=#
 
 # This is the main ungapped alignment extension function in the <-- direction
 # Returns: SGAlignment
@@ -576,10 +558,9 @@ end=#
       end
    end
 
-   #TODO alignments that hit the end of the read but < p.kmer_size beyond an
-   # exon-exon junction should still be valid no?  Even if they aren't counted
-   # as junction spanning reads.  Currently they would not be.
-   if identity(align, readlen) >= p.score_min && length(align.path) == 1  
+   cleanpath_rev!(align.path)
+
+   if identity(align, readlen) >= p.score_min 
       align.isvalid = true 
    end
    if sgidx < align.offset
@@ -594,29 +575,3 @@ end=#
    align
 end
 
-#=
-@inline function spliced_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, edgeind::CoordInt,
-                             read::SeqRecord, ridx::Int, left_kmer_index::Int, align::SGAlignment )
-   # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
-   # returns right nodes with matching genes
-   isdefined( lib.edges.left, left_kmer_index ) || return align
-
-   best = align
-   const right_kmer_ind = kmer_index(lib.graphs[geneind].edgeright[edgeind])
-   isdefined( lib.edges.right, right_kmer_ind ) || return align
-   const left_nodes = lib.edges.right[ right_kmer_ind ] ∩ lib.edges.left[ left_kmer_index ]
-
-   # do a test for trans-splicing, and reset left_nodes
-   for rn in left_nodes
-      rn.gene == align.path[1].gene || continue
-      const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node-1] + lib.graphs[rn.gene].nodelen[rn.node-1] - 1
-
-      res_align::SGAlignment = ungapped_rev_extend( p, lib, rn.gene, Int(rn_offset), read, ridx, 
-                                                    align=deepcopy(align), nodeidx=rn.node-0x01 )
-      best = res_align > best ? res_align : best
-   end
-   if score(best) >= score(align) + p.kmer_size
-      best.isvalid = true
-   end
-   best
-end=#
