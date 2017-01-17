@@ -112,18 +112,6 @@ end
 @inline score{A <: UngappedAlignment}( aln::A ) = score( aln.path )
 @inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath score( align ) / readlen)
 
-@inline function cleanpath_fwd!( v::Vector{SGAlignNode} )
-   while length(v) >= 1 && v[end].score.mismatches >= v[end].score.matches
-      pop!( v )
-   end
-end
-
-@inline function cleanpath_rev!( v::Vector{SGAlignNode} )
-   while length(v) >= 1 && v[1].score.mismatches >= v[1].score.matches
-      shift!( v )
-   end
-end
-
 Base.:>( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.:<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
 Base.:>=( a::SGAlignment, b::SGAlignment ) = >=( score(a), score(b) )
@@ -413,7 +401,11 @@ end
       end
    end
 
-   cleanpath_fwd!(align.path)
+   # clean up any bad trailing nodes
+   while length(align.path) >= 1 && align.path[end].score.mismatches >= align.path[end].score.matches
+      pop!( align.path )
+      length(align.path) == 0 && (align.isvalid = false)
+   end
 
    if identity(align, readlen) >= p.score_min  
       align.isvalid = true 
@@ -558,7 +550,11 @@ end
       end
    end
 
-   cleanpath_rev!(align.path)
+   # clean up any bad left trailing nodes
+   while length(align.path) >= 1 && align.path[1].score.mismatches >= align.path[1].score.matches
+      pop!( align.path )
+      length(align.path) == 0 && (align.isvalid = false)
+   end
 
    if identity(align, readlen) >= p.score_min 
       align.isvalid = true 
