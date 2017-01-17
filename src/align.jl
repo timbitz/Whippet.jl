@@ -378,7 +378,7 @@ end
          # go back.
       for c in length(get(passed_edges)):-1:1  #most recent edge first
          const cval = get(passed_edges)[c]
-         if matches(align.path[cval+1:end]) > p.kmer_size + p.mismatches
+         if matches(align.path[cval+1:end]) >= p.kmer_size + p.mismatches
             align.isvalid = true
             break
          else
@@ -555,7 +555,7 @@ end=#
          # go back.
       for c in length(get(passed_edges)):-1:1  #most recent edge first
          const cval = get(passed_edges)[c]
-         if matches(align.path[1:(end-(cval+1))]) > p.kmer_size + p.mismatches
+         if matches(align.path[1:(end-(cval+1))]) >= p.kmer_size + p.mismatches
             align.isvalid = true
             break
          else

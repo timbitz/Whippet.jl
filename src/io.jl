@@ -201,12 +201,8 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
       push!( cigar, string( soft ) * "S" )
    end
 
-   if total > readlen
-      println(STDERR, "$cigar : $align" )
-   end
-
    !strand && reverse!( cigar )
-   join( cigar, "" ), curpos - 1
+   join( cigar, "" ), curpos
 end
 
 
