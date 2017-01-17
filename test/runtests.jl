@@ -227,11 +227,11 @@ NCTATGCTAG
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
-@11M10N9M1S%10,39%exon1-exon2
+@11M10N10M%10,40%exon1-exon2
 NGCGGATTACAGCATTAGAAG
 +
 #BBBBBBBBBBBBBBBBBBBB
-@5M10N5M1S%16,35%exon1trunc-exon2trunc
+@5M10N6M%16,36%exon1trunc-exon2trunc
 TTACAGCATTN
 +
 BBBBBBBBBB#
@@ -247,7 +247,7 @@ BBBBBBBBBBBBBBBBBBB
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
-@11M55N3M1S%10,78%exon1-exon4_4bp
+@11M55N4M%10,78%exon1-exon4_4bp
 NGCGGATTACATTAG
 +
 #IIIIIIIIIIIIII
@@ -305,7 +305,7 @@ IIIIIIIIIIII
          # Test SAM Format
          @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
          test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
-         println(STDERR, "cigar = $test_cigar")
+         #println(STDERR, "cigar = $test_cigar")
          @test first == Int(curgraph.nodecoord[firstnode] + (align.value[best_ind].offset - curgraph.nodeoffset[firstnode]))
          @test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]))
          # test readlength = number of M and S entries in cigar  
