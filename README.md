@@ -11,7 +11,7 @@
     - Spliced alignment from/to any combination of annotated donor/acceptor splice sites
   - Dynamic building of splicing events of any complexity
     - Entropic measurements of splicing diversity
-- High speed PolyA+ Spliced Read Alignment
+- High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
   - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
 - Fast and robust quantification of transcriptome structure and expression using EM
