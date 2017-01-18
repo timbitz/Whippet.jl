@@ -82,88 +82,78 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
          is_pair_rc && (flag $= 0x20)
       end
    else
-      lib.info[ ind ].strand || (flag |= 0x10)
+      lib.info[ ind ].strand || (flag $= 0x10)
+      align.strand || (flag $= 0x10)
    end
    is_supplemental && (flag |= 0x100)
    flag   
 end
 
+@inline function soft_pad( align::SGAlignment )
+   pad = align.offsetread - 1
+   pad > 0 ? string(pad) * "S" : ""
+end
 
-# Lets build a pseudo spliced CIGAR string from an SGAlignment
-function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=align.matches )
-   matchleft = align.matches # matches to account for in cigar string
-   curpos    = align.offset  # left most position
-   leftover  = 0             # matches left over from previous iteration
-   total     = 0             # total matches accounted for
-   cigar     = ""            # build cigar string here
-   # step through nodes in the path
-   for idx in 1:length( align.path )
-      const i = align.path[idx].node # current node
-      i <= length(sg.nodeoffset) || return cigar # this shouldn't happen
-      # do the remaining alignment matches fit into the current node width
+function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readlen=0 )
+   curpos    = align.offset                                 # left most position
+   running   = 0                                            # cur number of running matches
+   total     = align.offsetread - 1                         # total positions accounted for
+   cigar     = String[ soft_pad(align) ]                    # build cigar string here 
 
-      const adjacent_edge_pos   = sg.nodeoffset[i] + sg.nodelen[i] - 1
-      const adjacent_edge_coord = strand ? sg.nodecoord[i] + sg.nodelen[i] - 1 : sg.nodecoord[i]
+   for idx in 1:length(align.path)
 
-      if curpos + matchleft <= adjacent_edge_pos
-         # finish in this node
-         matches_to_add = min( matchleft + leftover, readlen - total ) 
-         cigar *= string( matches_to_add ) * "M"
-         total += matches_to_add
-         matchleft = 0
-         leftover = 0
-      else # next_edge_pos is past the current node edge
-         cur_matches = adjacent_edge_pos - curpos
-         matchleft -= cur_matches # remove the current node range
-         curpos += cur_matches #?
-         # is the read spliced and is there another node left
-         if idx < length( align.path )
-            nexti = align.path[idx+1].node
-            nexti <= length(sg.nodeoffset) || return cigar # this shouldn't happen
-            curpos = sg.nodeoffset[ nexti ]
-            const next_edge_coord = strand ? sg.nodecoord[nexti] : 
-                                             sg.nodecoord[nexti] + sg.nodelen[nexti] - 1
-            const intron = strand ? Int(next_edge_coord) - Int(adjacent_edge_coord) : 
-                                    Int(adjacent_edge_coord) - Int(next_edge_coord)
-            if intron > 1
-               matches_to_add = min( cur_matches, readlen - total )
-              # end
-               cigar *= string( matches_to_add ) * "M" * string( intron ) * "N"
-               total += cur_matches
-            else
-               leftover += cur_matches
-            end
+      const matches = align.path[idx].score.matches + align.path[idx].score.mismatches
+      total  += matches
+      curpos += matches
+
+      if idx < length( align.path )
+         const curi = align.path[idx].node
+         const nexti = align.path[idx+1].node
+         const intron = strand ? Int(sg.nodecoord[nexti]) - Int(sg.nodecoord[curi] +  sg.nodelen[curi] - 1) - 1 :
+                                 Int(sg.nodecoord[curi])  - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
+         if intron >= 1
+            push!( cigar, string(running + matches) * "M" )
+            push!( cigar, string( intron ) * "N" )
+            running = 0
+            curpos  = sg.nodeoffset[nexti]
+         else
+            running += matches
          end
+      else
+         push!( cigar, string(running + matches) * "M" )
       end
-
-   end # nodes in path
-   
-   if matchleft + leftover > 0
-      matches_to_add = min( matchleft + leftover, readlen - total )
-      cigar *= string( matches_to_add ) * "M"
-      total += matches_to_add
    end
    if total < readlen
       soft = readlen - total
-      cigar *= string( soft ) * "S"
+      push!( cigar, string( soft ) * "S" )
    end
-   cigar
+
+   !strand && reverse!( cigar )
+   join( cigar, "" ), curpos
 end
+
 
 # Write single SAM entry for one SGAlignment
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
                     mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33,
                     supplemental=false )
    const geneind = align.path[1].gene
-   const nodeind = align.path[1].node
-   align.path[end].node < nodeind && return # TODO: allow circular SAM output
+   const strand  = lib.info[geneind].strand   
+   const nodeind = strand ? align.path[1].node : align.path[end].node
+   (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
+   const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
+   const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
+   if !strand && !supplemental
+      Bio.Seq.reverse_complement!(read.seq)
+      Bio.Seq.reverse!(read.metadata.quality)
+   end
    tab_write( io, read.name )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
-   tab_write( io, string( sg.nodecoord[nodeind] + (align.offset - sg.nodeoffset[nodeind]) ) ) 
+   tab_write( io, string( sg.nodecoord[nodeind] + offset ) ) 
    tab_write( io, string(mapq) )
-   tab_write( io, cigar_string( align, sg, lib.info[geneind].strand, length(read.seq) ) )
+   tab_write( io, cigar )
    tab_write( io, '*' )
    tab_write( io, '0' )
    tab_write( io, '0' )

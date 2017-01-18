@@ -74,8 +74,9 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
       if dist < p.seed_pair_range # inside allowable pair distance
 
          const geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
-         const inc = geneind < length(lib.offset) ? 1 : 0
-         if lib.offset[geneind] <= rev_sorted[ridx] < lib.offset[geneind+inc]
+         const next_offset= geneind < length(lib.offset) ? lib.offset[geneind+1] : 
+                                                           lib.offset[geneind] + length(lib.graphs[geneind].seq)
+         if lib.offset[geneind] <= rev_sorted[ridx] < next_offset
 
             fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
             rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )

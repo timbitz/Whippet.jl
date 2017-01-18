@@ -89,7 +89,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    end
 
-                              # fwd     rev
+                               # fwd     rev
    buffer1   = dna"AAAAA"      # 1-5     96-100
    utr5      = dna"TTATT"      # 6-10    91-95
    exon1     = dna"GCGGATTACA" # 11-20   81-90
@@ -153,6 +153,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    runoffset = 0
 
    for g in keys(gtfref)
+      println(STDERR, g)
       curgraph = SpliceGraph( gtfref[g], genome, kmer_size )
       xcript  *= curgraph.seq
       push!(xgraph, curgraph)
@@ -212,67 +213,67 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(STDERR, lib)
    end
 
-   @testset "Alignment" begin
+   @testset "Alignment and SAM Format" begin
       # reads
-      fastq = IOBuffer("@exon1
+      fastq = IOBuffer("@1S10M%11,20%exon1
 NGCGGATTACA
 +
 #BBBBBBBBBB
-@exon3def
+@1S9M%54,62%exon3def
 NCTATGCTAG
 +
 #BBBBBBBBB
-@alt3-exon3-alt5
+@1S15M%51,65%alt3-exon3-alt5
 NCCTCTATGCTAGTTC
 +
 #BBBBBBBBBBBBBBB
-@exon1-exon2
+@11M10N10M%10,40%exon1-exon2
 NGCGGATTACAGCATTAGAAG
 +
 #BBBBBBBBBBBBBBBBBBBB
-@exon1trunc-exon2trunc
+@5M10N6M%16,36%exon1trunc-exon2trunc
 TTACAGCATTN
 +
 BBBBBBBBBB#
-@exon1-exon3def
+@10M33N9M1S%11,62%exon1-exon3def
 GCGGATTACACTATGCTAGN
 +
 BBBBBBBBBBBBBBBBBBB#
-@exon1-exon3def:rc
-CTAGCATAGTGTAATCCGCN
+@10M33N9M%11,62%exon1-exon3def:rc
+CTAGCATAGTGTAATCCGC
 +
-BBBBBBBBBBBBBBBBBBB#
-@exon1-exon4full
+BBBBBBBBBBBBBBBBBBB
+@10M55N10M1S%11,85%exon1-exon4full
 GCGGATTACATTAGACAAGAN
 +
 BBBBBBBBBBBBBBBBBBBB#
-@exon1-exon4_2bp
-GCGGATTACATTN
+@11M55N4M%10,78%exon1-exon4_4bp
+NGCGGATTACATTAG
 +
-IIIIIIIIIIII#
-@exon1_2bp-exon4:rc
+#IIIIIIIIIIIIII
+@2M55N10M%19,85%exon1_2bp-exon4:rc
 TCTTGTCTAATG
 +
 IIIIIIIIIIII
 ")
 
       score_range = 0.05
-      param = AlignParam( 0, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
-                        false, false, true, false, true )
+      param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
+                          false, false, true, false, true )
       quant = GraphLibQuant( lib )
       multi = Vector{Multimap}()
 
       typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
-      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_T )
+      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_C )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
       @test length(reads) == 10
       for r in reads
-         println(r)
-#         println(r.metadata)
+         println(STDERR, r)
+
          align = ungapped_align( param, lib, r )
-         println(align)
+         println(STDERR, align)
 
          flush(STDERR)
          @test !isnull( align )
@@ -287,12 +288,31 @@ IIIIIIIIIIII
             @test align.value[1].strand == true
          end
 
-         ex_num = length(split(r.name, '-', keep=false))
-         @test length(align.value[1].path) == ex_num
+         best_ind = indmax(scores)
 
-         count!( quant, align.value[1] )
+         ex_num = length(split(r.name, '-', keep=false))
+         @test length(align.value[best_ind].path) == ex_num
+
+         count!( quant, align.value[best_ind] )
+
+         const curgene   = align.value[best_ind].path[1].gene
+         const firstnode = align.value[best_ind].path[1].node
+         const lastnode  = align.value[best_ind].path[end].node
+         const curgraph  = lib.graphs[ curgene ]
+
+         cigar,positions = split(r.name, '%', keep=false)[1:2]
+         first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
+         # Test SAM Format
+         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
+         test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
+         #println(STDERR, "cigar = $test_cigar")
+         @test first == Int(curgraph.nodecoord[firstnode] + (align.value[best_ind].offset - curgraph.nodeoffset[firstnode]))
+         #@test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]))
+         # test readlength = number of M and S entries in cigar  
+         # test SAM offset is correct for both '+' and '-' genes.
+         # test that cigar reversal works for '-' strand genes.
       end 
-   
+
       @testset "Quantification" begin
          calculate_tpm!( quant, readlen=20 )
 
@@ -318,10 +338,6 @@ IIIIIIIIIIII
          end
       end
 
-      @testset "SAM Output" begin
-         
-      end
-     
       @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
