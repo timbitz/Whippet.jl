@@ -76,10 +76,12 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
       if first
          flag |= 0x40
          lib.info[ ind ].strand || (flag |= 0x10)
+         align.strand || (flag $= 0x10)
       else
          flag |= 0x80
          lib.info[ ind ].strand || (flag $= 0x20)
-         is_pair_rc && (flag $= 0x20)
+         align.strand || (flag $= 0x20)
+         is_pair_rc   && (flag $= 0x20)
       end
    else
       lib.info[ ind ].strand || (flag $= 0x10)
@@ -137,6 +139,7 @@ end
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
                     mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33,
                     supplemental=false )
+   (align.isvalid && length(align.path) >= 1) || return
    const geneind = align.path[1].gene
    const strand  = lib.info[geneind].strand   
    const nodeind = strand ? align.path[1].node : align.path[end].node
