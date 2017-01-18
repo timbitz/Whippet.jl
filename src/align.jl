@@ -550,12 +550,6 @@ end
       end
    end
 
-   # clean up any bad left trailing nodes
-   while length(align.path) >= 1 && align.path[1].score.mismatches >= align.path[1].score.matches
-      pop!( align.path )
-      length(align.path) == 0 && (align.isvalid = false)
-   end
-
    if identity(align, readlen) >= p.score_min 
       align.isvalid = true 
    end
@@ -566,7 +560,17 @@ end
       align.offsetread = convert(ReadLengthInt, cur_ridx)
    end
 
-   #println(STDERR, "VERBOSE: REV RETURNING $align")
+   # clean up any bad left trailing nodes
+   while length(align.path) >= 1 && align.path[1].score.mismatches >= align.path[1].score.matches
+      offset_change = align.path[1].score.matches + align.path[1].score.mismatches
+      shift!( align.path )
+      if length(align.path) >= 1
+         align.offset      = sg.nodeoffset[ align.path[1].node ]
+         align.offsetread += offset_change
+      else
+         align.isvalid = false
+      end
+   end
 
    align
 end
