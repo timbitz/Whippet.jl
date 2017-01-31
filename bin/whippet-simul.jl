@@ -12,7 +12,7 @@ using ArgParse
 using StatsBase
 
 push!( LOAD_PATH, dir * "/../src" )
-using SpliceGraphs
+using Whippet
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -56,7 +56,7 @@ function main()
 end
 
 type SimulTranscript
-   seq::SpliceGraphs.SGSequence
+   seq::Whippet.SGSequence
    nodes::Vector{UInt}
 end
 

@@ -11,7 +11,7 @@ using ArgParse
 using Glob
 
 push!( LOAD_PATH, dir * "/../src" )
-using SpliceGraphs
+using Whippet
 
 function parse_cmd()
   s = ArgParseSettings()

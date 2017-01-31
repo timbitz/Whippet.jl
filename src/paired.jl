@@ -117,7 +117,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
          end # is reverse in same gene as fwd
       end # end dist vs. seed_pair_range
       if fwd_sorted[fidx] > rev_sorted[ridx]
-          ridx += 1
+         ridx += 1
       else
          fidx += 1
       end

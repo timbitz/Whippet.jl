@@ -10,7 +10,7 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using ArgParse
 
 push!( LOAD_PATH, dir * "/../src" )
-using SpliceGraphs
+using Whippet
 using Libz
 
 function parse_cmd()
