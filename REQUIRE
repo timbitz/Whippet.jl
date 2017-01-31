@@ -1,0 +1,14 @@
+julia 0.5
+DataStructures
+ArgParse
+Bio
+FMIndexes
+IntArrays
+IntervalTrees
+BufferedStreams
+Libz
+StatsBase
+Distributions
+Glob
+SuffixArrays
+Requests
