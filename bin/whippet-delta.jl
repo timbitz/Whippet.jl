@@ -19,19 +19,19 @@ function parse_cmd()
   @add_arg_table s begin
     "--a", "-a"
       help     = "Replicates for Set A -- Could be: pattern to glob.psi (common-filename-segment [*.psi*]), or comma delimited list of filenames. ie. (-a sample_a) would work for sample_a-rep1.psi.gz,sample_a-rep2.psi.gz,..."
-      arg_type = ASCIIString
+      arg_type = String
 #      required = true
     "--b", "-b"
       help     = "Replicates for Set B -- Same rules as for (-a)"
-      arg_type = ASCIIString
+      arg_type = String
 #      required = true
     "--out", "-o"
       help     = "Core file name to send .diff.gz output to!"
-      arg_type = ASCIIString
+      arg_type = String
       default  = fixpath( "./output" )
     "--directory", "-d"
       help     = "Directory to search for file patterns or list in -a and -b"
-      arg_type = ASCIIString
+      arg_type = String
       default  = "."
     "--min-reads", "-r"
       help     = "Minimum number of reads for a single event to be included!"
@@ -53,8 +53,8 @@ function parse_cmd()
   return parse_args(s)
 end
 
-function retrievefilelist( pattern::ASCIIString, dir::ASCIIString )
-   list = Vector{ASCIIString}()
+function retrievefilelist( pattern::String, dir::String )
+   list = Vector{String}()
    if search(pattern, ',') > 0
       tmp = split( pattern, ',', keep=false )
    else
