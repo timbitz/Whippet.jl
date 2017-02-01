@@ -28,8 +28,8 @@ Install most recent [julia release here](http://julialang.org/downloads/), which
 ### 2) Clone Whippet
 
 ```
-git clone https://github.com/timbitz/Whippet.git
-cd Whippet
+git clone https://github.com/timbitz/Whippet.jl.git
+cd Whippet.jl
 julia dependencies.jl
 ```
 
