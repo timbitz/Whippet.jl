@@ -1,6 +1,6 @@
 # Whippet
 
-[![Build Status](https://travis-ci.com/timbitz/Whippet.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet)
+[![Build Status](https://travis-ci.com/timbitz/Whippet.jl.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet)
 
 
@@ -28,8 +28,8 @@ Install most recent [julia release here](http://julialang.org/downloads/), which
 ### 2) Clone Whippet
 
 ```
-git clone https://github.com/timbitz/Whippet.git
-cd Whippet
+git clone https://github.com/timbitz/Whippet.jl.git
+cd Whippet.jl
 julia dependencies.jl
 ```
 
