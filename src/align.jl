@@ -431,7 +431,7 @@ end
    passed_edges  = Nullable{Vector{UInt8}}() # don't allocate array unless needed
    mistol        = mistolerance(align)
 
-   if align.path[1].gene != geneind || align.path[1].node != nodeidx
+   if length(align.path) <= 0 || align.path[1].gene != geneind || align.path[1].node != nodeidx
       unshift!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) ) # starting node if not already there
    end
 
