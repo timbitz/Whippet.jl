@@ -130,6 +130,17 @@ Base.isless( a::SGAlignment, b::SGAlignment ) = a < b
    align.isvalid = false 
 end
 
+@inline function remove_invalid!( vec::Vector{SGAlignment} )
+   i = 1
+   while i <= length(vec)
+      if !isvalid( vec[i] )
+         deleteat!( vec, i )
+      else
+         i += 1
+      end
+   end
+end
+
 @inline function seed_locate( p::AlignParam, index::FMIndex, read::SeqRecord; offset_left::Bool=true, both_strands::Bool=true )
    const def_sa = 2:1
    const readlen = convert(ReadLengthInt, length(read.seq))
