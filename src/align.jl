@@ -111,6 +111,7 @@ end
 @inline mistolerance{A <: UngappedAlignment}( aln::A ) = mistolerance( aln.path )
 @inline score{A <: UngappedAlignment}( aln::A ) = score( aln.path )
 @inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath score( align ) / readlen)
+@inline isvalid{A <: UngappedAlignment}( align::A ) = align.isvalid && length(align.path) >= 1 && matches(align) > mistolerance(align) ? true : false
 
 Base.:>( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.:<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -231,7 +232,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, seed::Un
       const align = _ungapped_align( p, lib, read, s, readloc, ispos=ispos )
       const scvar = identity(align, readlen)
 
-      if align.isvalid
+      if isvalid(align)
          if isnull( res )
             res = Nullable(SGAlignment[ align ])
             maxscore = scvar

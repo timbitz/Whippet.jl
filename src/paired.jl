@@ -83,7 +83,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
 
             @fastmath const scvar = identity( fwd_aln, rev_aln, fwd_len, rev_len )
 
-            if fwd_aln.isvalid || rev_aln.isvalid
+            if isvalid(fwd_aln) || isvalid(rev_aln)
                if isnull( fwd_res ) || isnull( rev_res )
                   fwd_res = Nullable(SGAlignment[ fwd_aln ])
                   rev_res = Nullable(SGAlignment[ rev_aln ])
