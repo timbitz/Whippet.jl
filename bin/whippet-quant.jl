@@ -84,7 +84,7 @@ function parse_cmd()
       help     = "FASTQ files are URLs to download/process on the fly"
       action   = :store_true
     "--ebi"
-      help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --curl=true)"
+      help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --url=true)"
       action   = :store_true
     "--circ"
       help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
@@ -119,7 +119,7 @@ function main()
    if args["ebi"]
       ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
       ispaired = ebi_res.paired
-      args["curl"] = true
+      args["url"] = true
       args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
       if ispaired
          args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
@@ -127,12 +127,12 @@ function main()
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
    end
 
-   const parser,response = args["curl"] ? make_http_fqparser( args["filename.fastq[.gz]"],
+   const parser,response = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"],
                                                          encoding=enc, forcegzip=args["force-gz"] ) : 
                                           make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
                                                          encoding=enc, forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser,mate_response = args["curl"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+      const mate_parser,mate_response = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
                                                                       encoding=enc, forcegzip=args["force-gz"] ) :
                                                        make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
                                                                       encoding=enc, forcegzip=args["force-gz"] )
@@ -147,13 +147,13 @@ function main()
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
                                                               sam=args["sam"], qualoffset=enc_offset, 
                                                               response=response, mate_response=mate_response,
-                                                              http=args["curl"] )
+                                                              http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
                                                        sam=args["sam"], qualoffset=enc_offset,
-                                                       response=response, http=args["curl"] )
+                                                       response=response, http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
