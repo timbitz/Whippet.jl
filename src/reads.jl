@@ -202,10 +202,8 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
          fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
          if !isnull( fwd_aln ) && !isnull( rev_aln )
             if length( fwd_aln.value ) > 1
-               remove_invalid!( fwd_aln.value )
-               remove_invalid!( rev_aln.value )
-               length( fwd_aln.value ) > 1 && push!( multi, Multimap( fwd_aln.value ) )
-               length( rev_aln.value ) > 1 && push!( multi, Multimap( rev_aln.value ) )
+               push!( multi, Multimap( fwd_aln.value ) )
+               push!( multi, Multimap( rev_aln.value ) )
                sam && write_sam( stdbuf, fwd_reads[i], rev_reads[i], fwd_aln.value, rev_aln.value, lib,
                                  paired=true, is_pair_rc=param.is_pair_rc, qualoffset=qualoffset )
             else

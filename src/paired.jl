@@ -83,7 +83,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
 
             @fastmath const scvar = identity( fwd_aln, rev_aln, fwd_len, rev_len )
 
-            if isvalid(fwd_aln) || isvalid(rev_aln)
+            if isvalid(fwd_aln) && isvalid(rev_aln)
                if isnull( fwd_res ) || isnull( rev_res )
                   fwd_res = Nullable(SGAlignment[ fwd_aln ])
                   rev_res = Nullable(SGAlignment[ rev_aln ])
@@ -153,8 +153,6 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
       sgquant.node[ fwd.path[1].node ] += val
       push!( used, fwd.path[1].node )
    else
-      # TODO: potentially handle trans-splicing here via align.istrans variable?
-
       # Otherwise, lets step through pairs of nodes and add val to those edges
       for n in 1:(length(fwd.path)-1)
          # trans-spicing off->
@@ -180,8 +178,6 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
          sgquant.node[ rev.path[1].node ] += val
       end
    else
-      # TODO: potentially handle trans-splicing here via align.istrans variable?
-
       # Otherwise, lets step through pairs of nodes and add val to those edges
       for n in 1:(length(rev.path)-1)
          # trans-spicing off->
