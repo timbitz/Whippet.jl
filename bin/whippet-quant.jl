@@ -80,7 +80,7 @@ function parse_cmd()
     "--phred-64"
       help     = "Qual string is encoded in Phred+64 integers"
       action   = :store_true
-    "--curl"
+    "--url"
       help     = "FASTQ files are URLs to download/process on the fly"
       action   = :store_true
     "--ebi"

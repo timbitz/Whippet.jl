@@ -50,13 +50,13 @@ Or if you have paired-end RNA-seq data...
 $ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-Or you can provide a link/s to the fastq file/s on the web using `--curl`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment. For example:
+Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment. For example:
 ```
 $ julia whippet-quant.jl --ebi SRR1199010
 ```
 is equivalent to
 ```bash
-$ julia whippet-quant.jl --curl ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
+$ julia whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
@@ -145,13 +145,13 @@ optional arguments:
 
 ```bash
 $ julia whippet-quant.jl -h
-Whippet v0.3.2 loading and compiling... 
+Whippet v0.6.2 loading and compiling... 
 usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
                         [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
                         [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
                         [-S SCORE-MIN] [--psi-body-read] [--stranded]
                         [--pair-same-strand] [--phred-33] [--phred-64]
-                        [--curl] [--ebi] [--circ] [--no-tpm]
+                        [--url] [--ebi] [--circ] [--no-tpm]
                         [--force-gz] [-h] filename.fastq[.gz]
                         [paired_mate.fastq[.gz]]
 
@@ -205,10 +205,10 @@ optional arguments:
   --phred-33            Qual string is encoded in Phred+33 integers
                         (default)
   --phred-64            Qual string is encoded in Phred+64 integers
-  --curl                FASTQ files are URLs to download/process on
+  --url                FASTQ files are URLs to download/process on
                         the fly
   --ebi                 Retrieve FASTQ files from ebi.ac.uk using seq
-                        run id (ie. SRR1199003). (sets --curl=true)
+                        run id (ie. SRR1199003). (sets --url=true)
   --circ                Allow back/circular splicing, this will allow
                         output of `BS`-type lines
   --no-tpm              Should tpm file be sent to
