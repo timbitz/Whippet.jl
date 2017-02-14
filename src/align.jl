@@ -209,14 +209,16 @@ end
 @inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, indx::Int, readloc::Int;
                                   ispos::Bool=true, geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
 
-   align = ungapped_fwd_extend( p, lib, geneind,
-                                indx - lib.offset[geneind] + 1,
-                                read, readloc + 1, ispos=ispos )
+   const sgidx       = indx - lib.offset[geneind]
+   const offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx + 1)))
 
-   align = ungapped_rev_extend( p, lib, geneind,
-                                indx - lib.offset[geneind],
+   align = ungapped_fwd_extend( p, lib, geneind, sgidx + 1,
+                                read, readloc + 1, ispos=ispos,
+                                nodeidx=offset_node )
+
+   align = ungapped_rev_extend( p, lib, geneind, sgidx,
                                 read, readloc, ispos=ispos, align=align,
-                                nodeidx=align.path[1].node )
+                                nodeidx=offset_node )
    align
 end
 
