@@ -160,8 +160,13 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    tab_write( io, '*' )
    tab_write( io, '0' )
    tab_write( io, '0' )
-   seq_write( io, read, tab=true )
-   qual_write( io, read, qualoffset=qualoffset )
+   if !supplemental
+      seq_write( io, read, tab=true )
+      qual_write( io, read, qualoffset=qualoffset )
+   else
+      tab_write( io, '*' )
+      write( io, '*' )
+   end
    write( io, '\n' )
 end
 
