@@ -227,7 +227,7 @@ end
    ungapped_align( p, lib, read, seed, readloc, pos, ispos=ispos )
 end
 
-function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord, seed::UnitRange, readloc::Int, pos::Bool; ispos::Bool=true )
+function ungapped_align{SA <: Union{UnitRange,Vector{Int}}}( p::AlignParam, lib::GraphLib, read::SeqRecord, seed::SA, readloc::Int, pos::Bool; ispos::Bool=true )
    const readlen = convert(ReadLengthInt, length(read.seq))
 
    if !pos
