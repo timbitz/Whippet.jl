@@ -133,7 +133,7 @@ end
 @inline function remove_invalid!( vec::Vector{SGAlignment} )
    i = 1
    while i <= length(vec)
-      if !isvalid( vec[i] )
+      @inbounds if !isvalid( vec[i] )
          deleteat!( vec, i )
       else
          i += 1
@@ -187,7 +187,7 @@ end
 @inline function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
    i = 1
    while i <= length( arr )
-      if threshold - score( arr[i] ) > buffer
+      @inbounds if threshold - score( arr[i] ) > buffer
          splice!( arr, i )
          i -= 1
       end
@@ -198,7 +198,7 @@ end
 @inline function splice_by_identity!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer, readlen )
    i = 1
    while i <= length( arr )
-      if threshold - identity( arr[i], readlen ) > buffer
+      @inbounds if threshold - identity( arr[i], readlen ) > buffer
          splice!( arr, i )
          i -= 1
       end
@@ -210,7 +210,7 @@ end
                                   ispos::Bool=true, geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
 
    const sgidx       = indx - lib.offset[geneind]
-   const offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx + 1)))
+   const offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,convert(CoordInt, sgidx + 1)))
 
    align = ungapped_fwd_extend( p, lib, geneind, sgidx + 1,
                                 read, readloc + 1, ispos=ispos,
@@ -222,12 +222,10 @@ end
    align
 end
 
-@inline function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; ispos::Bool=true, anchor_left::Bool=true )
-   const seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
-   ungapped_align( p, lib, read, seed, readloc, pos, ispos=ispos )
-end
+@inline function ungapped_align( p::AlignParam, lib::GraphLib, read::SeqRecord; 
+                         ispos::Bool=true, anchor_left::Bool=true )
 
-function ungapped_align{SA <: Union{UnitRange,Vector{Int}}}( p::AlignParam, lib::GraphLib, read::SeqRecord, seed::SA, readloc::Int, pos::Bool; ispos::Bool=true )
+   const seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
    const readlen = convert(ReadLengthInt, length(read.seq))
 
    if !pos

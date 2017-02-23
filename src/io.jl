@@ -237,7 +237,7 @@ function write_sam( io::BufOut, fwd::SeqRecord, rev::SeqRecord,
 end
 
 
-function write_sam_header( io::BufOut, lib::GraphLib )
+function write_sam_header( io::BufOut, lib::GraphLib, head::Bool=true )
    refs = Dict{String,Int}()
    for gind in 1:length(lib.graphs)
       name = lib.info[gind].name
@@ -246,7 +246,7 @@ function write_sam_header( io::BufOut, lib::GraphLib )
          refs[name] = len + 10000
       end
    end
-   write( io, "@HD\tVN:1.0\tSO:unsorted\n" )
+   head && write( io, "@HD\tVN:1.0\tSO:unsorted\n" )
    for k in keys(refs)
       write( io, "@SQ\tSN:" )
       tab_write( io, k )
@@ -254,7 +254,6 @@ function write_sam_header( io::BufOut, lib::GraphLib )
       write( io, '\n' )
    end
 end
-
 
 #=
 #
