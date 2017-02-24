@@ -38,16 +38,16 @@ Base.intersect( arrA::Vector{SGNode}, arrB::Vector{SGNode} ) = intersect_sorted(
 
 # Intersect two sorted arrays of SGNode by gene entry
 # Return the list of intersected arrB entries
-function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T}; right=true )
+function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
    res = Vector{T}()
    i,j = 1,1
-   while i <= length(arrA) && j <= length(arrB)
+   @inbounds while i <= length(arrA) && j <= length(arrB)
       if arrA[i] > arrB[j]
          j += 1
       elseif arrA[i] < arrB[j]
          i += 1
       else
-         push!( res, right ? arrB[j] : arrA[i] )
+         push!( res, arrB[j] )
          i += 1
          j += 1
       end

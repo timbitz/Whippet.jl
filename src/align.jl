@@ -296,8 +296,6 @@ end
       isdefined( lib.edges.left, left_kmer_ind ) || return align
       @inbounds const right_nodes = lib.edges.left[ left_kmer_ind ] ∩ lib.edges.right[ right_kmer_ind ]
 
-      #println(STDERR, "VERBOSE: SPLICED_EXTENSION, $(kmer_index(lib.graphs[geneind].edgeleft[edgeind])) ∩ $(kmer_index(rkmer)) = $right_nodes")
-
       for rn in right_nodes
          rn.gene == align.path[1].gene || continue
          const rn_offset = lib.graphs[rn.gene].nodeoffset[rn.node]
