@@ -137,8 +137,8 @@ end
 
 # Write single SAM entry for one SGAlignment
 function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
-                    mapq=0, paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33,
-                    supplemental=false )
+                    mapq::Int=0, paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33,
+                    supplemental::Bool=false, tagstr::String="" )
    (align.isvalid && length(align.path) >= 1) || return
    const geneind = align.path[1].gene
    const strand  = lib.info[geneind].strand   
@@ -166,6 +166,9 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    else
       tab_write( io, '*' )
       write( io, '*' )
+   end
+   if tagstr != ""
+      tab_write( io, tagstr )
    end
    write( io, '\n' )
 end
@@ -200,7 +203,7 @@ end
 # Write multiple SAM entries for a Vector of SGAlignment, highest score gets regular entry
 # others get supplementary entries.
 function write_sam( io::BufOut, read::SeqRecord, alignvec::Vector{SGAlignment}, lib::GraphLib;
-                    paired=false, fwd_mate=true, is_pair_rc=true, qualoffset=33 )
+                    paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33 )
 
    best = indmax_score( alignvec )
    mapq_val = 10 * length(alignvec)
@@ -218,7 +221,7 @@ end
 # Write multiple SAM entries for two vectors of SGAlignments for paired-end reads
 function write_sam( io::BufOut, fwd::SeqRecord, rev::SeqRecord,
                     fwd_vec::Vector{SGAlignment}, rev_vec::Vector{SGAlignment}, lib::GraphLib;
-                    paired=true, fwd_mate=true, is_pair_rc=true, qualoffset=33 )
+                    paired::Bool=true, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33 )
 
    best = indmax_score( fwd_vec, rev_vec )
    mapq_val = 10 * length(fwd_vec)
