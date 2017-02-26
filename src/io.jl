@@ -168,7 +168,8 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
       write( io, '*' )
    end
    if tagstr != ""
-      tab_write( io, tagstr )
+      write( io, '\t' )
+      write( io, tagstr )
    end
    write( io, '\n' )
 end
