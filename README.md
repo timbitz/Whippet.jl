@@ -37,45 +37,45 @@ julia dependencies.jl
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
 
 ```bash
-$ julia whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
+$ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
 ### 4) Quantify FASTQ files.
 ```bash
-$ julia whippet-quant.jl file.fastq.gz
+$ julia bin/whippet-quant.jl file.fastq.gz
 ```
 
 Or if you have paired-end RNA-seq data...
 ```bash
-$ julia whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
+$ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
 Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment. For example:
 ```
-$ julia whippet-quant.jl --ebi SRR1199010
+$ julia bin/whippet-quant.jl --ebi SRR1199010
 ```
 is equivalent to
 ```bash
-$ julia whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
+$ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
 ```bash
-$ julia whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
+$ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
 ```
 
 It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
-$ julia whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
+$ julia bin/whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
 ```
 
 ### 5) Compare multiple psi files
 ```bash
 $ ls *.psi.gz
 sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
-$ julia whippet-delta.jl -a sample1 -b sample2
+$ julia bin/whippet-delta.jl -a sample1 -b sample2
 OR
-$ julia whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
+$ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
 
 ---
