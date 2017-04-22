@@ -10,6 +10,7 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using Libz
 using ArgParse
 using StatsBase
+using Bio.Seq
 
 push!( LOAD_PATH, dir * "/../src" )
 using Whippet
@@ -20,11 +21,11 @@ function parse_cmd()
   @add_arg_table s begin
     "--index", "-x"
       help = "Prefix for index 'dir/prefix' (default Whippet/index/graph)"
-      arg_type = ASCIIString
+      arg_type = String
       default  = fixpath( "$(dir)/../index/graph" )
     "--out", "-o"
       help = "Where should the gzipped output go 'dir/prefix'?"
-      arg_type = ASCIIString
+      arg_type = String
       default  = fixpath( "$(dir)/../simul" )
     "--max-complexity", "-k"
       help = "Max complexity KMax allowed per gene (random K for each gene between K1:KMax)?"
@@ -62,7 +63,7 @@ end
 
 immutable SimulGene
    trans::Vector{SimulTranscript}
-   gene::ASCIIString
+   gene::String
    complexity::Int
 end
 
@@ -110,7 +111,7 @@ function simulate_genes( lib, anno, max_comp; output="simul_genes", gene_num=len
 end
 
 function simulate_transcripts!( simul::SimulGene, sg::SpliceGraph )
-   trans = SimulTranscript( sg"", Vector{UInt}() )
+   trans = SimulTranscript( dna"", Vector{UInt}() )
    collect_nodes!( trans, sg, 1:length(sg.nodelen) )
    push!( simul.trans, trans )
    if length(sg.nodelen) > 2
@@ -118,7 +119,7 @@ function simulate_transcripts!( simul::SimulGene, sg::SpliceGraph )
       for i in 1:simul.complexity
          combset = collect( combinations( mod_start:(mod_start+simul.complexity-1), i ) )
          for s in combset
-            trans = SimulTranscript( sg"", Vector{UInt}() )
+            trans = SimulTranscript( dna"", Vector{UInt}() )
             collect_nodes!( trans, sg, 1:length(sg.nodelen), skip=s )
             push!( simul.trans, trans )
          end
@@ -141,7 +142,7 @@ function output_transcripts( stream, simul::SimulGene, sg::SpliceGraph )
    end
 end
 
-function output_nodes( stream, gname::ASCIIString, info, sg::SpliceGraph)
+function output_nodes( stream, gname::String, info, sg::SpliceGraph)
    for n in 1:length(sg.nodelen)
       coord = "$(info[1]):$(sg.nodecoord[n])-$(sg.nodecoord[n] + sg.nodelen[n] - 1)"
       write( stream, "$gname\t$n\t$coord\t$(info[2])\n" )
