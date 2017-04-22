@@ -202,7 +202,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
          mm.prop_sum = 0.0
          for ai in 1:length(mm.align)
             const init_gene = mm.align[ai].path[1].gene
-            const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, (quant.length[i] - readlen) )
+            const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, (quant.length[ init_gene ] - readlen) )
             mm.prop[ai] = init_tpm
             @fastmath mm.prop_sum += init_tpm
          end
