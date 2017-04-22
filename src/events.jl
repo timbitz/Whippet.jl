@@ -861,7 +861,7 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
       if it > 1 # maximization
          ac.prop_sum = 0.0
          for p in ac.paths
-            prev_psi = p <= length(igraph.psi) ? igraph.psi[p] * igraph.length[i] : 
+            prev_psi = p <= length(igraph.psi) ? igraph.psi[p] * igraph.length[p] : 
                                                  egraph.psi[p-length(igraph.psi)] * egraph.length[p-length(igraph.psi)]
             ac.prop[idx] = prev_psi
             ac.prop_sum += prev_psi
