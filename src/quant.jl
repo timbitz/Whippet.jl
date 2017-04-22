@@ -192,7 +192,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
                                  tpm_temp::Vector{Float64}=ones(length(quant.count)),
                                  uniqsum::Float64=sum(quant.count),
                                  ambigsum::Int64=length(ambig),
-                                 it::Int64=1, max::Int64=1000, sig::Int64=0, readlen::Int64=50 )
+                                 it::Int64=1, maxit::Int64=1000, sig::Int64=0, readlen::Int64=50 )
    
    unsafe_copy!( count_temp, quant.count )
    unsafe_copy!( tpm_temp, quant.tpm )
@@ -202,7 +202,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
          mm.prop_sum = 0.0
          for ai in 1:length(mm.align)
             const init_gene = mm.align[ai].path[1].gene
-            const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, (quant.length[ init_gene ] - readlen) )
+            const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, quant.length[init_gene] - readlen )
             mm.prop[ai] = init_tpm
             @fastmath mm.prop_sum += init_tpm
          end
@@ -219,22 +219,22 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
    calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
  
    #iterate
-   if tpm_temp != quant.tpm && it < max
+   if tpm_temp != quant.tpm && it < maxit
       it = rec_gene_em!( quant, ambig, count_temp=count_temp, tpm_temp=tpm_temp, uniqsum=uniqsum, ambigsum=ambigsum, 
-                        it=it+1, max=max, sig=sig, readlen=readlen)
+                        it=it+1, maxit=maxit, sig=sig, readlen=readlen)
    end
    it
 end
 
 function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
-                   it::Int64=1, max::Int64=1000, sig::Int64=0, readlen::Int64=50 )
+                   it::Int64=1, maxit::Int64=1000, sig::Int64=0, readlen::Int64=50 )
 
    const count_temp = ones(length(quant.count))
    const tpm_temp   = ones(length(quant.count))
    const uniqsum    = sum(quant.count)
    const ambigsum   = length(ambig)
 
-   while tpm_temp != quant.tpm && it < max
+   while tpm_temp != quant.tpm && it < maxit
 
       unsafe_copy!( count_temp, quant.count )
       unsafe_copy!( tpm_temp, quant.tpm )
@@ -244,7 +244,7 @@ function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
             mm.prop_sum = 0.0
             for ai in 1:length(mm.align)
                const init_gene = mm.align[ai].path[1].gene
-               const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, (quant.length[ init_gene ] - readlen) )
+               const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, quant.length[ init_gene ] - readlen )
                mm.prop[ai] = init_tpm
                @fastmath mm.prop_sum += init_tpm
             end
