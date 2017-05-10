@@ -46,14 +46,14 @@ function GraphLibQuant( lib::GraphLib )
    GraphLibQuant( tpm, count, len, quant )
 end
 
-@inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=0 )
+@inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
    for i in 1:length(counts)
       @fastmath quant.tpm[ i ] = counts[i] / max( 1.0, (quant.length[i] - readlen) )
    end
    const rpk_sum = sum( quant.tpm )
    for i in 1:length(quant.tpm)
       if sig > 0
-         @fastmath quant.tpm[i] = signif( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
+         @fastmath quant.tpm[i] = round( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
       else
          @fastmath quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
       end
@@ -192,7 +192,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
                                  tpm_temp::Vector{Float64}=ones(length(quant.count)),
                                  uniqsum::Float64=sum(quant.count),
                                  ambigsum::Int64=length(ambig),
-                                 it::Int64=1, maxit::Int64=1000, sig::Int64=0, readlen::Int64=50 )
+                                 it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )
    
    unsafe_copy!( count_temp, quant.count )
    unsafe_copy!( tpm_temp, quant.tpm )
@@ -227,7 +227,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
 end
 
 function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
-                   it::Int64=1, maxit::Int64=1000, sig::Int64=0, readlen::Int64=50 )
+                   it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )
 
    const count_temp = ones(length(quant.count))
    const tpm_temp   = ones(length(quant.count))
