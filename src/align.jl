@@ -30,7 +30,7 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 3, 9, 2, 4, 4, 18, 5, 18
                                                         false, false, true, false, true )
 
 # load from command line args
-@inline function AlignParam( args::Dict{AbstractString,Any}, ispaired=false; kmer=9 )
+@inline function AlignParam{S <: AbstractString}( args::Dict{S,Any}, ispaired=false; kmer=9 )
    const aln = AlignParam( args["mismatches"], kmer,
                            args["seed-try"],
                            args["seed-tol"], 4,
