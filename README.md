@@ -23,7 +23,7 @@
 ## Get started
 
 ### 1) Install 
-Install [julia release here](http://julialang.org/downloads/), which must be v0.5.X.  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install [julia release here](http://julialang.org/downloads/), which must be v0.5.X (julia v0.6 is set to be released soon and will be supported as soon as possible as afterwards).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
