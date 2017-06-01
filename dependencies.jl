@@ -55,5 +55,5 @@ using Requests
 
 const dir = abspath( splitdir(@__FILE__)[1] )
 push!( LOAD_PATH, dir * "/src" )
-using SpliceGraphs
+using Whippet
 toc()
