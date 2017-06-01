@@ -1,20 +1,4 @@
 
-# this is an alternative to tryread! from Bio.Seq that doesn't
-# create any new objects to return.
-function tryread_bool!(parser::Bio.IO.AbstractReader, output)
-   T = eltype(parser)
-   try
-      read!(parser, output)
-      return true
-   catch ex
-      if isa(ex, EOFError)
-         return false
-      end
-      rethrow()
-   end
-   false
-end
-
 function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
    fopen = open( filename, "r" )
    if isgzipped( filename ) || forcegzip
@@ -89,39 +73,7 @@ function allocate_chunk( parser; size=100000 )
   chunk
 end
 
-allocate_rref( size=250000; rreftype=RemoteChannel{Channel{Any}} ) = Vector{rreftype}( size )
 
-function resize_rref!( rref, subsize )
-   @assert subsize <= length(rref)
-   while subsize <= length(rref)
-      pop!(rref) # clean up if we are at the end
-   end
-end
-
-function sendto(p::Int, nm, val)
-   ref = @spawnat(p, eval(Main, Expr(:(=), nm, val)))
-end
-
-macro sendto(p, nm, val)
-   return :( sendto($p, $nm, $val) )
-end
-
-macro broadcast(nm, val)
-   quote
-      @sync for p in workers()
-         @async sendto(p, $nm, $val)
-      end
-   end
-end
-
-
-#=process_reads!( parser, param::AlignParam, lib::GraphLib,
-                quant::GraphLibQuant, multi::Vector{Multimap}; 
-                bufsize=50, sam=false, qualoffset=33 ) = _process_reads!( 
-                                                                parser, param, lib, quant,
-                                                                multi, bufsize=bufsize, sam=sam,
-                                                                qualoffset=qualoffset )
-=#
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
                          multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
                          response=Requests.ResponseStream{TCPSocket}(), http=false )
@@ -165,14 +117,6 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
    mapped,total,mean_readlen
 end
 
-#= paired end version
-process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib,
-                quant::GraphLibQuant, multi::Vector{Multimap}; 
-                bufsize=50, sam=false, qualoffset=33 ) = _process_paired_reads!( 
-                                                                 fwd_parser, rev_parser, param, lib, quant,
-                                                                 multi, bufsize=bufsize, sam=sam, 
-                                                                 qualoffset=qualoffset )
-=#
 
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
                                 multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
