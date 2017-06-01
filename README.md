@@ -10,7 +10,7 @@
   - Pseudo _de novo_ event discovery
     - Spliced alignment from/to any combination of annotated donor/acceptor splice sites
   - Dynamic building of splicing events of any complexity
-    - Entropic measurements of splicing complexity
+    - Entropic measurements of alternative splicing
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
   - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
@@ -34,7 +34,7 @@ julia dependencies.jl
 ```
 
 ### 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default examples are supplied for hg19.
+You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default files are supplied for hg19 GENCODEv25 TSL1-level annoations.
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
@@ -82,7 +82,7 @@ $ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r
 
 ## Output Formats
 
-The output format for `whippet-quant.jl` is saved into two files a `.psi.gz` and a `.tpm.gz`.
+The output format for `whippet-quant.jl` is saved into two core quant files a `.psi.gz` and a `.tpm.gz`.
 
 The `.tpm.gz` file contains a simple format compatible with many downstream tools:
 
@@ -116,112 +116,17 @@ Type | Interpretation
 Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
 
 
+---
 
+## Index Building Strategies
+
+If you are building an index for another organism, there are some general guidelines that can help to ensure that the index you build is as effective as it can be. In general you should seek to:
+  * Use only the highest quality annotations you can find (for human we use TSL1-level). 
+  * Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering out invalid splice sites first.
+  * If you plan to align very short reads (~36nt), decrease the Kmer size (we have used 6nt before), otherwise the default Kmer size (9nt) should be used.
 
 ---
 
+## Troubleshooting
 
-
-
-## Advanced Index Building
-
-If you are building an index for a non-model organism or an index for a custom purpose, there are some general guidelines that can help to ensure that the index you build is as effective as it can be.  For example, a whippet index that is missing many annotated splice sites that are frequently used, may not be able to align all reads well. Similarly, a whippet index that is built with a huge number of decoy splice sites from indels in EST or mRNA annotations, may have too many `splice sites`, which will divide exons into many tiny nodes, making seeding to those segments more difficult. In general you should seek to:
-  * Increase the number of true splice sites that `whippet index` is given. 
-  * Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering for valid splice sites first.
-  * Choose a Kmer size appropriate for the node size and number in the transcriptome and the read length you plan to align.
-
-```bash
-$ julia whippet-index.jl -h
-Whippet v0.3 loading and compiling... 
-usage: whippet-index.jl [-k KMER] --fasta FASTA [--flat FLAT]
-                        [--gtf GTF] [--index INDEX] [-h]
-
-optional arguments:
-  -k, --kmer KMER  Kmer size to use for exon-exon junctions (default
-                   9) (type: Int64, default: 9)
-  --fasta FASTA    File containg the genome in fasta, one entry per
-                   chromosome [.gz]
-  --flat FLAT      Gene annotation file in RefFlat format
-  --gtf GTF        Gene anotation file in GTF format
-  --index INDEX    Output prefix for saving index 'dir/prefix'
-                   (default Whippet/index/graph) (default:
-                   "/path/to/Whippet/src/../index/graph")
-  -h, --help       show this help message and exit
-```
-
-## Custom Alignment Parameters
-
-```bash
-$ julia whippet-quant.jl -h
-Whippet v0.6.2 loading and compiling... 
-usage: whippet-quant.jl [-x INDEX] [-o OUT] [-s] [-L SEED-LEN]
-                        [-M SEED-TRY] [-T SEED-TOL] [-B SEED-BUF]
-                        [-I SEED-INC] [-P PAIR-RANGE] [-X MISMATCHES]
-                        [-S SCORE-MIN] [--psi-body-read] [--stranded]
-                        [--pair-same-strand] [--phred-33] [--phred-64]
-                        [--url] [--ebi] [--circ] [--no-tpm]
-                        [--force-gz] [-h] filename.fastq[.gz]
-                        [paired_mate.fastq[.gz]]
-
-positional arguments:
-  filename.fastq[.gz]
-  paired_mate.fastq[.gz]
-
-
-optional arguments:
-  -x, --index INDEX     Output prefix for saving index 'dir/prefix'
-                        (default Whippet/index/graph) (default:
-                        "/Users/timsw/Documents/git/Whippet/index/graph")
-  -o, --out OUT         Where should the gzipped output go
-                        'dir/prefix'? (default:
-                        "/Users/timsw/Documents/git/Whippet/output")
-  -s, --sam             Should SAM format be sent to stdout?
-  -L, --seed-len SEED-LEN
-                        Seed length (type: Int64, default: 18)
-  -M, --seed-try SEED-TRY
-                        Number of failed seeds to try before giving up
-                        (type: Int64, default: 3)
-  -T, --seed-tol SEED-TOL
-                        Number of seed hits to tolerate (type: Int64,
-                        default: 4)
-  -B, --seed-buf SEED-BUF
-                        Ignore this many bases from beginning and end
-                        of read for seed (type: Int64, default: 5)
-  -I, --seed-inc SEED-INC
-                        Number of bases to increment seed each
-                        iteration (type: Int64, default: 18)
-  -P, --pair-range PAIR-RANGE
-                        Seeds for paired end reads must match within _
-                        bases of one another (type: Int64, default:
-                        2500)
-  -X, --mismatches MISMATCHES
-                        Allowable number of mismatches in alignment
-                        (counted as 1-10^(-phred/10)) (type: Int64,
-                        default: 3)
-  -S, --score-min SCORE-MIN
-                        Minimum percent matching (matches -
-                        mismatches) / read_length (type: Float64,
-                        default: 0.6)
-  --psi-body-read       Allow exon-body reads in quantification of PSI
-                        values
-  --stranded            Is the data strand specific in fwd
-                        orientation? If so, increase speed with this
-                        flag
-  --pair-same-strand    Whippet by default tries to align fwd/rev
-                        pairs, if your data is fwd/fwd or rev/rev set
-                        this flag
-  --phred-33            Qual string is encoded in Phred+33 integers
-                        (default)
-  --phred-64            Qual string is encoded in Phred+64 integers
-  --url                FASTQ files are URLs to download/process on
-                        the fly
-  --ebi                 Retrieve FASTQ files from ebi.ac.uk using seq
-                        run id (ie. SRR1199003). (sets --url=true)
-  --circ                Allow back/circular splicing, this will allow
-                        output of `BS`-type lines
-  --no-tpm              Should tpm file be sent to
-                        output/prefix.tpm.gz? (default on)
-  --force-gz            Regardless of suffix, consider read input as
-                        gzipped
-  -h, --help            show this help message and exit
-```
+With all of the executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet.jl` then please ask a question in our gitter chat: .  If you think you have found a bug feel free to open an issue in github or make a pull request!
