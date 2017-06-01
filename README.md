@@ -10,7 +10,7 @@
   - Pseudo _de novo_ event discovery
     - Spliced alignment from/to any combination of annotated donor/acceptor splice sites
   - Dynamic building of splicing events of any complexity
-    - Entropic measurements of splicing diversity
+    - Entropic measurements of splicing complexity
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
   - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
@@ -114,6 +114,14 @@ Type | Interpretation
  AL  | Alternative Last exon
  
 Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
+
+
+
+
+---
+
+
+
 
 ## Advanced Index Building
 
