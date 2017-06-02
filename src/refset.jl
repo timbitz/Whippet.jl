@@ -21,7 +21,7 @@ immutable RefGene
    reftx::Vector{RefTx}
 end
 
-typealias RefSet Dict{GeneName,RefGene}
+const RefSet = Dict{GeneName,RefGene}
 
 # this guy maps an array of strings or substrings to Int parsing and then into a tuple
 # which is then sliced based on the l (left) and r (right) adjusters, c is the mathmatical adjuster to the data

@@ -22,12 +22,12 @@ typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 
 typealias SGSequence Bio.Seq.BioSequence{DNAAlphabet{4}}
 
-typealias GeneName   String
-typealias SeqName    String
-typealias RefSeqId   String
+typealias GeneName    String
+typealias SeqName     String
+typealias RefSeqId    String
 typealias ASCIIString String
 
-typealias GeneMeta   Tuple{GeneName, SeqName, Char}
+typealias GeneMeta Tuple{GeneName, SeqName, Char}
 
 typealias BufOut BufferedStreams.BufferedOutputStream
 
