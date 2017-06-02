@@ -32,7 +32,7 @@ julia dependencies.jl
 ```
 
 ### 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default files are supplied for hg19 GENCODEv25 TSL1-level annoations.
+You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome.
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
