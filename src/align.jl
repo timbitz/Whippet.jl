@@ -47,9 +47,9 @@ end
 
 abstract UngappedAlignment
 
-typealias MatchesInt    UInt8
-typealias MismatchInt   UInt8
-typealias MismatchFloat Float32
+const MatchesInt    = UInt8
+const MismatchInt   = UInt8
+const MismatchFloat = Float32
 
 type SGAlignScore
    matches::MatchesInt
@@ -70,7 +70,7 @@ end
 @inline SGAlignNode(sgn::SGNode) = SGAlignNode(sgn.gene, sgn.node, zero(SGAlignScore))
 @inline Base.push!( v::Vector{SGAlignNode}, sgn::SGNode ) = push!( v, SGAlignNode(sgn) )
 
-typealias ReadLengthInt UInt8
+const ReadLengthInt = UInt8
 
 type SGAlignment <: UngappedAlignment
    offset::UInt32
@@ -82,7 +82,7 @@ end
 
 SGAlignment() = SGAlignment(zero(UInt32), zero(ReadLengthInt), SGAlignNode[], true, false)
 
-typealias SGAlignVec Nullable{Vector{SGAlignment}}
+const SGAlignVec = Nullable{Vector{SGAlignment}}
 
 const DEF_ALIGN = SGAlignment(zero(UInt32), zero(ReadLengthInt), SGAlignNode[], true, false)
 

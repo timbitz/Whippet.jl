@@ -39,7 +39,7 @@ end
 function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, sig=4 )
    lo,hi = conf_int #unpack
    if width
-      write( io, string( signif(hi-lo, sig) ) )
+      write( io, string( round(hi-lo, sig) ) )
       write( io, '\t' )
    end
    write( io, string(lo) )
@@ -291,8 +291,8 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
          conf_int_write( io, conf_int, tab=true, width=true)
          tab_write( io, string( signif(total_reads, 3) ) )
          complex_write( io, complexity( pgraph.value ), tab=true )
-         tab_write( io, string( signif( shannon_index( pgraph.value ), 3 ) ) )
-         count_write( io, get(pgraph).nodes[i], get(pgraph).count[i], get(pgraph).length[i], tab=true )
+         tab_write( io, string( round( shannon_index( pgraph.value ), 4 ) ) )
+         count_write( io, get(pgraph).nodes[i], get(pgraph).psi[i], tab=true )
       else
          tab_write( io, "NA\tNA\tNA\tNA\tNA\tNA" )
       end 
@@ -319,7 +319,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
       conf_int_write( io, conf_int, tab=true, width=true )
       tab_write( io, string( signif(total_reads, 3) ) )
       complex_write( io, complexity( inc.value, exc.value ), tab=true )
-      tab_write( io, string( signif( shannon_index( inc.value, exc.value ), 3 ) ) )
+      tab_write( io, string( round( shannon_index( inc.value, exc.value ), 4 ) ) )
       count_write( io, get(inc), tab=true )
       count_write( io, get(exc) )
    else
@@ -367,19 +367,24 @@ function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int,
    write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 
-function count_write( io::BufOut, nodestr, countstr, lengstr; tab=false )
+function Base.string( is::IntSet )
+   str = ""
+   for n in is
+      str *= string(n) * "-"
+   end
+   str[1:end-1]
+end
+
+function count_write( io::BufOut, nodestr, psi; tab=false )
    write( io, string(nodestr) )
-#=   write( io, "-" )
-   write( io, string(countstr) )
-   write( io, "(" )
-   write( io, string(lengstr) )
-   write( io, ")" ) =#
+   write( io, ':' )
+   write( io, string(round(psi, 4)) )
    tab && write( io, '\t' )
 end
 
 function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
    for i in 1:length(pgraph.nodes)
-      count_write( io, pgraph.nodes[i], pgraph.count[i], pgraph.length[i] )
+      count_write( io, pgraph.nodes[i], pgraph.psi[i] )
       (i < length(pgraph.nodes)) && write( io, "," )
    end
    tab && write( io, '\t' )

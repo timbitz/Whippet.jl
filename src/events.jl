@@ -203,7 +203,8 @@ complexity( num_paths::Int ) = @fastmath Int(ceil(log2( num_paths )))
 function shannon_index( probs::Vector{Float64} )
    index = 0.0
    for i in 1:length(probs)
-      index += probs[i] * log2(probs[i])
+      const prob = (probs[i] == 0.0 ? eps(Float64) : probs[i])
+      index += prob * log2(prob)
    end
    index * -1
 end
@@ -215,10 +216,12 @@ shannon_index( one::PsiGraph ) = shannon_index( one.psi )
 function shannon_index( one::PsiGraph, two::PsiGraph )
    index = 0.0
    for i in 1:length(one.psi)
-      index += one.psi[i] * log2(one.psi[i])
+      const prob = (one.psi[i] == 0.0 ? eps(Float64) : one.psi[i])
+      index += prob * log2(prob)
    end
    for j in 1:length(two.psi)
-      index += two.psi[j] * log2(two.psi[j])
+      const prob = (two.psi[j] == 0.0 ? eps(Float64) : two.psi[j])
+      index += prob * log2(prob)
    end
    index * -1
 end
