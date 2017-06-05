@@ -42,13 +42,17 @@ function parse_cmd()
       arg_type = Int64
       default  = 1
     "--min-delta-psi", "-m"
-      help     = "Calculate max probability of |deltaPsi| greater than this value."
+      help     = "Calculate max probability of |deltaPsi| greater than this value (default is 0.0, it is not advisable to change this)."
       arg_type = Float64
       default  = 0.0
     "--emperical-size", "-e"
       help     = "Emperical distribution size to sample from."
       arg_type = Int64
       default  = 1000
+    "--seed", "-g"
+      help     = "Seed the RNG (Int) for reproducible results on successive runs"
+      arg_type = Int64
+      default  = 123456
   end
   return parse_args(s)
 end
@@ -70,6 +74,7 @@ end
 function main()
    args  = parse_cmd()
    println(STDERR, " $( round( toq(), 6 ) ) seconds" )
+   srand( args["seed"] )
    dir   = fixpath( args["directory"] )
    lista = retrievefilelist( args["a"], dir )
    listb = retrievefilelist( args["b"], dir )
