@@ -41,10 +41,10 @@ function parse_cmd()
       help     = "Minimum number of samples in a or in b for each event to be considered!"
       arg_type = Int64
       default  = 1
-    "--min-delta-psi", "-m"
+#=    "--min-delta-psi", "-m"
       help     = "Calculate max probability of |deltaPsi| greater than this value (default is 0.0, it is not advisable to change this)."
       arg_type = Float64
-      default  = 0.0
+      default  = 0.0 =#
     "--emperical-size", "-e"
       help     = "Emperical distribution size to sample from."
       arg_type = Int64
@@ -91,7 +91,7 @@ function main()
    @timer process_psi_files( args["out"] * ".diff.gz", astreams, bstreams, 
                              min_samp=args["min-samples"], 
                              min_reads=args["min-reads"],
-                             amt=args["min-delta-psi"],
+                             amt=0.0,
                              size=args["emperical-size"] ) 
    println(STDERR, "Whippet $ver done." )
 end
