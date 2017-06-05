@@ -42,7 +42,7 @@ function parse_cmd()
       arg_type = Int64
       default  = 1
     "--min-delta-psi", "-m"
-      help     = "Calculate probability of deltaPsi greater than this value."
+      help     = "Calculate max probability of |deltaPsi| greater than this value."
       arg_type = Float64
       default  = 0.0
     "--emperical-size", "-e"
