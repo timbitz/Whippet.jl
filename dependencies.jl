@@ -2,7 +2,7 @@
 
 function check_and_install( pkg; clone=false, checkout=false )
    print( STDERR, "Checking $pkg ... " )
-   pkgname = clone ? basename(pkg) |> x->split(x, ".jl.git", keep=false)[1] : pkg
+   pkgname = clone ? basename(pkg) |> x->split(x, ".jl.git", keep=false)[1] |> string : pkg
    try
       ver = Pkg.installed(pkgname)
       println( STDERR, "Found version $ver" )
