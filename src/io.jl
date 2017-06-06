@@ -315,15 +315,26 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
    tab_write( io, convert(String, motif) )
    tab_write( io, string(psi) )
 
+   conf_int_write( io, conf_int, tab=true, width=true )
+   tab_write( io, string( signif(total_reads, 3) ) )
+
    if !isnull( inc ) && !isnull( exc )
-      conf_int_write( io, conf_int, tab=true, width=true )
-      tab_write( io, string( signif(total_reads, 3) ) )
       complex_write( io, complexity( inc.value, exc.value ), tab=true )
       tab_write( io, string( round( shannon_index( inc.value, exc.value ), 4 ) ) )
-      count_write( io, get(inc), tab=true )
-      count_write( io, get(exc) )
    else
-      write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA" )
+      write( io, "K0\t0.0\t" )
+   end
+
+   if !isnull( inc )
+      count_write( io, get(inc), psi, tab=true )
+   else
+      write( io, "NA\t" )
+   end
+   
+   if !isnull( exc )
+      count_write( io, get(exc), 1.0-psi )
+   else
+      write( io, "NA" )
    end
 
    write( io, '\n' )
@@ -375,16 +386,32 @@ function Base.string( is::IntSet )
    str[1:end-1]
 end
 
-function count_write( io::BufOut, nodestr, psi; tab=false )
+function count_write( io::BufOut, nodestr, psi::Float64; tab=false )
    write( io, string(nodestr) )
    write( io, ':' )
    write( io, string(round(psi, 4)) )
    tab && write( io, '\t' )
 end
 
-function count_write( io::BufOut, pgraph::PsiGraph; tab=false )
-   for i in 1:length(pgraph.nodes)
-      count_write( io, pgraph.nodes[i], pgraph.psi[i] )
+function count_write( io::BufOut, nodestr, psi::String; tab=false )
+   write( io, string(nodestr) )
+   write( io, ':' )
+   write( io, psi )
+   tab && write( io, '\t' )
+end
+
+function count_write( io::BufOut, pgraph::PsiGraph, psi::Float64; tab=false )
+   start = 1
+   if psi == 1.0 && length(pgraph.nodes) > 1
+      for i in 1:length(pgraph.nodes)-1
+         write( io, string(pgraph.nodes[i]) )
+         write( io, ',' )
+      end
+      start = length(pgraph.nodes)
+   end
+   for i in start:length(pgraph.nodes)
+      curpsi = i > length(pgraph.psi) ? psi : pgraph.psi[i]
+      count_write( io, pgraph.nodes[i], curpsi )
       (i < length(pgraph.nodes)) && write( io, "," )
    end
    tab && write( io, '\t' )

@@ -113,6 +113,14 @@ Type | Interpretation
  
 Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
 
+The output format for `whippet-delta.jl` is:
+
+Gene | Node | Coord | Strand | Type | Psi_A | Psi_B | DeltaPsi | Probability | Complexity | Entropy
+---- | ---- | ----- | ------ | ---- | ----- | ----- | -------- | ----------- | ---------- | -------
+ENSG00000117448.13_2 | 9 | chr1:46033654-46033849 | + | CE | 0.95971 | 0.97876 | -0.019047 | 0.643 | K0 | 0.0   
+ENSG00000117448.13_2 | 10 | chr1:46034157-46034356 | + | CE | 0.9115 | 0.69021 | 0.22129 | 0.966 | K1 | 0.874 
+
+Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean Psi_A (from emperical sampling of the joint posterior distribution) and mean Psi_B, as well as the mean deltaPsi and the probability that there is some change in deltaPsi P(|deltaPsi| > 0.0).  
 
 ---
 

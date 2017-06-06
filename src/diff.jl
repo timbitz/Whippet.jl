@@ -127,7 +127,7 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
          a_post   = PosteriorPsi( a_post ) # fit new posterior
          b_post   = PosteriorPsi( b_post ) 
          fwdprob  = probability( a_post, b_post, amt=amt )
-         revprob  = probability( a_post, b_post, amt=amt )
+         revprob  = probability( b_post, a_post, amt=amt )
          prob     = fwdprob > revprob ? fwdprob : revprob
          psi_a    = mean(a_post.beta)
          psi_b    = mean(b_post.beta)

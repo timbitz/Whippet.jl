@@ -693,14 +693,17 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       end
    end
 
+   !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph( inc_graph.value ) ))
+   !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph( exc_graph.value ) ))
+
    if !isnull( exc_graph ) && !isnull( inc_graph )
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
 
       # try to bridge nodes by extending with potentially ambiguous edges
       ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_graph.value, ambig_edge, node )
 
-      inc_graph = Nullable( reduce_graph( inc_graph.value ) )
-      exc_graph = Nullable( reduce_graph( exc_graph.value ) )
+      #inc_graph = Nullable( reduce_graph( inc_graph.value ) )
+      #exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
       add_edge_counts!( ambig_cnt.value, inc_graph.value, 
                         exc_graph.value, get(ambig_edge) )
@@ -717,7 +720,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       if !isnull( inc_graph ) && ((connecting_val >= 2) || 
                                   (connecting_val >= 1  && 
                                    isaltsplice(motif)))
-          psi = Nullable( 0.99 ) #&& likelihood_ci( psi, inc_cnt, z=1.64 )
+          psi = Nullable( 1.0 ) #&& likelihood_ci( psi, inc_cnt, z=1.64 )
       else
          # NA is ignored.
       end
