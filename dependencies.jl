@@ -3,10 +3,10 @@
 function check_and_install( pkg; clone=false, checkout=false )
    print( STDERR, "Checking $pkg ... " )
    pkgname = clone ? basename(pkg) |> x->split(x, ".jl.git", keep=false)[1] : pkg
-   ver = Pkg.installed(pkgname)
-   if ver != nothing
+   try
+      ver = Pkg.installed(pkgname)
       println( STDERR, "Found version $ver" )
-   else
+   catch
       println( STDERR, "Trying to install $pkg ..." )
       if clone
          Pkg.clone(pkg)
@@ -21,6 +21,7 @@ end
 
 adds = [ "DataStructures",
          "ArgParse",
+         "SuffixArrays",
          "FMIndexes", 
          "IntArrays",
          "IntervalTrees",
@@ -33,7 +34,6 @@ adds = [ "DataStructures",
 
 tic()
 Pkg.update()
-check_and_install("SuffixArrays", checkout=true)
 check_and_install("IndexableBitVectors", checkout=true)
 map( check_and_install, adds )
 
