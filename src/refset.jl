@@ -155,7 +155,7 @@ function fetch_meta( var::String, meta; off=1 )
    val,0
 end
 
-function load_gtf( fh; txbool=true )
+function load_gtf( fh; txbool=true, suppress=false )
 
    # Temporary variables   
    gninfo   = Dict{GeneName,GeneInfo}()
@@ -173,6 +173,8 @@ function load_gtf( fh; txbool=true )
 
    # RefSet variables
    geneset  = Dict{GeneName,RefGene}()
+
+   warning  = false
 
    txnum = 75000
    sizehint!(geneset, txnum >> 1)
@@ -235,6 +237,21 @@ function load_gtf( fh; txbool=true )
       geneid,pos  = fetch_meta( "gene_id", metaspl )
       tranid,pos  = fetch_meta( "transcript_id", metaspl )
       genesym     = fetch_meta( "gene_name", metaspl )
+      support,val = fetch_meta( "transcript_support_level", metaspl )
+
+      # if we observe low transcript support levels, we will warn the user
+      if (support != "_" && support != "1" &&  support != "NA")
+
+         if suppress
+            continue
+         elseif !warning
+            println(STDERR, "")
+            warn("Using low quality Transcript Support Levels (TSL 2-5) in your GTF file is not recommended!\nFor more information on TSL, see: http://www.ensembl.org/Help/Glossary?id=492\n\nIf you would like Whippet to ignore these when building its index, use `--suppress-low-tsl` option!\n\n")
+         
+            warning=true
+         end
+
+      end
 
       if tranid != curtran
          # add transcript and clean up
