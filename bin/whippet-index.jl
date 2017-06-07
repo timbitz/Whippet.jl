@@ -35,6 +35,9 @@ function parse_cmd()
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
       default = "$dir/../index/graph"
+    "--suppress-low-tsl"
+      help = "Ignore low quality transcript annotations with TSL2+"
+      action   = :store_true
   end
   return parse_args(s)
 end
@@ -62,7 +65,7 @@ function main()
    if isgzipped( flat )
       fh = fh |> x->ZlibInflateInputStream(x, reset_on_end=true)
    end
-   @timer ref = annotype == "gtf" ? load_gtf(fh) : load_refflat(fh)
+   @timer ref = annotype == "gtf" ? load_gtf(fh, suppress=args["suppress-low-tsl"]) : load_refflat(fh)
 
    println(STDERR, "Indexing transcriptome...")
    @timer graphome = fasta_to_index( fixpath( args["fasta"] ), ref, kmer=args["kmer"] )
