@@ -48,9 +48,9 @@ end
 
 @inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
    for i in 1:length(counts)
-      @fastmath quant.tpm[ i ] = counts[i] / max( 1.0, (quant.length[i] - readlen) )
+      @fastmath quant.tpm[ i ] = counts[i] / max( (quant.length[i] - readlen), 1.0 )
    end
-   const rpk_sum = sum( quant.tpm )
+   const rpk_sum = max( sum( quant.tpm ), 1.0 )
    for i in 1:length(quant.tpm)
       if sig > 0
          @fastmath quant.tpm[i] = round( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
@@ -202,7 +202,7 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
          mm.prop_sum = 0.0
          for ai in 1:length(mm.align)
             const init_gene = mm.align[ai].path[1].gene
-            const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, quant.length[init_gene] - readlen )
+            const init_tpm  = quant.tpm[ init_gene ] * max( quant.length[init_gene] - readlen, 1.0 )
             mm.prop[ai] = init_tpm
             @fastmath mm.prop_sum += init_tpm
          end
@@ -211,8 +211,8 @@ function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
       for ai in 1:length(mm.align)
          const init_gene = mm.align[ai].path[1].gene
          @fastmath const prop = mm.prop[ai] / mm.prop_sum
-         mm.prop[ai] = prop
-         @fastmath count_temp[ init_gene ] += prop
+         mm.prop[ai] = isnan(prop) ? 0.0 : prop
+         @fastmath count_temp[ init_gene ] += mm.prop[ai]
       end
    end
 
@@ -244,7 +244,7 @@ function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
             mm.prop_sum = 0.0
             for ai in 1:length(mm.align)
                const init_gene = mm.align[ai].path[1].gene
-               const init_tpm  = quant.tpm[ init_gene ] * max( 1.0, quant.length[ init_gene ] - readlen )
+               const init_tpm  = quant.tpm[ init_gene ] * max( quant.length[ init_gene ] - readlen, 1.0 )
                mm.prop[ai] = init_tpm
                @fastmath mm.prop_sum += init_tpm
             end
@@ -253,8 +253,8 @@ function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
          for ai in 1:length(mm.align)
             const init_gene = mm.align[ai].path[1].gene
             @fastmath const prop = mm.prop[ai] / mm.prop_sum
-            mm.prop[ai] = prop
-            @fastmath count_temp[ init_gene ] += prop
+            mm.prop[ai] = isnan(prop) ? 0.0 : prop
+            @fastmath count_temp[ init_gene ] += mm.prop[ai]
          end
       end
 
