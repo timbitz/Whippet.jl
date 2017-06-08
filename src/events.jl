@@ -789,7 +789,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          #total_cnt = sum(inc) + sum(exc) + sum(ambig)
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
-            output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
+            output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
          else
             output_empty( io, motif, sg, i, info )
          end
