@@ -702,8 +702,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       # try to bridge nodes by extending with potentially ambiguous edges
       ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_graph.value, ambig_edge, node )
 
-      #inc_graph = Nullable( reduce_graph( inc_graph.value ) )
-      #exc_graph = Nullable( reduce_graph( exc_graph.value ) )
+      inc_graph = Nullable( reduce_graph( inc_graph.value ) )
+      exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
       add_edge_counts!( ambig_cnt.value, inc_graph.value, 
                         exc_graph.value, get(ambig_edge) )
@@ -789,7 +789,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          #total_cnt = sum(inc) + sum(exc) + sum(ambig)
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
-            output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, i, info, bias  ) # TODO bias
+            output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
          else
             output_empty( io, motif, sg, i, info )
          end

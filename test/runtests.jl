@@ -333,7 +333,7 @@ IIIIIIIIIIII
          seek(out,0)
          for l in eachline(out)
             spl = split( l, '\t' )
-            @test length(spl) == 13
+            @test length(spl) == 14
             print(STDERR,l)
          end
       end

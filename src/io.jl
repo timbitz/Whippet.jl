@@ -48,6 +48,21 @@ function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, si
    tab && write( io, '\t' )
 end
 
+function edges_write( io::BufOut, edges::IntervalMap{ExonInt,Float64}, range::UnitRange )
+   first = true
+   for i in edges
+      if i.first in range && i.last in range
+         !first && write( io, ',' )
+         write( io, string(i.first) )
+         write( io, '-' )
+         write( io, string(i.last) )
+         write( io, ':' )
+         write( io, string(round(i.value, 1)) )
+         first = false
+      end
+   end
+end
+
 #=
 #
 #                     SAM Format IO...
@@ -281,7 +296,7 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       tab_write( io, info[3] )
       tab_write( io, convert(String, motif) )
       if empty # had to add this flag since we iterate through the TS/TE nodes
-         write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
+         write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
          i += 1
          continue
       end
@@ -293,8 +308,9 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
          complex_write( io, complexity( pgraph.value ), tab=true )
          tab_write( io, string( round( shannon_index( pgraph.value ), 4 ) ) )
          count_write( io, get(pgraph).nodes[i], get(pgraph).psi[i], tab=true )
+         write( io, "NA\t" )
       else
-         tab_write( io, "NA\tNA\tNA\tNA\tNA\tNA" )
+         tab_write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\t" )
       end 
       write( io, "NA" )
       write( io, '\n' )
@@ -304,8 +320,9 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
 end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
-                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, sg::SpliceGraph, node::Int,
-                     info::GeneMeta, bias )
+                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, 
+                     sg::SpliceGraph, edges::IntervalMap{ExonInt,Float64}, 
+                     node::Int, info::GeneMeta, bias )
 
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene
@@ -325,18 +342,23 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
       write( io, "K0\t0.0\t" )
    end
 
+   min,max = Inf,0
    if !isnull( inc )
       count_write( io, get(inc), psi, tab=true )
+      min,max = get(inc).min,get(inc).max
    else
       write( io, "NA\t" )
    end
    
    if !isnull( exc )
-      count_write( io, get(exc), 1.0-psi )
+      count_write( io, get(exc), 1.0-psi, tab=true )
+      min = get(exc).min < min ? get(exc).min : min
+      max = get(exc).max > max ? get(exc).max : max
    else
-      write( io, "NA" )
+      write( io, "NA\t" )
    end
 
+   edges_write( io, edges, min:max )
    write( io, '\n' )
 end
 
@@ -363,7 +385,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
          conf_int_write( io, conf_int, tab=true, width=true)
          tab_write( io, string( signif(total_reads, 3) ) )
-         write( io, "NA\tNA\tNA\tNA\n" )
+         write( io, "NA\tNA\tNA\tNA\tNA\n" )
       end
    end
 end
@@ -375,7 +397,7 @@ function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int,
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
    tab_write( io, info[3] )
    tab_write( io, convert(String, motif) )
-   write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
+   write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 
 function Base.string( is::IntSet )
@@ -420,7 +442,7 @@ end
 function output_psi_header( io::BufOut )
    tab_write( io, "Gene\tNode\tCoord\tStrand" )
    tab_write( io, "Type\tPsi\tCI_Width\tCI_Lo,Hi" )
-   write( io, "Total_Reads\tComplexity\tEntropy\tInc_Paths\tExc_Paths\n" )
+   write( io, "Total_Reads\tComplexity\tEntropy\tInc_Paths\tExc_Paths\tEdges\n" )
 end
 
 function output_tpm_header( io::BufOut )
