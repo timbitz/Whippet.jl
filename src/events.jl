@@ -702,8 +702,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       # try to bridge nodes by extending with potentially ambiguous edges
       ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_graph.value, ambig_edge, node )
 
-      #inc_graph = Nullable( reduce_graph( inc_graph.value ) )
-      #exc_graph = Nullable( reduce_graph( exc_graph.value ) )
+      inc_graph = Nullable( reduce_graph( inc_graph.value ) )
+      exc_graph = Nullable( reduce_graph( exc_graph.value ) )
 
       add_edge_counts!( ambig_cnt.value, inc_graph.value, 
                         exc_graph.value, get(ambig_edge) )
