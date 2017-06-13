@@ -368,6 +368,7 @@ IIIIIIIIIIII
          for p in expected_paths
             @test p in res.nodes
          end
+         @test length(expected_paths) == length(res.nodes)
       end
 
       @testset "Event Building" begin
