@@ -313,10 +313,61 @@ IIIIIIIIIIII
          # test that cigar reversal works for '-' strand genes.
       end 
 
-      @testset "Quantification" begin
+      @testset "TPM" begin
          calculate_tpm!( quant, readlen=20 )
 
          #println(quant)
+      end
+
+      function parse_edge{S <: AbstractString}( str::S )
+         s = split( str, ['-',':'] )
+         (parse(Int, String(s[1])), parse(Int, String(s[2])), parse(Float64, String(s[3])))
+      end
+
+      @testset "Graph Reduction" begin
+         #= Real Test based on node 23 (here annotated as 1) in ENSMUSG00000038685
+         inclusion edges:
+         1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10
+         exclusion edges:
+         1-3, 2-4, 3-6, 3-10, 4-6, 8-10
+         expected paths:
+         =#
+         expected_paths = [IntSet([1,2,3,4,5,6,7,8,9,10]) # (full)
+         IntSet([1,3,4,5,6,7,8,9,10]) # (1-3)
+         IntSet([1,2,4,5,6,7,8,9,10]) # (2-4)
+         IntSet([1,2,3,6,7,8,9,10])   # (3-6)
+         IntSet([1,3,6,7,8,9,10])     # (3-6)
+         IntSet([1,2,3,10])           # (3-10) 
+         IntSet([1,3,10])             # (3-10) 
+         IntSet([1,2,3,4,6,7,8,9,10]) # (4-6)  
+         IntSet([1,3,4,6,7,8,9,10])   # (4-6) 
+         IntSet([1,2,4,6,7,8,9,10])   # (4-6)  
+         IntSet([1,2,3,4,5,6,7,8,10]) # (8-10)  
+         IntSet([1,3,4,5,6,7,8,10])   # (8-10)  
+         IntSet([1,2,4,5,6,7,8,10])   # (8-10)  
+         IntSet([1,2,3,6,7,8,10])     # (8-10)  
+         IntSet([1,3,6,7,8,10])       # (8-10)  
+         IntSet([1,2,3,4,6,7,8,10])   # (8-10)  
+         IntSet([1,3,4,6,7,8,10])     # (8-10)  
+         IntSet([1,2,4,6,7,8,10])]    # (8-10) 
+         edgestr = "1-2:616.0,1-3:4.0,2-3:569.0,2-4:20.0,3-4:629.0,3-6:1.0,3-10:3.0,4-5:1.0,4-6:664.0,5-6:5.0,6-7:789.0,7-8:790.0,8-9:2.0,8-10:606.0,9-10:15.0"
+         edgespl  = split( edgestr, ',' )
+         edges    = IntervalMap{Int,Float64}()
+         psigraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
+                              Vector{Float64}(), Vector{IntSet}(), 1, 10 )
+         for s in split( edgestr, ',' )
+            f,l,v = parse_edge( s )
+            edges[(f,l)] = v
+            push!( psigraph.psi, 0.0 )
+            push!( psigraph.length, 1.0 )
+            push!( psigraph.count, v )
+            push!( psigraph.nodes, IntSet([f,l]) )
+         end
+
+         res = reduce_graph( psigraph )
+         for p in expected_paths
+            @test p in res.nodes
+         end
       end
 
       @testset "Event Building" begin

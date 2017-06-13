@@ -693,9 +693,6 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       end
    end
 
-   !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph( inc_graph.value ) ))
-   !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph( exc_graph.value ) ))
-
    if !isnull( exc_graph ) && !isnull( inc_graph )
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
 
@@ -711,6 +708,9 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       if isnodeok
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
       end
+   else
+      !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph( inc_graph.value ) ))
+      !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph( exc_graph.value ) ))
    end # end expanding module
 
   # lets finish up now.
