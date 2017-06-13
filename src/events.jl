@@ -235,57 +235,33 @@ end
 # paths through a graph and is the essence of how Whippet quantification
 # works.. these graph paths are then assigned unambiguous counts, while
 # ambiguous counts are then assigned to each graph path using the EM algorithm
-function reduce_graph( pgraph::PsiGraph )
+
+function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
    newgraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
                         Vector{Float64}(), Vector{IntSet}(),
-                        pgraph.min, pgraph.max )
-   used = IntSet()
-   for i in 1:length(pgraph.nodes)
-      if i < length(pgraph.nodes)
-         for j in i:length(pgraph.nodes)
-            if hasintersect_terminal( pgraph.nodes[i], pgraph.nodes[j] )
-               push!( newgraph.nodes,  union( pgraph.nodes[i], pgraph.nodes[j] ) )
-               push!( newgraph.length, pgraph.length[i] + pgraph.length[j] )
-               push!( newgraph.count,  pgraph.count[i] + pgraph.count[j] )
-               push!( used, i )
-               push!( used, j )
-            end
+                        graph.min, graph.max )
+   for i in 1:length(graph.nodes)
+      push_i = false
+      for j in 1:length(edges.nodes)
+         if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
+            push!( newgraph.nodes,  union( graph.nodes[i], edges.nodes[j] ) )
+            push!( newgraph.length, graph.length[i] + edges.length[j] )
+            push!( newgraph.count,  graph.count[i] + edges.count[j] )
+            push_i = true
+            newgraph.min = min( min(first(graph.nodes[i]), first(edges.nodes[j])), newgraph.min )
+            newgraph.max = max( max(last(graph.nodes[i]),  last(edges.nodes[j])),  newgraph.max )
          end
       end
-      if !( i in used )
-         push!( newgraph.nodes, pgraph.nodes[i] )
-         push!( newgraph.length, pgraph.length[i] )
-         push!( newgraph.count, pgraph.count[i] )
-         push!( used, i )
+      if !push_i && !(graph.nodes[i] in newgraph.nodes)
+         push!( newgraph.nodes, graph.nodes[i] )
+         push!( newgraph.length, graph.length[i] )
+         push!( newgraph.count, graph.count[i] )
+         newgraph.min = min( first(graph.nodes[i]), newgraph.min )
+         newgraph.max = max( last(graph.nodes[i]),  newgraph.max )
       end
    end
-   ischanging = true
-   while ischanging
-      ischanging = false
-      for i in 1:length(pgraph.nodes)
-         for j in 1:length(newgraph.nodes)
-            if hasintersect_terminal( pgraph.nodes[i], newgraph.nodes[j] )
-               for n in pgraph.nodes[i]
-                  push!( newgraph.nodes[j], n )
-               end
-               newgraph.count[j] += pgraph.count[i]
-               newgraph.length[j] += pgraph.length[i]
-               ischanging = true 
-            end
-         end
-      end
-   end
-   i = 1
-   if length(newgraph.nodes) > 1
-     while i < length(newgraph.nodes)
-        if newgraph.nodes[i] in newgraph.nodes[i+1:end]
-           splice!( newgraph.nodes,  i )
-           splice!( newgraph.length, i )
-           splice!( newgraph.count,  i )
-           i -= 1
-        end
-        i += 1
-     end
+   if newgraph.nodes != graph.nodes
+      return reduce_graph( edges, newgraph )
    end
    newgraph
 end
@@ -338,7 +314,7 @@ function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, igraph::
                              ambig_edge::Nullable{Vector{IntervalValue}}, node::NodeInt )
 
    minv = min( pgraph.min, igraph.min )
-   maxv = max( pgraph.max, igraph.max  )
+   maxv = max( pgraph.max, igraph.max )
    idx = node - 1
    shouldpush = false
    while idx > minv # <----- node iter left
@@ -693,9 +669,6 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       end
    end
 
-   !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph( inc_graph.value ) ))
-   !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph( exc_graph.value ) ))
-
    if !isnull( exc_graph ) && !isnull( inc_graph )
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
 
@@ -711,6 +684,9 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       if isnodeok
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
       end
+   else
+      !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph( inc_graph.value ) ))
+      !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph( exc_graph.value ) ))
    end # end expanding module
 
   # lets finish up now.
@@ -789,7 +765,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          #total_cnt = sum(inc) + sum(exc) + sum(ambig)
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
-            output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
+            output_psi( io, signif(psi.value,3), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
          else
             output_empty( io, motif, sg, i, info )
          end
@@ -855,7 +831,7 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
                           inc_temp::Vector{Float64}=zeros(length(igraph.count)),
                           exc_temp::Vector{Float64}=zeros(length(egraph.count)),
                           count_temp::Vector{Float64}=ones(length(igraph.count)+length(egraph.count)),
-                          it=1, max=1000, sig=0 )
+                          it=1, maxit=1500, sig=0 )
 
    unsafe_copy!( count_temp, igraph.count, indx_shift=0 )
    unsafe_copy!( count_temp, egraph.count, indx_shift=length(igraph.count) )
@@ -886,10 +862,10 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
 
    calculate_psi!( igraph, egraph, count_temp, sig=sig ) # expectation
 
-   if (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < max
+   if (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < maxit
       it = rec_spliced_em!( igraph, egraph, ambig, 
                             inc_temp=inc_temp, exc_temp=exc_temp, count_temp=count_temp,
-                            it=it+1, max=max, sig=sig )
+                            it=it+1, maxit=maxit, sig=sig )
    end
    it
 end
@@ -897,7 +873,7 @@ end
 function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
                           utr_temp::Vector{Float64}=zeros(length(pgraph.count)),
                           count_temp::Vector{Float64}=ones(length(pgraph.count)),
-                          it=1, max=1000, sig=0 )
+                          it=1, maxit=1500, sig=0 )
 
    unsafe_copy!( count_temp, pgraph.count, indx_shift=0 )
    unsafe_copy!( utr_temp, pgraph.psi )
@@ -925,10 +901,10 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
 
    calculate_psi!( pgraph, count_temp, sig=sig ) # expectation
 
-   if utr_temp != pgraph.psi && it < max
+   if utr_temp != pgraph.psi && it < maxit
       it = rec_tandem_em!( pgraph, ambig,
                            utr_temp=utr_temp, count_temp=count_temp,
-                           it=it+1, max=max, sig=sig )
+                           it=it+1, maxit=maxit, sig=sig )
    end
    it
 end
