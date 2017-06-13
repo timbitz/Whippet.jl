@@ -248,12 +248,16 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
             push!( newgraph.length, graph.length[i] + edges.length[j] )
             push!( newgraph.count,  graph.count[i] + edges.count[j] )
             push_i = true
+            newgraph.min = min( min(first(graph.nodes[i]), first(edges.nodes[j])), newgraph.min )
+            newgraph.max = max( max(last(graph.nodes[i]),  last(edges.nodes[j])),  newgraph.max )
          end
       end
       if !push_i && !(graph.nodes[i] in newgraph.nodes)
          push!( newgraph.nodes, graph.nodes[i] )
          push!( newgraph.length, graph.length[i] )
          push!( newgraph.count, graph.count[i] )
+         newgraph.min = min( first(graph.nodes[i]), newgraph.min )
+         newgraph.max = max( last(graph.nodes[i]),  newgraph.max )
       end
    end
    if newgraph.nodes != graph.nodes
