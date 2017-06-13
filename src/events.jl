@@ -765,7 +765,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          #total_cnt = sum(inc) + sum(exc) + sum(ambig)
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
-            output_psi( io, signif(psi.value,4), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
+            output_psi( io, signif(psi.value,3), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
          else
             output_empty( io, motif, sg, i, info )
          end
@@ -831,7 +831,7 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
                           inc_temp::Vector{Float64}=zeros(length(igraph.count)),
                           exc_temp::Vector{Float64}=zeros(length(egraph.count)),
                           count_temp::Vector{Float64}=ones(length(igraph.count)+length(egraph.count)),
-                          it=1, max=1000, sig=0 )
+                          it=1, maxit=1500, sig=0 )
 
    unsafe_copy!( count_temp, igraph.count, indx_shift=0 )
    unsafe_copy!( count_temp, egraph.count, indx_shift=length(igraph.count) )
@@ -862,10 +862,10 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
 
    calculate_psi!( igraph, egraph, count_temp, sig=sig ) # expectation
 
-   if (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < max
+   if (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < maxit
       it = rec_spliced_em!( igraph, egraph, ambig, 
                             inc_temp=inc_temp, exc_temp=exc_temp, count_temp=count_temp,
-                            it=it+1, max=max, sig=sig )
+                            it=it+1, maxit=maxit, sig=sig )
    end
    it
 end
@@ -873,7 +873,7 @@ end
 function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
                           utr_temp::Vector{Float64}=zeros(length(pgraph.count)),
                           count_temp::Vector{Float64}=ones(length(pgraph.count)),
-                          it=1, max=1000, sig=0 )
+                          it=1, maxit=1500, sig=0 )
 
    unsafe_copy!( count_temp, pgraph.count, indx_shift=0 )
    unsafe_copy!( utr_temp, pgraph.psi )
@@ -901,10 +901,10 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
 
    calculate_psi!( pgraph, count_temp, sig=sig ) # expectation
 
-   if utr_temp != pgraph.psi && it < max
+   if utr_temp != pgraph.psi && it < maxit
       it = rec_tandem_em!( pgraph, ambig,
                            utr_temp=utr_temp, count_temp=count_temp,
-                           it=it+1, max=max, sig=sig )
+                           it=it+1, maxit=maxit, sig=sig )
    end
    it
 end
