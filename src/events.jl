@@ -244,10 +244,12 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
       push_i = false
       for j in 1:length(edges.nodes)
          if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
-            push!( newgraph.nodes,  union( graph.nodes[i], edges.nodes[j] ) )
+            jointset = union( graph.nodes[i], edges.nodes[j] )
+            push_i = true
+            (jointset in newgraph.nodes) && continue
+            push!( newgraph.nodes,  jointset )
             push!( newgraph.length, graph.length[i] + edges.length[j] )
             push!( newgraph.count,  graph.count[i] + edges.count[j] )
-            push_i = true
             newgraph.min = min( min(first(graph.nodes[i]), first(edges.nodes[j])), newgraph.min )
             newgraph.max = max( max(last(graph.nodes[i]),  last(edges.nodes[j])),  newgraph.max )
          end
@@ -260,6 +262,10 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
          newgraph.max = max( last(graph.nodes[i]),  newgraph.max )
       end
    end
+   #println(newgraph.nodes)
+   #println(length(newgraph.nodes))
+   #println(graph.nodes)
+   #println(length(graph.nodes))
    if newgraph.nodes != graph.nodes
       return reduce_graph( edges, newgraph )
    end
@@ -711,7 +717,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
          get(exc_graph).psi = zeros( length( get(exc_graph).count ) )
          get(inc_graph).psi = zeros( length( get(inc_graph).count ) )
          calculate_psi!( inc_graph.value, exc_graph.value, [get(inc_graph).count; get(exc_graph).count] )
-         it = rec_spliced_em!( inc_graph.value, exc_graph.value, ambig_cnt.value, sig=4 )
+         it = spliced_em!( inc_graph.value, exc_graph.value, ambig_cnt.value, sig=4 )
          psi = Nullable( sum( get(inc_graph).psi ) )
       end
    end
@@ -866,6 +872,49 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
       it = rec_spliced_em!( igraph, egraph, ambig, 
                             inc_temp=inc_temp, exc_temp=exc_temp, count_temp=count_temp,
                             it=it+1, maxit=maxit, sig=sig )
+   end
+   it
+end
+
+function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCounts};
+                      it=1, maxit=1500, sig=0 )
+
+   const inc_temp   = zeros(length(igraph.count))
+   const exc_temp   = zeros(length(egraph.count))
+   const count_temp = ones(length(igraph.count)+length(egraph.count))
+
+   while inc_temp != igraph.psi && egraph.psi != exc_temp && it < maxit
+ 
+      unsafe_copy!( count_temp, igraph.count, indx_shift=0 )
+      unsafe_copy!( count_temp, egraph.count, indx_shift=length(igraph.count) )
+      unsafe_copy!( inc_temp, igraph.psi )
+      unsafe_copy!( exc_temp, egraph.psi )
+
+      for ac in ambig
+         idx = 1
+         if it > 1 # maximization
+            ac.prop_sum = 0.0
+            for p in ac.paths
+               prev_psi = p <= length(igraph.psi) ? igraph.psi[p] :
+                                                    egraph.psi[p-length(igraph.psi)]
+               ac.prop[idx] = prev_psi
+               ac.prop_sum += prev_psi
+               idx += 1
+            end
+         end
+
+         idx = 1
+         for p in ac.paths
+            @fastmath prop = ac.prop[idx] / ac.prop_sum
+            ac.prop[idx] = prop
+            @fastmath count_temp[p] += prop * ac.multiplier
+            idx += 1
+         end
+      end
+
+      calculate_psi!( igraph, egraph, count_temp, sig=sig ) # expectation
+
+      it += 1
    end
    it
 end
