@@ -411,7 +411,7 @@ end
 function count_write( io::BufOut, nodestr, psi::Float64; tab=false )
    write( io, string(nodestr) )
    write( io, ':' )
-   write( io, string(round(psi, 4)) )
+   write( io, string(round(psi, 6)) )
    tab && write( io, '\t' )
 end
 

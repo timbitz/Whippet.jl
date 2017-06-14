@@ -278,6 +278,43 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
    newgraph
 end
 
+#=
+function reduce_graph_min( edges::Vector{IntSet}, graph::Vector{IntSet}=deepcopy(edges) )
+   newgraph = Vector{IntSet}()
+   graphmin = 10000
+   graphmax = 0
+   it = 1
+   while newgraph != graph || it == 1
+      if it > 1
+         const temp = graph
+         graph = newgraph
+         newgraph = temp
+         empty!( newgraph )
+      end
+      @inbounds for i in 1:length(graph)
+         push_i = false
+         for j in 1:length(edges)
+            if hasintersect_terminal( graph[i], edges[j] )
+               const jointset = union( graph[i], edges[j] )
+               push_i = true
+               (jointset in newgraph) && continue
+               push!( newgraph,  jointset )
+               graphmin = min( min(first(graph[i]), first(edges[j])), graphmin )
+               graphmax = max( max(last(graph[i]),  last(edges[j])),  graphmax )
+            end
+         end
+         if !push_i && !(graph[i] in newgraph)
+            push!( newgraph, graph[i] )
+            graphmin = min( first(graph[i]), graphmin )
+            graphmax = max( last(graph[i]),  graphmax )
+         end
+      end
+      it += 1
+   end
+   newgraph
+end
+=#
+
 function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; 
                                             value_bool=true, length=1.0 )
    push!( pgraph.count, value_bool ? edg.value : 0.0 )
@@ -891,7 +928,7 @@ function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCou
    const exc_temp   = zeros(length(egraph.count))
    const count_temp = ones(length(igraph.count)+length(egraph.count))
 
-   while inc_temp != igraph.psi && egraph.psi != exc_temp && it < maxit
+   while (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < maxit
  
       unsafe_copy!( count_temp, igraph.count, indx_shift=0 )
       unsafe_copy!( count_temp, egraph.count, indx_shift=length(igraph.count) )
