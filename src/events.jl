@@ -255,6 +255,7 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
          for j in 1:length(edges.nodes)
             if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
                const jointset = union( graph.nodes[i], edges.nodes[j] )
+               resize!(jointset.bits, div(graph.max, 32) + 1 )
                push_i = true
                (jointset in newgraph.nodes) && continue
                push!( newgraph.nodes,  jointset )
