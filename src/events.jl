@@ -237,37 +237,42 @@ end
 # ambiguous counts are then assigned to each graph path using the EM algorithm
 
 function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
-   newgraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                        Vector{Float64}(), Vector{IntSet}(),
+   newgraph = PsiGraph( Vector{IntSet}(),  Vector{Float64}(),
+                        Vector{Float64}(), Vector{Float64}(),
                         graph.min, graph.max )
-   for i in 1:length(graph.nodes)
-      push_i = false
-      for j in 1:length(edges.nodes)
-         if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
-            jointset = union( graph.nodes[i], edges.nodes[j] )
-            push_i = true
-            (jointset in newgraph.nodes) && continue
-            push!( newgraph.nodes,  jointset )
-            push!( newgraph.length, graph.length[i] + edges.length[j] )
-            push!( newgraph.count,  graph.count[i] + edges.count[j] )
-            newgraph.min = min( min(first(graph.nodes[i]), first(edges.nodes[j])), newgraph.min )
-            newgraph.max = max( max(last(graph.nodes[i]),  last(edges.nodes[j])),  newgraph.max )
+   it = 1
+   while newgraph.nodes != graph.nodes || it == 1
+      if it > 1
+         const temp = graph
+         graph = newgraph
+         newgraph = temp
+         empty!( newgraph.nodes  )
+         empty!( newgraph.length )
+         empty!( newgraph.count  )
+      end
+      @inbounds for i in 1:length(graph.nodes)
+         push_i = false
+         for j in 1:length(edges.nodes)
+            if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
+               const jointset = union( graph.nodes[i], edges.nodes[j] )
+               push_i = true
+               (jointset in newgraph.nodes) && continue
+               push!( newgraph.nodes,  jointset )
+               push!( newgraph.length, graph.length[i] + edges.length[j] )
+               push!( newgraph.count,  graph.count[i] + edges.count[j] )
+               newgraph.min = min( min(first(graph.nodes[i]), first(edges.nodes[j])), newgraph.min )
+               newgraph.max = max( max(last(graph.nodes[i]),  last(edges.nodes[j])),  newgraph.max )
+            end
+         end
+         if !push_i && !(graph.nodes[i] in newgraph.nodes)
+            push!( newgraph.nodes, graph.nodes[i] )
+            push!( newgraph.length, graph.length[i] )
+            push!( newgraph.count, graph.count[i] )
+            newgraph.min = min( first(graph.nodes[i]), newgraph.min )
+            newgraph.max = max( last(graph.nodes[i]),  newgraph.max )
          end
       end
-      if !push_i && !(graph.nodes[i] in newgraph.nodes)
-         push!( newgraph.nodes, graph.nodes[i] )
-         push!( newgraph.length, graph.length[i] )
-         push!( newgraph.count, graph.count[i] )
-         newgraph.min = min( first(graph.nodes[i]), newgraph.min )
-         newgraph.max = max( last(graph.nodes[i]),  newgraph.max )
-      end
-   end
-   #println(newgraph.nodes)
-   #println(length(newgraph.nodes))
-   #println(graph.nodes)
-   #println(length(graph.nodes))
-   if newgraph.nodes != graph.nodes
-      return reduce_graph( edges, newgraph )
+      it += 1
    end
    newgraph
 end
@@ -832,6 +837,7 @@ function calculate_psi!( pgraph::PsiGraph, counts::Vector{Float64}; sig=0 )
    divsignif!( pgraph.psi, cnt_sum, sig )
 end
 
+#=
 function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph, 
                           ambig::Vector{AmbigCounts};
                           inc_temp::Vector{Float64}=zeros(length(igraph.count)),
@@ -875,6 +881,7 @@ function rec_spliced_em!( igraph::PsiGraph, egraph::PsiGraph,
    end
    it
 end
+=#
 
 function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCounts};
                       it=1, maxit=1500, sig=0 )
