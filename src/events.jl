@@ -160,6 +160,14 @@ function hasintersect_terminal( a::IntSet, b::IntSet )
    end
 end
 
+function hasintersect_terminal( a, b )
+   if first(a) == last(b) || first(b) == last(a)
+      return true
+   else
+      return false
+   end  
+end
+
 function Base.in{T <: Integer}( i::T, pgraph::PsiGraph )
    for nodeset in pgraph.nodes
       (i in nodeset) && return true
@@ -236,16 +244,14 @@ end
 # works.. these graph paths are then assigned unambiguous counts, while
 # ambiguous counts are then assigned to each graph path using the EM algorithm
 
-function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
+function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::Int=2000 )
    newgraph = PsiGraph( Vector{IntSet}(),  Vector{Float64}(),
                         Vector{Float64}(), Vector{Float64}(),
                         graph.min, graph.max )
    it = 1
-   while newgraph.nodes != graph.nodes || it == 1
+   while (newgraph.nodes != graph.nodes || it == 1) && it <= maxit
       if it > 1
-         const temp = graph
-         graph = newgraph
-         newgraph = temp
+         graph,newgraph = newgraph,graph
          empty!( newgraph.nodes  )
          empty!( newgraph.length )
          empty!( newgraph.count  )
@@ -255,7 +261,7 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
          for j in 1:length(edges.nodes)
             if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
                const jointset = union( graph.nodes[i], edges.nodes[j] )
-               resize!(jointset.bits, div(graph.max, 32) + 1 )
+               #resize!(jointset.bits, div(graph.max, 32) + 1 )
                push_i = true
                (jointset in newgraph.nodes) && continue
                push!( newgraph.nodes,  jointset )
@@ -278,24 +284,38 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
    newgraph
 end
 
-#=
-function reduce_graph_min( edges::Vector{IntSet}, graph::Vector{IntSet}=deepcopy(edges) )
-   newgraph = Vector{IntSet}()
-   graphmin = 10000
-   graphmax = 0
+#= this is not faster than reduce_graph, should be deprecated.
+@inline function reduce_graph_min( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
+   const ExonIntType = UInt8
+   edgevec  = map( y->map(x->convert(ExonIntType, x), collect(y)), edges.nodes )
+   graphvec = map( y->map(x->convert(ExonIntType, x), collect(y)), graph.nodes )
+   results,gmin,gmax = reduce_graph_uint( edgevec, graphvec )
+   newgraph = PsiGraph( Vector{IntSet}(),  Vector{Float64}(),
+                        Vector{Float64}(), Vector{Float64}(),
+                        gmin, gmax )
+   for path in results
+      push!( newgraph.nodes, IntSet(path) )
+      push!( newgraph.length, length(path) )
+      push!( newgraph.count, 0.0 )
+   end
+   newgraph
+end
+
+function reduce_graph_uint{T}( edges::Vector{Vector{T}}, graph::Vector{Vector{T}}=deepcopy(edges) )
+   newgraph = Vector{Vector{T}}()
+   graphmin = typemax(T)
+   graphmax = typemin(T)
    it = 1
    while newgraph != graph || it == 1
       if it > 1
-         const temp = graph
-         graph = newgraph
-         newgraph = temp
+         graph,newgraph = newgraph,graph
          empty!( newgraph )
       end
       @inbounds for i in 1:length(graph)
          push_i = false
          for j in 1:length(edges)
             if hasintersect_terminal( graph[i], edges[j] )
-               const jointset = union( graph[i], edges[j] )
+               const jointset = sort(union( graph[i], edges[j] ))
                push_i = true
                (jointset in newgraph) && continue
                push!( newgraph,  jointset )
@@ -311,7 +331,7 @@ function reduce_graph_min( edges::Vector{IntSet}, graph::Vector{IntSet}=deepcopy
       end
       it += 1
    end
-   newgraph
+   newgraph,graphmin,graphmax
 end
 =#
 
@@ -678,7 +698,8 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
 end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
-                           node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool )
+                           node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool,
+                           minedgeweight::Float64=0.01 )
 
    inc_graph  = Nullable{PsiGraph}()
    exc_graph  = Nullable{PsiGraph}()
@@ -688,7 +709,12 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    connecting_val = 0.0 
    spanning_val   = 0.0
 
+   const maxvalue = length(sgquant.edge) > 0 ? maximum( sgquant.edge ).value : 0.0
+
    for edg in intersect( sgquant.edge, (node, node) )
+
+      (edg.value / maxvalue < minedgeweight) && continue
+
       if   isconnecting( edg, node )
          if isnull( inc_graph )
             inc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
