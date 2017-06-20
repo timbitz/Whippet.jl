@@ -261,7 +261,6 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
          for j in 1:length(edges.nodes)
             if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
                const jointset = union( graph.nodes[i], edges.nodes[j] )
-               #resize!(jointset.bits, div(graph.max, 32) + 1 )
                push_i = true
                (jointset in newgraph.nodes) && continue
                push!( newgraph.nodes,  jointset )
@@ -282,6 +281,22 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
       it += 1
    end
    newgraph
+end
+
+@inline function reduce_graph_simple( edges::PsiGraph )
+   if length(edges.nodes) == 2
+      if hasintersect_terminal( edges.nodes[1], edges.nodes[2] )
+         union!( edges.nodes[1], edges.nodes[2] )
+         edges.length[1] += edges.length[2]
+         edges.count[1]  += edges.count[2]
+         pop!( edges.nodes )
+         pop!( edges.length )
+         pop!( edges.count )
+      end
+      return edges
+   else
+      return reduce_graph( edges )
+   end
 end
 
 #= this is not faster than reduce_graph, should be deprecated.
@@ -760,8 +775,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
          add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
       end
    else
-      !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph( inc_graph.value ) ))
-      !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph( exc_graph.value ) ))
+      !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph_simple( inc_graph.value ) ))
+      !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph_simple( exc_graph.value ) ))
    end # end expanding module
 
   # lets finish up now.
