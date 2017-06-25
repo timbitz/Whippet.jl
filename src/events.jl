@@ -34,7 +34,7 @@ const MOTIF_STRING = fill( "", 9 )
       MOTIF_STRING[ UInt8(SKIP_MOTIF) + 1 ] = "CE"
       MOTIF_STRING[ UInt8(ALTD_MOTIF) + 1 ] = "AD"
       MOTIF_STRING[ UInt8(ALTA_MOTIF) + 1 ] = "AA"
-      MOTIF_STRING[ UInt8(NONE_MOTIF) + 1 ] = "na"
+      MOTIF_STRING[ UInt8(NONE_MOTIF) + 1 ] = "NA"
 
 const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
       # Alt TxStart  SL SL
@@ -837,10 +837,9 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    i = 1
    while i < length(sg.edgetype)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
-      motif == NONE_MOTIF && (i += 1; continue)
-      #println(motif)
-      #println(sg)
-      if isobligate( motif ) # is utr event
+      if motif == NONE_MOTIF
+         output_empty( io, motif, sg, i, info )
+      elseif isobligate( motif ) # is utr event
          psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )
             total_cnt = sum(utr) + sum(ambig)
