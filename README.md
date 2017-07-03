@@ -22,7 +22,7 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Install [supported julia release here](https://julialang.org/downloads/oldreleases.html) which must be v0.5.X (julia v0.6 is just now released and will supported as soon as possible).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install [Julia v0.5.2](https://julialang.org/downloads/oldreleases.html) (NOTE: julia v0.6 is just now released and will be supported soon).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
