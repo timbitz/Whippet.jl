@@ -8,7 +8,7 @@ end
 ## Since all nucleotides are converted to UInt8 as one hot 4-bit encodings by default
 ## we can override FMIndexes.sa_range function for those sequences specifically
 ## to re-encode as DNAAlphabet{2}
-@inline function FMIndexes.sa_range{A <: Bio.Seq.Alphabet}(query::BioSequence{A}, index::FMIndex, init_range::UnitRange{Int})
+@inline function FMIndexes.sa_range{A <: BioSequences.Alphabet}(query::BioSequence{A}, index::FMIndex, init_range::UnitRange{Int})
     sp, ep = init_range.start, init_range.stop
     # backward search
     i = length(query)

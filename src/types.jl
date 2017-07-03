@@ -7,9 +7,9 @@ const GENOMESIZE = 3235Mb
 
 # ALIAS NEW TYPES FOR INCREASED CODE READABILITY
 if GENOMESIZE < typemax(UInt32)
-   const CoordInt UInt32
+   const CoordInt = UInt32
 else
-   const CoordInt UInt64
+   const CoordInt = UInt64
 end
 
 const CoordTuple = Tuple{Vararg{CoordInt}}
@@ -27,9 +27,9 @@ const SeqName     = String
 const RefSeqId    = String
 const ASCIIString = String
 
-const GeneMeta Tuple{GeneName, SeqName, Char}
+const GeneMeta = Tuple{GeneName, SeqName, Char}
 
-const BufOut BufferedStreams.BufferedOutputStream
+const BufOut = BufferedStreams.BufferedOutputStream
 
 immutable GeneInfo
    gene::GeneName
