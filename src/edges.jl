@@ -1,12 +1,11 @@
-
-typealias NodeInt UInt32
+const NodeInt = UInt32
 
 immutable SGNode
    gene::NodeInt
    node::NodeInt
 end
 
-typealias SGNodeSet Vector{SGNode}
+const SGNodeSet = Vector{SGNode}
 
 immutable Edges{K}
    left::Vector{SGNodeSet}

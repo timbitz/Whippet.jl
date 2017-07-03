@@ -32,7 +32,8 @@ adds = [ "DataStructures",
          "StatsBase",
          "Distributions",
          "Glob",
-         "Bio",
+         "BioSymbols",
+         "BioSequences",
          "Requests"]
 
 tic()
@@ -44,7 +45,8 @@ println( STDERR, "INFO: Loading and precompiling... " )
 
 using DataStructures
 using ArgParse
-using Bio
+using BioSymbols
+using BioSequences
 using FMIndexes
 using IntArrays
 using IntervalTrees

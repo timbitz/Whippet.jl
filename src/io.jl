@@ -163,8 +163,8 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
    const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
    if !strand && !supplemental
-      Bio.Seq.reverse_complement!(read.seq)
-      Bio.Seq.reverse!(read.metadata.quality)
+      BioSequences.reverse_complement!(read.seq)
+      BioSequences.reverse!(read.metadata.quality)
    end
    tab_write( io, read.name )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )

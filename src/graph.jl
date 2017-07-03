@@ -27,7 +27,7 @@ function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    EDGETYPE_TO_UINT8[one-3,two-3]
 end
 
-Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) = 
+Base.convert( ::Type{EdgeType}, one::DNA, two::DNA ) = 
               Base.convert( EdgeType, convert(UInt8, trailing_zeros(one)), convert(UInt8, trailing_zeros(two)) )
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)

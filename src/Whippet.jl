@@ -2,9 +2,10 @@ __precompile__()
 
 module Whippet
 
-importall Bio
+importall BioSymbols
+importall BioSequences
 
-using Bio.Seq
+using BioSequences
 using DataStructures
 using BufferedStreams
 using FMIndexes

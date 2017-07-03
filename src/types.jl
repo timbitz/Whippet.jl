@@ -7,29 +7,29 @@ const GENOMESIZE = 3235Mb
 
 # ALIAS NEW TYPES FOR INCREASED CODE READABILITY
 if GENOMESIZE < typemax(UInt32)
-   typealias CoordInt UInt32
+   const CoordInt UInt32
 else
-   typealias CoordInt UInt64
+   const CoordInt UInt64
 end
 
-typealias CoordTuple Tuple{Vararg{CoordInt}}
-typealias CoordArray Vector{CoordInt}
-typealias CoordTree  IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
-typealias CoordSet   Set{Tuple{CoordInt,CoordInt}}
+const CoordTuple = Tuple{Vararg{CoordInt}}
+const CoordArray = Vector{CoordInt}
+const CoordTree  = IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
+const CoordSet   = Set{Tuple{CoordInt,CoordInt}}
 
-typealias ExonInt    UInt16
-typealias ExonTree   IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
+const ExonInt    = UInt16
+const ExonTree   = IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 
-typealias SGSequence Bio.Seq.BioSequence{DNAAlphabet{4}}
+const SGSequence = BioSequences.BioSequence{DNAAlphabet{4}}
 
-typealias GeneName    String
-typealias SeqName     String
-typealias RefSeqId    String
-typealias ASCIIString String
+const GeneName    = String
+const SeqName     = String
+const RefSeqId    = String
+const ASCIIString = String
 
-typealias GeneMeta Tuple{GeneName, SeqName, Char}
+const GeneMeta Tuple{GeneName, SeqName, Char}
 
-typealias BufOut BufferedStreams.BufferedOutputStream
+const BufOut BufferedStreams.BufferedOutputStream
 
 immutable GeneInfo
    gene::GeneName

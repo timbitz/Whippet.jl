@@ -75,7 +75,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    runoffset = 0
    for r in fhIter
       haskey(seqdic, r.name) || continue
-      #Bio.Seq.immutable!(r.seq)
+      #BioSequences.immutable!(r.seq)
       sg = SGSequence( r.seq )
 
       r.seq = ReferenceSequence()
@@ -116,7 +116,7 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
       to_open = open( filename ) |> BufferedInputStream
    end
    # iterate through fasta entries
-   index = @time trans_index!(FASTAReader{Bio.Seq.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)
+   index = @time trans_index!(FASTAReader{BioSequences.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)
    index
 end
 

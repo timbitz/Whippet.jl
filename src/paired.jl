@@ -44,7 +44,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    const fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
    
    if (p.is_pair_rc && strand) || (!p.is_pair_rc && !strand)
-      Bio.Seq.reverse_complement!(rev.seq)
+      BioSequences.reverse_complement!(rev.seq)
       reverse!(rev.metadata.quality)
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
    else
@@ -54,7 +54,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
    const rev_len = length(rev.seq)
 
    if !strand
-      Bio.Seq.reverse_complement!(fwd.seq)
+      BioSequences.reverse_complement!(fwd.seq)
       reverse!(fwd.metadata.quality)
       ispos = false
    end

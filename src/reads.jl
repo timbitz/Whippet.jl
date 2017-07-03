@@ -1,12 +1,12 @@
 
-function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
+function make_fqparser( filename; encoding=BioSequences.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
    fopen = open( filename, "r" )
    if isgzipped( filename ) || forcegzip
       to_open = ZlibInflateInputStream( fopen, reset_on_end=true )
    else
       to_open = BufferedInputStream( fopen )
    end 
-   FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
+   FASTQReader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( to_open, 
                                                              encoding,
                                                              DNA_A ), Requests.ResponseStream{TCPSocket}()
 end
@@ -25,14 +25,14 @@ end
 end
 
 # This function specifically tries to download a fastq file from a url string and returns
-# the Bio.Seq parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
-function make_http_fqparser( url::String; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
+# the BioSequences parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
+function make_http_fqparser( url::String; encoding=BioSequences.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
    response = Requests.get_streaming(url)
    if isgzipped( url ) || forcegzip
       zlibstr  = ZlibInflateInputStream( response.buffer, reset_on_end=true )
-      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
+      fqparser = FASTQReader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
    else
-      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
+      fqparser = FASTQReader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
    end
    fqparser, response
 end
