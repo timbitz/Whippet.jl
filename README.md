@@ -3,7 +3,6 @@
 [![Build Status](https://travis-ci.com/timbitz/Whippet.jl.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet.jl/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet.jl)
 
-
 ## Features
 - Splice graph representations of transcriptome structure
   - Build an index for any species with a genome and annotation file
@@ -17,6 +16,8 @@
   - Gene expression (TpM)
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
+
+Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 
 ## Get started
 
