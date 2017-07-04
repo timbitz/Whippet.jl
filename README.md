@@ -141,4 +141,4 @@ If you are building an index for another organism, there are some general guidel
 
 ## Troubleshooting
 
-With all of the executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet.jl` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you think you have found a bug feel free to open an issue in github or make a pull request!
+With all of the executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet.jl` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `julia test/runtests.jl` in the main `Whippet.jl` directory, Whippet should run cleanly if your environment is working correctly (though it is untested on Windows, it should still work).  If you think you have found a bug feel free to open an issue in github or make a pull request! 
