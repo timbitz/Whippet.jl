@@ -69,6 +69,7 @@ $ julia bin/whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --fo
 ```
 
 ### 5) Compare multiple psi files
+Compare `.psi.gz` files from from two samples `-a` and `-b` with any number of replicates (comma delimited list of files or common pattern matching) per sample.
 ```bash
 $ ls *.psi.gz
 sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
@@ -76,6 +77,7 @@ $ julia bin/whippet-delta.jl -a sample1 -b sample2
 OR
 $ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
+Note: Comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
 
 ---
 
@@ -88,6 +90,8 @@ The `.tpm.gz` file contains a simple format compatible with many downstream tool
 Gene | TpM | Read Counts
 ---- | --- | -----------
 NFIA | 2897.11 | 24657.0
+
+---
 
 Meanwhile the `.psi.gz` file is a bit more complex and requires more explanation:
 
@@ -114,14 +118,15 @@ Type | Interpretation
  
 Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
 
-The output format for `whippet-delta.jl` is:
+---
+The output format of `.diff.gz` files from `whippet-delta.jl` is:
 
 Gene | Node | Coord | Strand | Type | Psi_A | Psi_B | DeltaPsi | Probability | Complexity | Entropy
 ---- | ---- | ----- | ------ | ---- | ----- | ----- | -------- | ----------- | ---------- | -------
 ENSG00000117448.13_2 | 9 | chr1:46033654-46033849 | + | CE | 0.95971 | 0.97876 | -0.019047 | 0.643 | K0 | 0.0   
 ENSG00000117448.13_2 | 10 | chr1:46034157-46034356 | + | CE | 0.9115 | 0.69021 | 0.22129 | 0.966 | K1 | 0.874 
 
-Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean Psi_A (from emperical sampling of the joint posterior distribution) and mean Psi_B, as well as the mean deltaPsi and the probability that there is some change in deltaPsi P(|deltaPsi| > 0.0).  
+Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean Psi_A (from emperical sampling of the joint posterior distribution) and mean Psi_B.  It also outputs the mean deltaPsi (Psi_A - Psi_B) and the probability that there is some change in deltaPsi, such that P(|deltaPsi| > 0.0). To determine the significance of output in `.diff.gz` files, two filters are strongly encouraged: (1) significant nodes should have a high probability (>=0.95) suggesting there is likely to be a difference between the samples, and (2) significant nodes should have a magnitude of change (DeltaPsi > x) where x is some value you consider to be a biologically relevant magnitude of change (we suggest DeltaPsi > 0.1).
 
 ---
 
