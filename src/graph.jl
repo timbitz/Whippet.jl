@@ -1,6 +1,6 @@
 # requires:
 
-bitstype 8 EdgeType
+primitive type EdgeType 8 end
 
 const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
       EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start 

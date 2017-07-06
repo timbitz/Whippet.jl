@@ -1,7 +1,7 @@
 
 const COMPLEX_CHAR = 'K'
 
-bitstype 8 EdgeMotif
+primitive type EdgeMotif 8 end
 
 Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = reinterpret(EdgeMotif, motif )
 Base.convert( ::Type{UInt8}, motif::EdgeMotif ) = reinterpret(UInt8, motif )

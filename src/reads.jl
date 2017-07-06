@@ -6,7 +6,7 @@ function make_fqparser( filename; encoding=BioSequences.ILLUMINA18_QUAL_ENCODING
    else
       to_open = BufferedInputStream( fopen )
    end 
-   FASTQReader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( to_open, 
+   FASTQ.Reader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( to_open, 
                                                              encoding,
                                                              DNA_A ), Requests.ResponseStream{TCPSocket}()
 end
@@ -30,9 +30,9 @@ function make_http_fqparser( url::String; encoding=BioSequences.ILLUMINA18_QUAL_
    response = Requests.get_streaming(url)
    if isgzipped( url ) || forcegzip
       zlibstr  = ZlibInflateInputStream( response.buffer, reset_on_end=true )
-      fqparser = FASTQReader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
+      fqparser = FASTQ.Reader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
    else
-      fqparser = FASTQReader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
+      fqparser = FASTQ.Reader{BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
    end
    fqparser, response
 end

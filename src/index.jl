@@ -2,7 +2,7 @@
 
 # requires
 
-abstract SeqLibrary
+abstract type SeqLibrary end
 
 immutable GraphLib <: SeqLibrary
    offset::Vector{CoordInt}
@@ -116,7 +116,7 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
       to_open = open( filename ) |> BufferedInputStream
    end
    # iterate through fasta entries
-   index = @time trans_index!(FASTAReader{BioSequences.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)
+   index = @time trans_index!(FASTA.Reader{BioSequences.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)
    index
 end
 

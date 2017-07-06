@@ -45,7 +45,7 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 3, 9, 2, 4, 4, 18, 5, 18
    aln
 end
 
-abstract UngappedAlignment
+abstract type UngappedAlignment end
 
 const MatchesInt    = UInt8
 const MismatchInt   = UInt8
