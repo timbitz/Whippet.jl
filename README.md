@@ -32,6 +32,7 @@ git clone https://github.com/timbitz/Whippet.jl.git
 cd Whippet.jl
 julia dependencies.jl
 ```
+(note: deprecated syntax `warnings` for dependent packages can be ignored.)
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome.
