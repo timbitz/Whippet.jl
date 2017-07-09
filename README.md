@@ -79,7 +79,7 @@ $ julia bin/whippet-delta.jl -a sample1 -b sample2
 OR
 $ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
-Note: Comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
+note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
 
 ---
 
