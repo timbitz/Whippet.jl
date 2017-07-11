@@ -51,7 +51,7 @@ Or if you have paired-end RNA-seq data...
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment. For example:
+Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
 ```
 $ julia bin/whippet-quant.jl --ebi SRR1199010
 ```
