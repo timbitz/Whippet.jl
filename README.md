@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/timbitz/Whippet.jl.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet.jl/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet.jl)
-
+[![Gitter Chat](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/Whippet-jl/Lobby)
 
 ## Features
 - Splice graph representations of transcriptome structure
@@ -18,10 +18,12 @@
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
+Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
+
 ## Get started
 
 ### 1) Install 
-Install [julia release here](https://julialang.org/downloads/oldreleases.html), which must be v0.5.X (julia v0.6 is now released and will be supported as soon as possible).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install [Julia v0.5.2](https://julialang.org/downloads/oldreleases.html) (NOTE: julia v0.6 is just now released and will be supported soon).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
@@ -30,6 +32,7 @@ git clone https://github.com/timbitz/Whippet.jl.git
 cd Whippet.jl
 julia dependencies.jl
 ```
+(note: deprecated syntax `warnings` for dependent packages can be ignored.)
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome.
@@ -48,7 +51,7 @@ Or if you have paired-end RNA-seq data...
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web into memory which is subsequently freed after alignment. For example:
+Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
 ```
 $ julia bin/whippet-quant.jl --ebi SRR1199010
 ```
@@ -68,6 +71,7 @@ $ julia bin/whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --fo
 ```
 
 ### 5) Compare multiple psi files
+Compare `.psi.gz` files from from two samples `-a` and `-b` with any number of replicates (comma delimited list of files or common pattern matching) per sample.
 ```bash
 $ ls *.psi.gz
 sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
@@ -75,6 +79,7 @@ $ julia bin/whippet-delta.jl -a sample1 -b sample2
 OR
 $ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
+note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
 
 ---
 
@@ -87,6 +92,8 @@ The `.tpm.gz` file contains a simple format compatible with many downstream tool
 Gene | TpM | Read Counts
 ---- | --- | -----------
 NFIA | 2897.11 | 24657.0
+
+---
 
 Meanwhile the `.psi.gz` file is a bit more complex and requires more explanation:
 
@@ -113,14 +120,15 @@ Type | Interpretation
  
 Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
 
-The output format for `whippet-delta.jl` is:
+---
+The output format of `.diff.gz` files from `whippet-delta.jl` is:
 
 Gene | Node | Coord | Strand | Type | Psi_A | Psi_B | DeltaPsi | Probability | Complexity | Entropy
 ---- | ---- | ----- | ------ | ---- | ----- | ----- | -------- | ----------- | ---------- | -------
 ENSG00000117448.13_2 | 9 | chr1:46033654-46033849 | + | CE | 0.95971 | 0.97876 | -0.019047 | 0.643 | K0 | 0.0   
 ENSG00000117448.13_2 | 10 | chr1:46034157-46034356 | + | CE | 0.9115 | 0.69021 | 0.22129 | 0.966 | K1 | 0.874 
 
-Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean Psi_A (from emperical sampling of the joint posterior distribution) and mean Psi_B, as well as the mean deltaPsi and the probability that there is some change in deltaPsi P(|deltaPsi| > 0.0).  
+Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean Psi_A (from emperical sampling of the joint posterior distribution) and mean Psi_B.  It also outputs the mean deltaPsi (Psi_A - Psi_B) and the probability that there is some change in deltaPsi, such that P(|deltaPsi| > 0.0). To determine the significance of output in `.diff.gz` files, two filters are strongly encouraged: (1) significant nodes should have a high probability (>=0.95) suggesting there is likely to be a difference between the samples, and (2) significant nodes should have an absolute magnitude of change (|DeltaPsi| > x) where x is some value you consider to be a biologically relevant magnitude of change (we suggest |DeltaPsi| > 0.1).
 
 ---
 
@@ -135,4 +143,4 @@ If you are building an index for another organism, there are some general guidel
 
 ## Troubleshooting
 
-With all of the executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet.jl` then please ask a question in our gitter chat: .  If you think you have found a bug feel free to open an issue in github or make a pull request!
+With all of the executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet.jl` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `julia test/runtests.jl` in the main `Whippet.jl` directory, Whippet should run cleanly if your environment is working correctly (though it is untested on Windows, it should still work).  If you still think you have found a bug feel free to open an issue in github or make a pull request! 
