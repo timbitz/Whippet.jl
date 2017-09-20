@@ -35,11 +35,13 @@ julia dependencies.jl
 (note: deprecated syntax `warnings` for dependent packages can be ignored.)
 
 ### 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome.
+You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome.  
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
+
+(note: Whippet only uses GTF `exon` lines, which must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.)
 
 ### 4) Quantify FASTQ files.
 ```bash
@@ -79,7 +81,7 @@ $ julia bin/whippet-delta.jl -a sample1 -b sample2
 OR
 $ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
-note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
+(note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`)
 
 ---
 
@@ -104,7 +106,7 @@ NFIA | 4 | chr1:61548433-61548490 | + | CE | 0.8329 | 0.069 | 0.795,0.864 | 318.
 NFIA | 5 | chr1:61553821-61554352 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
 NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
 
-In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns.  Therfore in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
+In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns.  Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
 
 
 Type | Interpretation
@@ -117,6 +119,7 @@ Type | Interpretation
  TE  | Tandem alternative polyadenylation site
  AF  | Alternative First exon
  AL  | Alternative Last exon
+ BS  | Circular back-splicing (output only when `--circ` flag is given)
  
 Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
 
