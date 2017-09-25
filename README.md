@@ -32,16 +32,21 @@ git clone https://github.com/timbitz/Whippet.jl.git
 cd Whippet.jl
 julia dependencies.jl
 ```
-(note: deprecated syntax `warnings` for dependent packages can be ignored.)
+Notes: 
+* Deprecated syntax `warnings` for dependent packages can be ignored.
+* For all executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 
 ### 3) Build an index.  
-You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome.  
+You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome. 
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
-(note: Whippet only uses GTF `exon` lines, which must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.)
+Notes: 
+* Whippet only uses GTF `exon` lines, which must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
+* You can specify the output name and location of the index to build using the `--index` parameter, the default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `Whippet.jl/index/graph`.
+
 
 ### 4) Quantify FASTQ files.
 ```bash
@@ -81,7 +86,7 @@ $ julia bin/whippet-delta.jl -a sample1 -b sample2
 OR
 $ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
-(note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`)
+Note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
 
 ---
 
