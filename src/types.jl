@@ -31,7 +31,7 @@ const GeneMeta = Tuple{GeneName, SeqName, Char}
 
 const BufOut = BufferedStreams.BufferedOutputStream
 
-immutable GeneInfo
+struct GeneInfo
    gene::GeneName
    name::SeqName
    strand::Bool # pos is true, neg is false
@@ -43,7 +43,7 @@ GeneInfo{S <: AbstractString}( gene::S, name::S, strand::Char ) =
                                          strand == '+' ? true : 
                                                          false )
 
-immutable TxInfo
+struct TxInfo
    name::RefSeqId
    txstart::CoordInt
    txend::CoordInt

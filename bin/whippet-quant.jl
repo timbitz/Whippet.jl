@@ -182,4 +182,4 @@ function main()
    println(STDERR, "Whippet $ver done." )
 end
 
-main()
+@timer main()

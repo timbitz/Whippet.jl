@@ -75,7 +75,8 @@ function main()
    open("$(args["index"])_anno.jls", "w") do fh
       @timer serialize(fh, ref)
    end
-=#
+   =#
+
    println(STDERR, "Serializing splice graph index...")
    open("$(args["index"]).jls", "w") do io
       @timer serialize( io, graphome )
@@ -83,4 +84,4 @@ function main()
 
 end
 
-main()
+@timer main()

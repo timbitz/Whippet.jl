@@ -1,4 +1,27 @@
 
+struct FASTQRecord
+   sequence::BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
+   quality::Vector{UInt8}
+
+   function FASTQRecord( rec::BioSequences.FASTQ.Record, offset=33 )
+      return new( BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}( rec.data, 
+                                                                         first(rec.sequence), 
+                                                                         last(rec.sequence) ),
+                  rec.data[rec.quality] - convert(UInt8, offset) )
+   end
+end
+
+
+
+function reverse_complement!( fqrec::FASTQRecord )
+   reverse_complement!( fqrec.sequence )
+   reverse!( fqrec.quality )
+end
+
+function Base.read!( parser::BioSequences.FASTQ.Reader, fqrec::FASTQRecord )
+   #read!(
+end
+
 function make_fqparser( filename; encoding=BioSequences.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
    fopen = open( filename, "r" )
    if isgzipped( filename ) || forcegzip
@@ -65,7 +88,7 @@ function read_http_chunk!( chunk, parser, resp; maxtime=24 )
    parser
 end
 
-function allocate_chunk( parser; size=100000 )
+function allocate_chunk( parser; size=10000 )
   chunk = Vector{eltype(parser)}( size )
   for i in 1:length(chunk)
      chunk[i] = eltype(parser)()

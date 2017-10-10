@@ -1,8 +1,4 @@
 
-# using FMIndexes
-# include("graph.jl")
-# include("index.jl")
-
 import Bio.Seq.SeqRecord
 
 immutable AlignParam
@@ -51,7 +47,7 @@ const MatchesInt    = UInt8
 const MismatchInt   = UInt8
 const MismatchFloat = Float32
 
-type SGAlignScore
+mutable struct SGAlignScore
    matches::MatchesInt
    mismatches::MismatchInt
    mistolerance::MismatchFloat
@@ -72,7 +68,7 @@ end
 
 const ReadLengthInt = UInt8
 
-type SGAlignment <: UngappedAlignment
+mutable struct SGAlignment <: UngappedAlignment
    offset::UInt32
    offsetread::ReadLengthInt
    path::Vector{SGAlignNode}

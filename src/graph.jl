@@ -66,14 +66,14 @@ function invert_edgetype( edge::EdgeType )
    if edge == EdgeType(0x04) # 'LR'
       return edge
    else
-      return convert(EdgeType, convert(UInt8, edge) $ 0b011)
+      return convert(EdgeType, convert(UInt8, edge) ⊻ 0b011)
    end
 end
 
 
 # This holds a representation of the splice graph
 # which is a directed multigraph
-immutable SpliceGraph{K}
+struct SpliceGraph{K}
    nodeoffset::Vector{CoordInt} # SG offset
    nodecoord::Vector{CoordInt}  # Genome offset
    nodelen::Vector{CoordInt}
@@ -228,8 +228,7 @@ function build_annotated_path( nodecoord::Vector{CoordInt},
                                tx::RefTx, strand::Bool )
    const path = IntSet()
    # this may be `poor form`, but 256 is too big for default!
-   path.bits  = zeros(UInt32,64>>>5)
-   path.limit = 64
+   resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
    for i in 1:length(tx.acc)
       const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )

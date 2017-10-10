@@ -2,7 +2,8 @@ using Base.Test
 
 using DataStructures
 using BufferedStreams
-using Bio.Seq
+using BioSequences
+using BioSymbols
 using FMIndexes
 using IntArrays
 using IntervalTrees
@@ -28,11 +29,11 @@ include("../src/io.jl")
 include("../src/diff.jl")
 
 @testset "SG Kmers & Seq" begin
-   @test sgkmer(dna"ATG") == Bio.Seq.DNAKmer(dna"ATG")
-   @test sgkmer("ATG") == Bio.Seq.DNAKmer(dna"ATG")
+   @test sgkmer(dna"ATG") == BioSequences.DNAKmer(dna"ATG")
+   @test sgkmer("ATG") == BioSequences.DNAKmer(dna"ATG")
    @test isa(sgkmer(dna"ATG"), SGKmer{3})
-   @test kmer_index( sgkmer(dna"ATG") ) == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
-   @test Int(kmer_index_trailing( dna"ATG" ))+1 == kmer_index( Bio.Seq.DNAKmer(dna"ATG") )
+   @test kmer_index( sgkmer(dna"ATG") ) == kmer_index( BioSequences.DNAKmer(dna"ATG") )
+   @test Int(kmer_index_trailing( dna"ATG" ))+1 == kmer_index( BioSequences.DNAKmer(dna"ATG") )
    @test Int(kmer_index_trailing( dna"ATGR" )) == 0
    seq = dna""
    for i in 1:32
@@ -182,18 +183,18 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       #println(rkmer[1])
       for i in 1:4^kmer_size
          if i in lkmer
-            @test isdefined(edges.left, i)
+            @test isassigned(edges.left, i)
             @test typeof(edges.left[i]) == Vector{SGNode}
             @test issorted(edges.left[i], lt=sortlt)
          else
-            @test !isdefined(edges.left, i)
+            @test !isassigned(edges.left, i)
          end
          if i in rkmer
-            @test isdefined(edges.right, i)
+            @test isassigned(edges.right, i)
             @test typeof(edges.right[i]) == Vector{SGNode}
             @test issorted(edges.right[i], lt=sortlt)
          else
-            @test !isdefined(edges.right, i)
+            @test !isassigned(edges.right, i)
          end
       end
       exon1_lind = lkmer[1]
@@ -263,8 +264,8 @@ IIIIIIIIIIII
       quant = GraphLibQuant( lib )
       multi = Vector{Multimap}()
 
-      typealias DNASeqType Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}
-      fqparse = FASTQReader{DNASeqType}( BufferedInputStream(fastq), Bio.Seq.ILLUMINA18_QUAL_ENCODING, DNA_C )
+      const DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
+      fqparse = FASTQ.Reader( BufferedInputStream(fastq), fill_ambiguous=DNA_C )
       reads  = allocate_chunk( fqparse, size=10 )
       read_chunk!( reads, fqparse )
 
