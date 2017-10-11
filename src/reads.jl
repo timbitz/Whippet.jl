@@ -83,7 +83,7 @@ function allocate_fastq_records( size::Int=10000 )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                        multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33 )
+                        multi::Vector{Multimap}; bufsize=150, sam=false, qualoffset=33 )
 #                         response=Requests.ResponseStream{TCPSocket}(), http=false )
   
    #const reads  = allocate_chunk( parser, size=bufsize )

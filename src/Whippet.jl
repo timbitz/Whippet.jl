@@ -5,8 +5,9 @@ module Whippet
 importall BioSymbols
 importall BioSequences
 
+import DataStructures: SortedSet
+
 using BioSequences
-using DataStructures
 using BufferedStreams
 using FMIndexes
 using IntArrays
