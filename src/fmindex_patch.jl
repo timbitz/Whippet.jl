@@ -1,6 +1,6 @@
 @inline function raw_getindex{A}(seq::BioSequence{A}, i::Integer)
-    j = Bio.Seq.bitindex(seq, i)
-    @inbounds return convert(UInt8, (seq.data[Bio.Seq.index(j)] >> Bio.Seq.offset(j)) & Bio.Seq.mask(A))
+    j = BioSequences.bitindex(seq, i)
+    @inbounds return convert(UInt8, (seq.data[BioSequences.index(j)] >> BioSequences.offset(j)) & BioSequences.mask(A))
 end
 
 

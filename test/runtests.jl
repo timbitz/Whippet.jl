@@ -1,5 +1,8 @@
 using Base.Test
 
+importall BioSymbols
+importall BioSequences
+
 using DataStructures
 using BufferedStreams
 using BioSequences
@@ -10,6 +13,7 @@ using IntervalTrees
 using Libz
 using Distributions
 using Requests
+#using HTTP
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -19,10 +23,11 @@ include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
 include("../src/index.jl")
+include("../src/record.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
-include("../src/ebi.jl")
+#include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
@@ -266,12 +271,14 @@ IIIIIIIIIIII
 
       const DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
       fqparse = FASTQ.Reader( BufferedInputStream(fastq), fill_ambiguous=DNA_C )
-      reads  = allocate_chunk( fqparse, size=10 )
+      reads  = allocate_fastq_records( 10 )
       read_chunk!( reads, fqparse )
 
       @test length(reads) == 10
       for r in reads
+         fill!( r, 33 )
          println(STDERR, r)
+         readname = string(r)
 
          align = ungapped_align( param, lib, r )
          println(STDERR, align)
@@ -280,10 +287,10 @@ IIIIIIIIIIII
          @test !isnull( align )
          @test length( align.value ) >= 1
          @test all(map( x->x.isvalid, align.value))
-         scores = map( x->identity(x, length(r.seq)), align.value )
+         scores = map( x->identity(x, length(r.sequence)), align.value )
          @test maximum(scores) - minimum(scores) <= score_range
 
-         if length(search(r.name, ":rc")) > 0
+         if length(search(readname, ":rc")) > 0
             @test align.value[1].strand == false
          else
             @test align.value[1].strand == true
@@ -291,7 +298,7 @@ IIIIIIIIIIII
 
          best_ind = indmax(scores)
 
-         ex_num = length(split(r.name, '-', keep=false))
+         ex_num = length(split(readname, '-', keep=false))
          @test length(align.value[best_ind].path) == ex_num
 
          count!( quant, align.value[best_ind] )
@@ -301,11 +308,11 @@ IIIIIIIIIIII
          const lastnode  = align.value[best_ind].path[end].node
          const curgraph  = lib.graphs[ curgene ]
 
-         cigar,positions = split(r.name, '%', keep=false)[1:2]
+         cigar,positions = split(readname, '%', keep=false)[1:2]
          first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
          # Test SAM Format
-         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )[1]
-         test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.seq) )
+         @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.sequence) )[1]
+         test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.sequence) )
          #println(STDERR, "cigar = $test_cigar")
          @test first == Int(curgraph.nodecoord[firstnode] + (align.value[best_ind].offset - curgraph.nodeoffset[firstnode]))
          #@test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]))
@@ -391,21 +398,24 @@ IIIIIIIIIIII
          end
       end
 
-      @testset "EBI Accessions & HTTP Streaming" begin
+#=      @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
 
          println(STDERR, "Streaming fastq file from $(ebi_res.fastq_1_url)")
          parser, response = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
-         reads  = allocate_chunk( parser, size=50 )
+         reads  = allocate_fastq_records( 50 )
          cnt    = 0
          while length(reads) > 0
             read_http_chunk!( reads, parser, response )
+            for r in reads
+               fill!( r, 33 )
+            end
             cnt += length(reads)
          end
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
-      end
+      end =#
    end
 end

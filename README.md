@@ -7,7 +7,7 @@
 ## Features
 - Splice graph representations of transcriptome structure
   - Build an index for any species with a genome and annotation file
-  - Pseudo _de novo_ event discovery (splicing from/to any combination of annotated donor/acceptor splice sites)
+  - Quasi- _de novo_ event discovery (splicing from/to any combination of annotated donor/acceptor splice sites)
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
   - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk

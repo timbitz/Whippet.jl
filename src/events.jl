@@ -182,7 +182,7 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    while !done( iset, s )
       v1,s = next( iset, s )
       if v1 == edge.first
-         v2,s = next( iset, s )
+         v2,_ = next( iset, s )
          if v2 == edge.last
             return true
          end
@@ -843,7 +843,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )
             total_cnt = sum(utr) + sum(ambig)
-            i = output_utr( io, round(get(psi),4), utr, total_cnt, motif, sg, i , info )   
+            i = output_utr( io, round.(get(psi),4), utr, total_cnt, motif, sg, i , info )   
          else
             # psi/utr/total_cnt ignored here.
             i = output_utr( io, zeros(len), utr, 0.0, motif, sg, i, info, empty=true )

@@ -69,15 +69,15 @@ end
 #
 =#
 
-function seq_write( io::BufOut, read::SeqRecord; tab=false )
+function seq_write( io::BufOut, read::FASTQRecord; tab=false )
    for c in read.seq
       write( io, convert(Char, c) )
    end
    tab && write( io, '\t' )
 end
 
-function qual_write( io::BufOut, read::SeqRecord; qualoffset=33, tab=false )
-   for i in read.metadata.quality
+function qual_write( io::BufOut, read::FASTQRecord; qualoffset=33, tab=false )
+   for i in read.quality
       write( io, convert(Char, i+qualoffset) )
    end
    tab && write( io, '\t' )
@@ -151,7 +151,7 @@ end
 
 
 # Write single SAM entry for one SGAlignment
-function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphLib; 
+function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::GraphLib; 
                     mapq::Int=0, paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33,
                     supplemental::Bool=false, tagstr::String="" )
    (align.isvalid && length(align.path) >= 1) || return
@@ -163,10 +163,9 @@ function write_sam( io::BufOut, read::SeqRecord, align::SGAlignment, lib::GraphL
    const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
    const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
    if !strand && !supplemental
-      BioSequences.reverse_complement!(read.seq)
-      BioSequences.reverse!(read.metadata.quality)
+      reverse_complement!(read)
    end
-   tab_write( io, read.name )
+   tab_write( io, string(read) )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
    tab_write( io, string( sg.nodecoord[nodeind] + offset ) ) 
@@ -218,7 +217,7 @@ end
 
 # Write multiple SAM entries for a Vector of SGAlignment, highest score gets regular entry
 # others get supplementary entries.
-function write_sam( io::BufOut, read::SeqRecord, alignvec::Vector{SGAlignment}, lib::GraphLib;
+function write_sam( io::BufOut, read::FASTQRecord, alignvec::Vector{SGAlignment}, lib::GraphLib;
                     paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33 )
 
    best = indmax_score( alignvec )
@@ -235,7 +234,7 @@ function write_sam( io::BufOut, read::SeqRecord, alignvec::Vector{SGAlignment}, 
 end
 
 # Write multiple SAM entries for two vectors of SGAlignments for paired-end reads
-function write_sam( io::BufOut, fwd::SeqRecord, rev::SeqRecord,
+function write_sam( io::BufOut, fwd::FASTQRecord, rev::FASTQRecord,
                     fwd_vec::Vector{SGAlignment}, rev_vec::Vector{SGAlignment}, lib::GraphLib;
                     paired::Bool=true, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33 )
 
