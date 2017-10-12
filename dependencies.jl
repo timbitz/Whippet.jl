@@ -25,20 +25,21 @@ end
 adds = [ "DataStructures",
          "ArgParse",
          "SuffixArrays",
-         "FMIndexes", 
          "IntArrays",
-         "IntervalTrees",
          "Libz",
          "StatsBase",
          "Distributions",
          "Glob",
          "BioSymbols",
-         "BioSequences",
-         "Requests"]
+         "BioSequences" ]
+
+checkouts = [ "FMIndexes",
+              "IndexableBitVectors",
+              "IntervalTrees" ]
 
 tic()
 Pkg.update()
-check_and_install("IndexableBitVectors", checkout=true)
+map( x->check_and_install(x, checkout=true), checkouts )
 map( check_and_install, adds )
 
 println( STDERR, "INFO: Loading and precompiling dependencies... " )

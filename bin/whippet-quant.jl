@@ -23,7 +23,7 @@ function parse_cmd()
       arg_type = String
       required = false
     "--index", "-x"
-      help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
+      help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph[.jls])"
       arg_type = String
       default  = fixpath( "$dir/../index/graph" )
     "--out", "-o"

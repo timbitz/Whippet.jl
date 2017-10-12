@@ -57,8 +57,10 @@ Basic IO Functions
 
 fixpath( str::String ) = abspath( expanduser( str ) )
 
-function isgzipped( filename::String )
-   restr = "\.gz\$"
+isgzipped( filename::String ) = hasextension( filename, "gz" )
+
+function hasextension( filename::String, ext::String )
+   restr = "\.$ext\$"
    re = Base.match(Regex(restr), filename)
    return re == nothing ? false : true
 end

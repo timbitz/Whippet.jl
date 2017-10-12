@@ -10,7 +10,6 @@
   - Quasi- _de novo_ event discovery (splicing from/to any combination of annotated donor/acceptor splice sites)
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
-  - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
   - Event-specific Percent-spliced-in (PSI)
@@ -23,7 +22,7 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Install [Julia v0.5.2](https://julialang.org/downloads/oldreleases.html) (NOTE: julia v0.6 is just now released and will be supported soon).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
