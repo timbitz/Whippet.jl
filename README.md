@@ -44,7 +44,7 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1
 ```
 
 Notes: 
-* Whippet only uses GTF `exon` lines, which must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
+* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
 * You can specify the output name and location of the index to build using the `--index` parameter, the default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `Whippet.jl/index/graph`.
 
 
