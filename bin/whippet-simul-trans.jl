@@ -28,13 +28,13 @@ function parse_cmd()
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
       default  = fixpath( "$(dir)/../simul" )
-    "--gtf"
-      help = "Gene anotation file in GTF format"
-      arg_type = String 
     "--num-genes", "-n"
       help = "Randomly sample at most -n number of genes from the index to simulate."
       arg_type = Int64
       default  = 5000
+    "--verbose"
+      help = "Print progress messages.."
+      action = :store_true
   end
   return parse_args(s)
 end
@@ -86,11 +86,11 @@ function collect_txstops( sg::SpliceGraph )
    stops
 end
 
-function combinatorial_paths( sg::SpliceGraph, max_nodes=20 )
+function combinatorial_paths( sg::SpliceGraph, max_nodes=15 )
    println("collecting starts & stops")
    starts = collect_txstarts( sg )
    stops  = collect_txstops( sg )
-   paths  = Vector{IntSet}()
+   paths  = Vector{Vector{Int8}}()
    println("going through $(length(starts)) starts and $(length(stops)) stops")
 
    function add_combinations!( paths, i, j, sub_range, val )
@@ -102,19 +102,19 @@ function combinatorial_paths( sg::SpliceGraph, max_nodes=20 )
              push!( m, jv )
           end
           if isvalid_path( m, sg )
-             push!( paths, IntSet(m) )
+             push!( paths, map(x->convert(Int8,x), m) )
           end
        end
    end
 
    for i in starts, j in stops
       if i == j
-         push!( paths, IntSet([i]) )
+         push!( paths, Int8[i] )
       elseif i == j - 1
-         push!( paths, IntSet([i, j]))
+         push!( paths, Int8[i,j] )
       elseif i < j
          range = i+1:j-1
-         for k in 1:length(range)
+         for k in 0:length(range)
             println(" going through combinations of $range, $k")
             if length(range) >= max_nodes
                sub_range = first(range):(first(range)+(length(range)-max_nodes))
@@ -148,56 +148,74 @@ function isvalid_path( path::Vector{Int}, sg::SpliceGraph )
 end
 
 
-function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, path )
-   for n in path
-      noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
-      st.seq *= sg.seq[ noderange ]
-      push!( st.nodes, n )
-   end
-   st
-end
-
 function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs) )
    fastaout = open( output * ".fa.gz", "w" ) 
-   nodesout = open( output * ".node.gz", "w" )
+   gtfout   = open( output * ".gtf.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
-   nodesstr = ZlibDeflateOutputStream( nodesout )
+   gtfstr = ZlibDeflateOutputStream( gtfout )
    
-   for g in sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
+   for g in 1:gene_num #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g] )
-      simulate_transcripts!( sgene, lib.graphs[g] )
-      output_transcripts( fastastr, sgene, lib.graphs[g] )
-      output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
+      simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g] )
+      #output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
    end
    close( fastastr )
    close( fastaout )
-   close( nodesstr )
-   close( nodesout )
+   close( gtfstr )
+   close( gtfout )
 end
 
-function simulate_transcripts!( simul::SimulGene, sg::SpliceGraph )
+function simulate_transcripts( fastream, gtfstream, simul::SimulGene, sg::SpliceGraph, info::GeneInfo )
    println("simulating paths for length $(length(sg.nodelen))")
    paths = combinatorial_paths( sg )
    println("length $(length(paths))")
    for s in paths
-      trans = SimulTranscript( dna"", Vector{UInt}() )
-      collect_nodes!( trans, sg, s )
-      push!( simul.trans, trans )
+      txid = simul.gene * "_" * join( s, "-" )
+      output_transcript( fastream, s, sg, header=txid )
+      output_gtf( gtfstream, s, sg, info, gene_id=simul.gene, transcript_id=txid )
    end
 end
 
-function output_transcripts( stream, simul::SimulGene, sg::SpliceGraph )
-   prefix = simul.gene * "_"
-   used = Set()
-   for t in simul.trans
-      name = prefix * join( t.nodes, "-" )
-      (name in used) && continue
-      write( stream, ">$name\n" )
-      for i in t.seq
-         write( stream, Char(i) )
+function output_transcript( stream, path, sg::SpliceGraph; header::String="PREFIX" )
+   write( stream, '>' )
+   write( stream, header )
+   write( stream, "\n" )
+   for n in path
+      noderange = sg.nodeoffset[n]:(sg.nodeoffset[n]+sg.nodelen[n]-1)
+      for i in sg.seq[ noderange ]
+         write( stream, convert(Char, i) )
       end
-      write( stream, "\n" )
-      push!( used, name )
+   end
+   write( stream, "\n" )
+end
+
+function output_gtf( stream, path, sg::SpliceGraph, info::GeneInfo; gene_id::String="GENE", transcript_id::String="TXID" )
+   start,stop = 0,0
+   i = 1
+   while i <= length(path)
+      if i < length(path) && (sg.nodecoord[path[i+1]] == sg.nodecoord[path[i]]+sg.nodelen[path[i]] ||
+                              sg.nodecoord[path[i+1]]+sg.nodelen[path[i+1]] == sg.nodecoord[path[i]])
+         if info.strand
+            start = start > 0 ? start : sg.nodecoord[path[i]]
+            stop  = sg.nodecoord[path[i+1]]+sg.nodelen[path[i+1]]-1
+         else
+            start = sg.nodecoord[path[i+1]]
+            stop  = stop > 0 ? stop : sg.nodecoord[path[i]]+sg.nodelen[path[i]]-1
+         end
+      else
+         start = start > 0 ? start : Int(sg.nodecoord[path[i]])
+         stop  = stop  > 0 ? stop  : Int(sg.nodecoord[path[i]]+sg.nodelen[path[i]]-1)
+
+         write( stream, info.name * "\tWHIPPET_COMBINATORIAL\texon\t" )
+         write( stream, string(start) * "\t" )
+         write( stream, string(stop) * "\t\.\t" )
+         write( stream, info.strand ? '+' : '-' )
+         write( stream, "\t\.\tgene_id \"" * gene_id * "\"\; " )
+         write( stream, "transcript_id \"" * transcript_id * "\"\;\n" )
+
+         start,stop = 0,0
+      end
+      i += 1
    end
 end
 
