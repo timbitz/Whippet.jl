@@ -69,8 +69,8 @@ println( STDERR, "INFO: using Glob" )
 using Glob
 println( STDERR, "INFO: using SuffixArrays" )
 using SuffixArrays
-println( STDERR, "INFO: using Requests" )
-using Requests
+#println( STDERR, "INFO: using Requests" )
+#using Requests
 
 println( STDERR, "INFO: Loading and precompiling whippet... " )
 
