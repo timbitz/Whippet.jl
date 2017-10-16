@@ -29,9 +29,13 @@ function parse_cmd()
       arg_type = String
       default  = fixpath( "$(dir)/../simul" )
     "--num-genes", "-n"
-      help = "Randomly sample at most -n number of genes from the index to simulate."
+      help = "Choose the first -n genes from the index to simulate (starting at offset -i)."
       arg_type = Int64
       default  = 5000
+    "--offset", "-i"
+      help = "Offset of gene number to start simulating from"
+      arg_type = Int64
+      default  = 1
     "--verbose"
       help = "Print progress messages.."
       action = :store_true
@@ -49,7 +53,7 @@ function main()
    @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
    println(STDERR, "Simulating combinatorial transcripts..")
-   @timer simulate_genes( lib, output=args["out"], gene_num=args["num-genes"] )
+   @timer simulate_genes( lib, output=args["out"], gene_num=args["num-genes"], offset=args["offset"] )
 
 end
 
@@ -148,13 +152,13 @@ function isvalid_path( path::Vector{Int}, sg::SpliceGraph )
 end
 
 
-function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs) )
+function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs), offset=1 )
    fastaout = open( output * ".fa.gz", "w" ) 
    gtfout   = open( output * ".gtf.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
    gtfstr = ZlibDeflateOutputStream( gtfout )
    
-   for g in 1:gene_num #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
+   for g in offset:offset+gene_num-1 #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g] )
       simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g] )
       #output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
