@@ -26,6 +26,7 @@ adds = [ "DataStructures",
          "ArgParse",
          "SuffixArrays",
          "IntArrays",
+         "FMIndexes",
          "Libz",
          "StatsBase",
          "Distributions",
@@ -33,8 +34,7 @@ adds = [ "DataStructures",
          "BioSymbols",
          "BioSequences" ]
 
-checkouts = [ "FMIndexes",
-              "IndexableBitVectors",
+checkouts = [ "IndexableBitVectors",
               "IntervalTrees" ]
 
 tic()
