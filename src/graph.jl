@@ -81,6 +81,7 @@ struct SpliceGraph{K}
    edgeleft::Vector{SGKmer{K}}
    edgeright::Vector{SGKmer{K}}
    annopath::Vector{IntSet}
+   annoname::Vector{String}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -180,8 +181,9 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    eright = Vector{SGKmer{k}}(length(edgetype))
 
    paths = build_paths_edges( nodecoord, nodelen, gene )
+   names = map( x->x.info.name, gene.reftx )
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, seq )
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, names, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!
