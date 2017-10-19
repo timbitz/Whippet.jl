@@ -559,10 +559,16 @@ end
 function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
    function write_junctions( sg::SpliceGraph, sgquant::SpliceGraphQuant, i::Int )
       for edg in sgquant.edge
-         if edg in sg.annopath
-            write_junction( sg, edg, i, "ANNO" )
-         else # unique edge
-            write_junction( sg, edg, i, "UNIQ" )
+         if sg.edgetype[edg.first+1] in (EDGETYPE_LS, EDGETYPE_LL, EDGETYPE_LR) &&
+            sg.edgetype[edg.last]    in (EDGETYPE_SR, EDGETYPE_RR, EDGETYPE_LR)
+
+            if inall( edg, sg.annopath )
+               write_junction( sg, edg, i, "CON_ANNO" )
+            elseif edg in sg.annopath
+               write_junction( sg, edg, i, "ALT_ANNO" )
+            else # unique edge
+               write_junction( sg, edg, i, "ALT_UNIQ" )
+            end
          end
       end
    end

@@ -201,6 +201,19 @@ function Base.in{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
    false
 end
 
+function inall{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+   inone = false
+   for iset in viset
+      if edge.first >= first(iset) && edge.last <= last(iset)
+         if !(edge in iset)
+            return false
+         end
+         inone = true
+      end
+   end
+   inone ? true : false
+end
+
 complexity( one::PsiGraph, two::PsiGraph ) = complexity(length(one.nodes) + length(two.nodes))
 complexity( one::PsiGraph ) = complexity(length(one.nodes))
 # This function calculates complexity of a splicing event
