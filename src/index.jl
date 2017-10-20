@@ -4,7 +4,7 @@
 
 abstract type SeqLibrary end
 
-immutable GraphLib <: SeqLibrary
+struct GraphLib <: SeqLibrary
    offset::Vector{CoordInt}
    names::Vector{GeneName}
    info::Vector{GeneInfo}

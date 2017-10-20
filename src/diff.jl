@@ -1,5 +1,5 @@
 
-immutable PosteriorPsi
+struct PosteriorPsi
    beta::Distributions.Beta
    emperical::Vector{Float64}
    psi::Float64

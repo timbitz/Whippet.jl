@@ -1,5 +1,5 @@
 
-immutable AlignParam
+struct AlignParam
    mismatches::Int      # Allowable mismatches
    kmer_size::Int       # Minimum number of matches to extend past an edge
    seed_try::Int        # Starting number of seeds
@@ -55,7 +55,7 @@ end
 @inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
 @inline match{I <: Integer}(t::Type{SGAlignScore}, val::I) = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
 
-immutable SGAlignNode
+struct SGAlignNode
    gene::NodeInt
    node::NodeInt
    score::SGAlignScore
