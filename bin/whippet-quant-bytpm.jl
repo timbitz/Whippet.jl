@@ -40,14 +40,79 @@ function main()
    println(STDERR, "Loading splice graph index... $( indexpath ).jls")
    @timer const lib = open(deserialize, "$( indexpath ).jls")
 
+   data = load_tpm_file( fixpath(args["tpm"]) )
+
    tpms = Vector{Vector{Float64}}(length(lib.graphs))
-   fill_tpms!( tpms )
+   allocate_tpms!( tpms, lib )
+   fill_tpms!( tpms, lib, data )
+
+   io = open( args["out"], "w" )
+   stream = ZlibDeflateOutputStream( io )
+
+   output_tpms( stream, tpms, lib )
+
+   close(stream)
+   close(io)
 
    println(STDERR, "Whippet $ver done." )
 end
 
-function fill_tpms!( , )
-   
+function load_tpm_file( filename::String )
+   tpmfile = Dict{String,Float64}()
+   fh = open( filename )
+   for l in eachline(fh)
+      s = split(l)
+      tpmfile[String(s[1])] = parse(Float64, s[2])
+   end
+   tpmfile
+end
+
+function allocate_tpms!( tpms, lib )
+   for i in 1:length(lib.graphs)
+      tpms[i] = zeros(length(lib.graphs[i].annonames))
+   end
+   tpms
+end
+
+function fill_tpms!( tpms, lib, data )
+   for i in 1:length(lib.graphs)
+      for j in 1:length(lib.graphs[i].annoname)
+         if haskey( data, lib.graphs[i].annoname[j] )
+            tpms[i][j] = data[ lib.graphs[i].annoname[j] ]
+         end
+      end
+   end
+   tpms
+end
+
+function output_tpms( stream, tpms, lib )
+   for i in 1:length(lib.graphs)
+      for n in 1:length(lib.graphs[i].nodelen)
+         if !(lib.graphs[i].edgetype[n]   in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_LL)) ||
+            !(lib.graphs[i].edgetype[n+1] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_RR))
+             continue
+         end
+         tpm_total = 0.0
+         tpm_node  = 0.0
+         for j in 1:length(lib.graphs[i].annopath)
+            curpath = lib.graphs[i].annopath[j]
+            if n in first(curpath):last(curpath) # is within bounds
+               tpm_total += tpms[i][j]
+               if n in curpath
+                  tpm_node += tpms[i][j]
+               end
+            end
+         end
+         if tpm_total > 0.0
+            psi = tpm_node / tpm_total
+            write( stream, lib.info[i].gene * "\t" )
+            write( stream, lib.info[i].name * ":" * string(lib.graphs[i].nodecoord[n]) * 
+                                              "-" * string(lib.graphs[i].nodecoord[n]+lib.graphs[i].nodelen[n]-1) * "\t" )
+            write( stream, string(n) * "\t" )
+            write( stream, string(psi) * "\n" )
+         end
+      end
+   end
 end
 
 @timer main()
