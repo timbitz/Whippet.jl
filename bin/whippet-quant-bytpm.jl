@@ -8,6 +8,7 @@ tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
 
 using ArgParse
+using Libz
 
 unshift!( LOAD_PATH, dir * "/../src" )
 using Whippet
@@ -57,10 +58,14 @@ function main()
    println(STDERR, "Whippet $ver done." )
 end
 
-function load_tpm_file( filename::String )
+function load_tpm_file( filename::String, header=true )
    tpmfile = Dict{String,Float64}()
    fh = open( filename )
    for l in eachline(fh)
+      if header
+         header = false
+         continue
+      end
       s = split(l)
       tpmfile[String(s[1])] = parse(Float64, s[2])
    end
@@ -69,7 +74,7 @@ end
 
 function allocate_tpms!( tpms, lib )
    for i in 1:length(lib.graphs)
-      tpms[i] = zeros(length(lib.graphs[i].annonames))
+      tpms[i] = zeros(length(lib.graphs[i].annoname))
    end
    tpms
 end
