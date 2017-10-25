@@ -90,11 +90,34 @@ function fill_tpms!( tpms, lib, data )
    tpms
 end
 
+function flanking_spliced( edges, node )
+   upstream   = false
+   downstream = false
+   for i in node:-1:1
+      if edges[i] in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_SR)
+         upstream = true
+         continue
+      elseif edges[i] in (EDGETYPE_LS, EDGETYPE_SL, EDGETYPE_RS)
+         return false
+      end
+   end
+   for i in node+1:length(edges)
+      if edges[i] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_LS)
+         downstream = true
+         continue
+      elseif edges[i] in (EDGETYPE_SR, EDGETYPE_RS, EDGETYPE_SL)
+         return false
+      end
+   end
+   upstream && downstream
+end
+
 function output_tpms( stream, tpms, lib )
    for i in 1:length(lib.graphs)
       for n in 1:length(lib.graphs[i].nodelen)
          if !(lib.graphs[i].edgetype[n]   in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_LL)) ||
-            !(lib.graphs[i].edgetype[n+1] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_RR))
+            !(lib.graphs[i].edgetype[n+1] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_RR))# ||
+      #      !(flanking_spliced(lib.graphs[i].edgetype, n))
              continue
          end
          tpm_total = 0.0

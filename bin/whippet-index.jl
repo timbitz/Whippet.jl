@@ -31,7 +31,7 @@ function parse_cmd()
     "--gtf"
       help = "Gene anotation file in GTF format"
       arg_type = String
-    "--index"
+    "--index", "-x"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
       default = "$dir/../index/graph"

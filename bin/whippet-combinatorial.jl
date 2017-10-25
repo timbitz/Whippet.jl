@@ -28,14 +28,20 @@ function parse_cmd()
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
       default  = fixpath( "$(dir)/../simul" )
-    "--num-genes", "-n"
+    "--num-nodes", "-n"
+      help = "Maximum number of consecutive nodes to output sliding combinatorial paths through"
+      arg_type = Int64
+      default  = 8 
+    "--num-genes", "-g"
       help = "Choose the first -n genes from the index to simulate (starting at offset -i)."
       arg_type = Int64
-      default  = 5000
+      default  = 100000
     "--offset", "-i"
       help = "Offset of gene number to start simulating from"
       arg_type = Int64
       default  = 1
+    "--theoretical_only"
+      action = :store_true
     "--verbose"
       help = "Print progress messages.."
       action = :store_true
@@ -53,16 +59,16 @@ function main()
    @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
    println(STDERR, "Simulating combinatorial transcripts..")
-   @timer simulate_genes( lib, output=args["out"], gene_num=args["num-genes"], offset=args["offset"] )
+   @timer simulate_genes( lib, output=args["out"], gene_num=args["num-genes"], offset=args["offset"], node_num=args["num-nodes"], verbose=args["verbose"] )
 
 end
 
-type SimulTranscript
+mutable struct SimulTranscript
    seq::Whippet.SGSequence
    nodes::Vector{UInt}
 end
 
-immutable SimulGene
+struct SimulGene
    trans::Vector{SimulTranscript}
    gene::String
 end
@@ -90,12 +96,12 @@ function collect_txstops( sg::SpliceGraph )
    stops
 end
 
-function combinatorial_paths( sg::SpliceGraph, max_nodes=15 )
-   println("collecting starts & stops")
+function combinatorial_paths( sg::SpliceGraph; max_nodes=10, verbose=false )
+   verbose && println("collecting starts & stops")
    starts = collect_txstarts( sg )
    stops  = collect_txstops( sg )
-   paths  = Vector{Vector{Int8}}()
-   println("going through $(length(starts)) starts and $(length(stops)) stops")
+   paths  = Vector{Vector{Int16}}()
+   verbose && println("going through $(length(starts)) starts and $(length(stops)) stops")
 
    function add_combinations!( paths, i, j, sub_range, val )
        for m in combinations( sub_range, val )
@@ -106,24 +112,24 @@ function combinatorial_paths( sg::SpliceGraph, max_nodes=15 )
              push!( m, jv )
           end
           if isvalid_path( m, sg )
-             push!( paths, map(x->convert(Int8,x), m) )
+             push!( paths, map(x->convert(Int16,x), m) )
           end
        end
    end
 
    for i in starts, j in stops
       if i == j
-         push!( paths, Int8[i] )
+         push!( paths, Int16[i] )
       elseif i == j - 1
-         push!( paths, Int8[i,j] )
+         push!( paths, Int16[i,j] )
       elseif i < j
          range = i+1:j-1
          for k in 0:length(range)
-            println(" going through combinations of $range, $k")
+            verbose && println(" going through combinations of $range, $k")
             if length(range) >= max_nodes
                sub_range = first(range):(first(range)+(length(range)-max_nodes))
                for r in sub_range
-                  println(" adding sub_combinations of $(r:r+max_nodes-1) with $(i:r-1) and $(r+max_nodes:j) flanking")
+                  verbose && println(" adding sub_combinations of $(r:r+max_nodes-1) with $(i:r-1) and $(r+max_nodes:j) flanking")
                   add_combinations!( paths, i:r-1, r+max_nodes:j, r:r+max_nodes-1, k )
                end
             else
@@ -152,15 +158,15 @@ function isvalid_path( path::Vector{Int}, sg::SpliceGraph )
 end
 
 
-function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs), offset=1 )
+function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs), offset=1, node_num=10, verbose=false )
    fastaout = open( output * ".fa.gz", "w" ) 
    gtfout   = open( output * ".gtf.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
    gtfstr = ZlibDeflateOutputStream( gtfout )
    
-   for g in offset:offset+gene_num-1 #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
+   for g in offset:min(offset+gene_num-1, length(lib.graphs)) #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g] )
-      simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g] )
+      simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g], node_num=node_num, verbose=verbose )
       #output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
    end
    close( fastastr )
@@ -169,10 +175,11 @@ function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs),
    close( gtfout )
 end
 
-function simulate_transcripts( fastream, gtfstream, simul::SimulGene, sg::SpliceGraph, info::GeneInfo )
-   println("simulating paths for length $(length(sg.nodelen))")
-   paths = combinatorial_paths( sg )
-   println("length $(length(paths))")
+function simulate_transcripts( fastream, gtfstream, simul::SimulGene, sg::SpliceGraph, info::GeneInfo;
+                               node_num=10, verbose=false )
+   verbose && println("simulating paths for length $(length(sg.nodelen))")
+   paths = combinatorial_paths( sg, max_nodes=node_num, verbose=verbose )
+   verbose && println("length $(length(paths))")
    for s in paths
       txid = simul.gene * "_" * join( s, "-" )
       output_transcript( fastream, s, sg, header=txid )
@@ -230,4 +237,4 @@ function output_nodes( stream, gname::String, info, sg::SpliceGraph)
    end
 end
 
-main()
+@timer main()
