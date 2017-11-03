@@ -90,13 +90,14 @@ function fill_tpms!( tpms, lib, data )
    tpms
 end
 
-function flanking_spliced( edges, node )
+function flanking_spliced( edges, node, name )
    upstream   = false
    downstream = false
    for i in node:-1:1
       if edges[i] in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_SR)
          upstream = true
-         continue
+         #print("$name $(edges[i]):$i for n:$node")
+         break
       elseif edges[i] in (EDGETYPE_LS, EDGETYPE_SL, EDGETYPE_RS)
          return false
       end
@@ -104,40 +105,41 @@ function flanking_spliced( edges, node )
    for i in node+1:length(edges)
       if edges[i] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_LS)
          downstream = true
-         continue
+         #println(" to $(edges[i]):$i")
+         break
       elseif edges[i] in (EDGETYPE_SR, EDGETYPE_RS, EDGETYPE_SL)
          return false
       end
    end
-   upstream && downstream
+   return (upstream && downstream)
 end
 
 function output_tpms( stream, tpms, lib )
    for i in 1:length(lib.graphs)
       for n in 1:length(lib.graphs[i].nodelen)
-         if !(lib.graphs[i].edgetype[n]   in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_LL)) ||
-            !(lib.graphs[i].edgetype[n+1] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_RR))# ||
-      #      !(flanking_spliced(lib.graphs[i].edgetype, n))
-             continue
-         end
-         tpm_total = 0.0
-         tpm_node  = 0.0
-         for j in 1:length(lib.graphs[i].annopath)
-            curpath = lib.graphs[i].annopath[j]
-            if n in first(curpath):last(curpath) # is within bounds
-               tpm_total += tpms[i][j]
-               if n in curpath
-                  tpm_node += tpms[i][j]
-               end
-            end
-         end
-         if tpm_total > 0.0
-            psi = tpm_node / tpm_total
-            write( stream, lib.info[i].gene * "\t" )
-            write( stream, lib.info[i].name * ":" * string(lib.graphs[i].nodecoord[n]) * 
-                                              "-" * string(lib.graphs[i].nodecoord[n]+lib.graphs[i].nodelen[n]-1) * "\t" )
-            write( stream, string(n) * "\t" )
-            write( stream, string(psi) * "\n" )
+         if lib.graphs[i].edgetype[n]   in (EDGETYPE_RR, EDGETYPE_LR, EDGETYPE_LL) &&
+            lib.graphs[i].edgetype[n+1] in (EDGETYPE_LL, EDGETYPE_LR, EDGETYPE_RR) &&
+            flanking_spliced(lib.graphs[i].edgetype, n, lib.info[i].gene)
+
+             tpm_total = 0.0
+             tpm_node  = 0.0
+             for j in 1:length(lib.graphs[i].annopath)
+                curpath = lib.graphs[i].annopath[j]
+                if n in first(curpath):last(curpath) # is within bounds
+                   tpm_total += tpms[i][j]
+                   if n in curpath
+                      tpm_node += tpms[i][j]
+                   end
+                end
+             end
+             if tpm_total > 0.0
+                psi = tpm_node / tpm_total
+                write( stream, lib.info[i].gene * "\t" )
+                write( stream, lib.info[i].name * ":" * string(lib.graphs[i].nodecoord[n]) * 
+                                                  "-" * string(lib.graphs[i].nodecoord[n]+lib.graphs[i].nodelen[n]-1) * "\t" )
+                write( stream, string(n) * "\t" )
+                write( stream, string(psi) * "\n" )
+             end
          end
       end
    end

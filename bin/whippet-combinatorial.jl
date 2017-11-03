@@ -40,7 +40,7 @@ function parse_cmd()
       help = "Offset of gene number to start simulating from"
       arg_type = Int64
       default  = 1
-    "--theoretical_only"
+    "--theoretical"
       action = :store_true
     "--verbose"
       help = "Print progress messages.."
@@ -59,8 +59,12 @@ function main()
    @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
    println(STDERR, "Simulating combinatorial transcripts..")
-   @timer simulate_genes( lib, output=args["out"], gene_num=args["num-genes"], offset=args["offset"], node_num=args["num-nodes"], verbose=args["verbose"] )
-
+   @timer simulate_genes( lib, output=args["out"], 
+                               gene_num=args["num-genes"], 
+                               offset=args["offset"], 
+                               node_num=args["num-nodes"], 
+                               verbose=args["verbose"],
+                               theoretical=args["theoretical"] )
 end
 
 mutable struct SimulTranscript
@@ -158,7 +162,8 @@ function isvalid_path( path::Vector{Int}, sg::SpliceGraph )
 end
 
 
-function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs), offset=1, node_num=10, verbose=false )
+function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs), 
+                              offset=1, node_num=10, verbose=false, theoretical=false )
    fastaout = open( output * ".fa.gz", "w" ) 
    gtfout   = open( output * ".gtf.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
@@ -166,7 +171,8 @@ function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs),
    
    for g in offset:min(offset+gene_num-1, length(lib.graphs)) #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g] )
-      simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g], node_num=node_num, verbose=verbose )
+      simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g], 
+                            node_num=node_num, verbose=verbose, theoretical=theoretical )
       #output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
    end
    close( fastastr )
@@ -176,7 +182,7 @@ function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs),
 end
 
 function simulate_transcripts( fastream, gtfstream, simul::SimulGene, sg::SpliceGraph, info::GeneInfo;
-                               node_num=10, verbose=false )
+                               node_num=10, verbose=false, theoretical=false )
    verbose && println("simulating paths for length $(length(sg.nodelen))")
    paths = combinatorial_paths( sg, max_nodes=node_num, verbose=verbose )
    verbose && println("length $(length(paths))")

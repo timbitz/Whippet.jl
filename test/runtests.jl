@@ -12,7 +12,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-using Requests
+#using Requests
 #using HTTP
 
 include("../src/types.jl")
