@@ -10,7 +10,7 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using Libz
 using ArgParse
 using StatsBase
-using Bio.Seq
+using BioSequences
 
 push!( LOAD_PATH, dir * "/../src" )
 using Whippet
@@ -27,6 +27,9 @@ function parse_cmd()
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
       default  = fixpath( "$(dir)/../simul" )
+    "--gtf"
+      help = "Gene anotation file in GTF format"
+      arg_type = String 
     "--max-complexity", "-k"
       help = "Max complexity KMax allowed per gene (random K for each gene between K1:KMax)?"
       arg_type = Int64
@@ -47,9 +50,6 @@ function main()
 
    println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
    @timer const lib = open(deserialize, "$( args["index"] ).jls")
-
-   println(STDERR, "Loading annotation index... $( args["index"] )_anno.jls")
-   @timer const anno = open(deserialize, "$( args["index"] )_anno.jls")
 
    println(STDERR, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
    @timer simulate_genes( lib, anno, args["max-complexity"], output=args["out"], gene_num=args["num-genes"] )

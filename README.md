@@ -10,7 +10,6 @@
   - _de novo_ event discovery (splicing from/to any combination of annotated donor/acceptor splice sites)
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
-  - On-the-fly alignment/analysis of SRR accession ids using ebi.ac.uk
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
   - Event-specific Percent-spliced-in (PSI)
@@ -23,7 +22,7 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Install [Julia v0.5.2](https://julialang.org/downloads/oldreleases.html) (NOTE: julia v0.6 is released and will be supported very soon).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install latest version of [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
@@ -56,15 +55,6 @@ $ julia bin/whippet-quant.jl file.fastq.gz
 Or if you have paired-end RNA-seq data...
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
-```
-
-Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
-```
-$ julia bin/whippet-quant.jl --ebi SRR1199010
-```
-is equivalent to
-```bash
-$ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:

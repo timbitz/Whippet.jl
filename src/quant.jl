@@ -6,7 +6,7 @@ const SCALING_FACTOR = 1_000_000
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
 # as junction counts, which should always be at a lower level, e.g. bias < 1
-type SpliceGraphQuant
+mutable struct SpliceGraphQuant
    node::Vector{Float64}
    edge::IntervalMap{ExonInt,Float64}
    circ::Dict{Tuple{ExonInt,ExonInt},Float64}
@@ -27,7 +27,7 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen
 
 
 # Here we store whole graphome quantification
-immutable GraphLibQuant
+struct GraphLibQuant
    tpm::Vector{Float64}
    count::Vector{Float64}
    length::Vector{Float64}
@@ -60,7 +60,7 @@ end
    end
 end
 
-type Multimap
+mutable struct Multimap
    align::Vector{SGAlignment}
    prop::Vector{Float64}
    prop_sum::Float64

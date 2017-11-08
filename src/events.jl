@@ -1,7 +1,7 @@
 
 const COMPLEX_CHAR = 'K'
 
-bitstype 8 EdgeMotif
+primitive type EdgeMotif 8 end
 
 Base.convert( ::Type{EdgeMotif}, motif::UInt8 ) = reinterpret(EdgeMotif, motif )
 Base.convert( ::Type{UInt8}, motif::EdgeMotif ) = reinterpret(UInt8, motif )
@@ -182,7 +182,7 @@ function Base.in{I <: IntervalValue}( edge::I, iset::IntSet )
    while !done( iset, s )
       v1,s = next( iset, s )
       if v1 == edge.first
-         v2,s = next( iset, s )
+         v2,_ = next( iset, s )
          if v2 == edge.last
             return true
          end
@@ -199,6 +199,19 @@ function Base.in{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
       end
    end
    false
+end
+
+function inall{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+   inone = false
+   for iset in viset
+      if edge.first >= first(iset) && edge.last <= last(iset)
+         if !(edge in iset)
+            return false
+         end
+         inone = true
+      end
+   end
+   inone ? true : false
 end
 
 complexity( one::PsiGraph, two::PsiGraph ) = complexity(length(one.nodes) + length(two.nodes))
@@ -843,7 +856,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )
             total_cnt = sum(utr) + sum(ambig)
-            i = output_utr( io, round(get(psi),4), utr, total_cnt, motif, sg, i , info )   
+            i = output_utr( io, round.(get(psi),4), utr, total_cnt, motif, sg, i , info )   
          else
             # psi/utr/total_cnt ignored here.
             i = output_utr( io, zeros(len), utr, 0.0, motif, sg, i, info, empty=true )
@@ -980,8 +993,8 @@ function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCou
          if it > 1 # maximization
             ac.prop_sum = 0.0
             for p in ac.paths
-               prev_psi = p <= length(igraph.psi) ? igraph.psi[p] :
-                                                    egraph.psi[p-length(igraph.psi)]
+               prev_psi = p <= length(igraph.psi) ? igraph.psi[p] * igraph.length[p] :
+                                                    egraph.psi[p-length(igraph.psi)] * egraph.length[p-length(igraph.psi)]
                ac.prop[idx] = prev_psi
                ac.prop_sum += prev_psi
                idx += 1
@@ -1017,7 +1030,7 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
       if it > 1 # maximization
          ac.prop_sum = 0.0
          for p in ac.paths
-            prev_psi = pgraph.psi[p]
+            prev_psi = pgraph.psi[p] * pgraph.length[p]
             ac.prop[idx] = prev_psi
             ac.prop_sum += prev_psi
             idx += 1

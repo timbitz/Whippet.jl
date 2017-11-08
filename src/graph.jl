@@ -1,6 +1,6 @@
 # requires:
 
-bitstype 8 EdgeType
+primitive type EdgeType 8 end
 
 const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
       EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start 
@@ -27,7 +27,7 @@ function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
    EDGETYPE_TO_UINT8[one-3,two-3]
 end
 
-Base.convert( ::Type{EdgeType}, one::DNANucleotide, two::DNANucleotide ) = 
+Base.convert( ::Type{EdgeType}, one::DNA, two::DNA ) = 
               Base.convert( EdgeType, convert(UInt8, trailing_zeros(one)), convert(UInt8, trailing_zeros(two)) )
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)
@@ -66,14 +66,14 @@ function invert_edgetype( edge::EdgeType )
    if edge == EdgeType(0x04) # 'LR'
       return edge
    else
-      return convert(EdgeType, convert(UInt8, edge) $ 0b011)
+      return convert(EdgeType, convert(UInt8, edge) ⊻ 0b011)
    end
 end
 
 
 # This holds a representation of the splice graph
 # which is a directed multigraph
-immutable SpliceGraph{K}
+struct SpliceGraph{K}
    nodeoffset::Vector{CoordInt} # SG offset
    nodecoord::Vector{CoordInt}  # Genome offset
    nodelen::Vector{CoordInt}
@@ -81,6 +81,7 @@ immutable SpliceGraph{K}
    edgeleft::Vector{SGKmer{K}}
    edgeright::Vector{SGKmer{K}}
    annopath::Vector{IntSet}
+   annoname::Vector{String}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -180,8 +181,9 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    eright = Vector{SGKmer{k}}(length(edgetype))
 
    paths = build_paths_edges( nodecoord, nodelen, gene )
+   names = map( x->x.info.name, gene.reftx )
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, seq )
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, names, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!
@@ -228,8 +230,7 @@ function build_annotated_path( nodecoord::Vector{CoordInt},
                                tx::RefTx, strand::Bool )
    const path = IntSet()
    # this may be `poor form`, but 256 is too big for default!
-   path.bits  = zeros(UInt32,64>>>5)
-   path.limit = 64
+   resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
    for i in 1:length(tx.acc)
       const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )

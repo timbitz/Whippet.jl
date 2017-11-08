@@ -2,17 +2,19 @@ __precompile__()
 
 module Whippet
 
-importall Bio
+importall BioSymbols
+importall BioSequences
 
-using Bio.Seq
-using DataStructures
+import DataStructures: SortedSet
+
+using BioSequences
 using BufferedStreams
 using FMIndexes
 using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-using Requests
+#using Requests
 
 include("types.jl")
 include("timer.jl")
@@ -22,10 +24,11 @@ include("refset.jl")
 include("graph.jl")
 include("edges.jl") 
 include("index.jl")
+include("record.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
-include("ebi.jl")
+#include("ebi.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
@@ -61,7 +64,8 @@ export SpliceGraph,
        AlignParam,
        ungapped_align,
        make_fqparser,
-       make_http_fqparser,
+#       make_http_fqparser,
+       hasextension,
        isgzipped,
        EBIResponse,
        ident_to_fastq_url,
