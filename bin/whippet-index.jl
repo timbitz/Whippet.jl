@@ -31,7 +31,7 @@ function parse_cmd()
     "--gtf"
       help = "Gene anotation file in GTF format"
       arg_type = String
-    "--index"
+    "--index", "-x"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
       default = "$dir/../index/graph"
@@ -75,7 +75,8 @@ function main()
    open("$(args["index"])_anno.jls", "w") do fh
       @timer serialize(fh, ref)
    end
-=#
+   =#
+
    println(STDERR, "Serializing splice graph index...")
    open("$(args["index"]).jls", "w") do io
       @timer serialize( io, graphome )
@@ -83,4 +84,4 @@ function main()
 
 end
 
-main()
+@timer main()

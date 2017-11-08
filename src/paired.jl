@@ -39,23 +39,21 @@ function splice_by_identity!{A <: UngappedAlignment}( one::Vector{A}, two::Vecto
 end
 
 # Paired ungapped_align
-function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqRecord; ispos=true, anchor_left=true )
+function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FASTQRecord; ispos=true, anchor_left=true )
 
    const fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
    
    if (p.is_pair_rc && strand) || (!p.is_pair_rc && !strand)
-      Bio.Seq.reverse_complement!(rev.seq)
-      reverse!(rev.metadata.quality)
+      reverse_complement!(rev)
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
    else
       const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left, both_strands=false)
    end
-   const fwd_len = length(fwd.seq)
-   const rev_len = length(rev.seq)
+   const fwd_len = length(fwd.sequence)
+   const rev_len = length(rev.sequence)
 
    if !strand
-      Bio.Seq.reverse_complement!(fwd.seq)
-      reverse!(fwd.metadata.quality)
+      reverse_complement!(fwd)
       ispos = false
    end
 
@@ -125,10 +123,10 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::SeqRecord, rev::SeqR
 
    # if !stranded and no valid alignments, run reverse complement
 #=   if ispos && !p.is_stranded && (isnull( fwd_res ) && isnull( rev_res ))
-      reverse_complement!( fwd.seq )
-      reverse_complement!( rev.seq )
-      reverse!( fwd.metadata.quality )
-      reverse!( rev.metadata.quality )
+      reverse_complement!( fwd.sequence )
+      reverse_complement!( rev.sequence )
+      reverse!( fwd.quality )
+      reverse!( rev.quality )
       fwd_res,rev_res = ungapped_align( p, lib, fwd, rev, ispos=false, anchor_left=!anchor_left )
    end=#
 

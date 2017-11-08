@@ -1,6 +1,6 @@
 
 # Single RefTx entry
-immutable RefTx
+struct RefTx
    info::TxInfo
    don::CoordTuple
    acc::CoordTuple
@@ -8,7 +8,7 @@ immutable RefTx
 end
 
 # Single RefGene entry
-immutable RefGene
+struct RefGene
    info::GeneInfo
    don::CoordTuple 
    acc::CoordTuple 

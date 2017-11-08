@@ -1,14 +1,13 @@
 
-function make_fqparser( filename; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
+
+function make_fqparser( filename; forcegzip=false )
    fopen = open( filename, "r" )
    if isgzipped( filename ) || forcegzip
       to_open = ZlibInflateInputStream( fopen, reset_on_end=true )
    else
       to_open = BufferedInputStream( fopen )
    end 
-   FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( to_open, 
-                                                             encoding,
-                                                             DNA_A ), Requests.ResponseStream{TCPSocket}()
+   FASTQ.Reader( to_open, fill_ambiguous=DNA_A ) #,Requests.ResponseStream{TCPSocket}()
 end
 
 # modified for Bio v0.2 with tryread_bool!
@@ -25,14 +24,15 @@ end
 end
 
 # This function specifically tries to download a fastq file from a url string and returns
-# the Bio.Seq parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
-function make_http_fqparser( url::String; encoding=Bio.Seq.ILLUMINA18_QUAL_ENCODING, forcegzip=false )
+# the BioSequences parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
+#=
+function make_http_fqparser( url::String; forcegzip=false )
    response = Requests.get_streaming(url)
    if isgzipped( url ) || forcegzip
       zlibstr  = ZlibInflateInputStream( response.buffer, reset_on_end=true )
-      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( zlibstr,         encoding, DNA_A )
+      fqparser = FASTQ.Reader( zlibstr, fill_ambiguous=DNA_A )
    else
-      fqparser = FASTQReader{Bio.Seq.BioSequence{Bio.Seq.DNAAlphabet{2}}}( response.buffer, encoding, DNA_A )
+      fqparser = FASTQ.Reader( response.buffer, fill_ambiguous=DNA_A )
    end
    fqparser, response
 end
@@ -64,8 +64,9 @@ function read_http_chunk!( chunk, parser, resp; maxtime=24 )
    end
    parser
 end
+=#
 
-function allocate_chunk( parser; size=100000 )
+function allocate_chunk( parser; size=10000 )
   chunk = Vector{eltype(parser)}( size )
   for i in 1:length(chunk)
      chunk[i] = eltype(parser)()
@@ -73,12 +74,20 @@ function allocate_chunk( parser; size=100000 )
   chunk
 end
 
+function allocate_fastq_records( size::Int=10000 )
+   chunk = Vector{FASTQRecord}( size )
+   for i in 1:length(chunk)
+      chunk[i] = FASTQRecord()
+   end
+   chunk
+end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                         response=Requests.ResponseStream{TCPSocket}(), http=false )
+                        multi::Vector{Multimap}; bufsize=150, sam=false, qualoffset=33 )
+#                         response=Requests.ResponseStream{TCPSocket}(), http=false )
   
-   const reads  = allocate_chunk( parser, size=bufsize )
+   #const reads  = allocate_chunk( parser, size=bufsize )
+   const reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
    total        = 0
    mapped       = 0
@@ -87,13 +96,14 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
       write_sam_header( stdbuf, lib )
    end
    while length(reads) > 0
-      if http
-         read_http_chunk!( reads, parser, response )
-      else
+      #if http
+      #   read_http_chunk!( reads, parser, response )
+      #else
          read_chunk!( reads, parser )
-      end
+      #end
       total += length(reads)
-      for i in 1:length(reads)
+      @inbounds for i in 1:length(reads)
+         fill!( reads[i], qualoffset )
          align = ungapped_align( param, lib, reads[i] )
          if !isnull( align )
             if length( align.value ) > 1
@@ -104,7 +114,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
                sam && write_sam( stdbuf, reads[i], align.value[1], lib, qualoffset=qualoffset )
             end
             mapped += 1
-            @fastmath mean_readlen += (length(reads[i].seq) - mean_readlen) / mapped
+            @fastmath mean_readlen += (length(reads[i].sequence) - mean_readlen) / mapped
          end
       end
       if total % 100000 == 0
@@ -119,13 +129,13 @@ end
 
 
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                                multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33,
-                                     response=Requests.ResponseStream{TCPSocket}(), 
-                                mate_response=Requests.ResponseStream{TCPSocket}(), 
-                                http=false )
+                               multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33 )
+#                                     response=Requests.ResponseStream{TCPSocket}(), 
+#                                mate_response=Requests.ResponseStream{TCPSocket}(), 
+#                                http=false )
 
-   const fwd_reads  = allocate_chunk( fwd_parser, size=bufsize )
-   const rev_reads  = allocate_chunk( rev_parser, size=bufsize )
+   const fwd_reads  = allocate_fastq_records( bufsize )
+   const rev_reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
    total        = 0
    mapped       = 0
@@ -134,15 +144,17 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
       write_sam_header( stdbuf, lib )
    end
    while length(fwd_reads) > 0 && length(rev_reads) > 0
-      if http
-         read_http_chunk!( fwd_reads, fwd_parser, response )
-         read_http_chunk!( rev_reads, rev_parser, mate_response )
-      else
+      #if http
+      #   read_http_chunk!( fwd_reads, fwd_parser, response )
+      #   read_http_chunk!( rev_reads, rev_parser, mate_response )
+      #else
          read_chunk!( fwd_reads, fwd_parser )
          read_chunk!( rev_reads, rev_parser )
-      end
+      #end
       total += length(fwd_reads)
-      for i in 1:length(fwd_reads)
+      @inbounds for i in 1:length(fwd_reads)
+         fill!( fwd_reads[i], qualoffset )
+         fill!( rev_reads[i], qualoffset )
          fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
          if !isnull( fwd_aln ) && !isnull( rev_aln )
             if length( fwd_aln.value ) > 1
@@ -160,7 +172,7 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
                                  qualoffset=qualoffset )
             end
             mapped += 1
-            @fastmath mean_readlen += (length(fwd_reads[i].seq) - mean_readlen) / mapped
+            @fastmath mean_readlen += (length(fwd_reads[i].sequence) - mean_readlen) / mapped
          end
       end
    end # end while

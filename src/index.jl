@@ -2,9 +2,9 @@
 
 # requires
 
-abstract SeqLibrary
+abstract type SeqLibrary end
 
-immutable GraphLib <: SeqLibrary
+struct GraphLib <: SeqLibrary
    offset::Vector{CoordInt}
    names::Vector{GeneName}
    info::Vector{GeneInfo}
@@ -74,15 +74,13 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    # set up splice graphs
    runoffset = 0
    for r in fhIter
-      haskey(seqdic, r.name) || continue
-      #Bio.Seq.immutable!(r.seq)
-      sg = SGSequence( r.seq )
+      name = String(r.data[r.identifier])
+      haskey(seqdic, name) || continue
+      #BioSequences.immutable!(r.seq)
+      sg = SGSequence( r.data[r.sequence] )
 
-      r.seq = ReferenceSequence()
-      gc() # free
-
-      println(STDERR, "Building Splice Graphs for $( r.name ).." )
-      for g in seqdic[r.name]
+      println(STDERR, "Building Splice Graphs for $( name ).." )
+      @timer for g in seqdic[name]
          #println( STDERR, "Building $g Splice Graph..." )
          curgraph = SpliceGraph( ref[g], sg, kmer )
          xcript  *= curgraph.seq
@@ -116,7 +114,7 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
       to_open = open( filename ) |> BufferedInputStream
    end
    # iterate through fasta entries
-   index = @time trans_index!(FASTAReader{Bio.Seq.ReferenceSequence}( to_open, nothing ), ref, kmer=kmer)
+   index = @time trans_index!(FASTA.Reader( to_open ), ref, kmer=kmer)
    index
 end
 

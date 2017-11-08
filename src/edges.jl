@@ -1,14 +1,13 @@
+const NodeInt = UInt32
 
-typealias NodeInt UInt32
-
-immutable SGNode
+struct SGNode
    gene::NodeInt
    node::NodeInt
 end
 
-typealias SGNodeSet Vector{SGNode}
+const SGNodeSet = Vector{SGNode}
 
-immutable Edges{K}
+struct Edges{K}
    left::Vector{SGNodeSet}
    right::Vector{SGNodeSet}
 end
@@ -29,7 +28,7 @@ Base.convert{K <: Integer}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = bu
 function is_edge( edge::EdgeType, left::Bool )
    eint = convert(UInt8, edge)
    eint == 0x04 && return true
-   left || (eint $= 0b011)
+   left || (eint ⊻= 0b011)
    (eint == 0x02 || eint == 0x05) && return true
    false
 end
@@ -88,7 +87,7 @@ function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet},
       end
    end
    if ind > 0
-      if !isdefined(kmers, ind)
+      if !isassigned(kmers, ind)
          kmers[ind] = SGNodeSet()
       end
       push!(kmers[ind], entry)

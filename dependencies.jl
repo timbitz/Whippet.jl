@@ -25,19 +25,21 @@ end
 adds = [ "DataStructures",
          "ArgParse",
          "SuffixArrays",
-         "FMIndexes", 
          "IntArrays",
-         "IntervalTrees",
+         "FMIndexes",
          "Libz",
          "StatsBase",
          "Distributions",
          "Glob",
-         "Bio",
-         "Requests"]
+         "BioSymbols",
+         "BioSequences" ]
+
+checkouts = [ "IndexableBitVectors",
+              "IntervalTrees" ]
 
 tic()
 Pkg.update()
-check_and_install("IndexableBitVectors", checkout=true)
+map( x->check_and_install(x, checkout=true), checkouts )
 map( check_and_install, adds )
 
 println( STDERR, "INFO: Loading and precompiling dependencies... " )
@@ -47,7 +49,8 @@ using DataStructures
 println( STDERR, "INFO: using ArgParse" )
 using ArgParse
 println( STDERR, "INFO: using Bio" )
-using Bio
+using BioSymbols
+using BioSequences
 println( STDERR, "INFO: using FMIndexes" )
 using FMIndexes
 println( STDERR, "INFO: using IntArrays" )
@@ -66,8 +69,8 @@ println( STDERR, "INFO: using Glob" )
 using Glob
 println( STDERR, "INFO: using SuffixArrays" )
 using SuffixArrays
-println( STDERR, "INFO: using Requests" )
-using Requests
+#println( STDERR, "INFO: using Requests" )
+#using Requests
 
 println( STDERR, "INFO: Loading and precompiling whippet... " )
 

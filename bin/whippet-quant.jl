@@ -2,7 +2,7 @@
 # Tim Sterne-Weiler 2015
 
 const dir = abspath( splitdir(@__FILE__)[1] )
-const ver = chomp(readline(open(dir * "/VERSION")))
+const ver = readline(open(dir * "/VERSION"))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
@@ -23,7 +23,7 @@ function parse_cmd()
       arg_type = String
       required = false
     "--index", "-x"
-      help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
+      help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph[.jls])"
       arg_type = String
       default  = fixpath( "$dir/../index/graph" )
     "--out", "-o"
@@ -80,12 +80,12 @@ function parse_cmd()
     "--phred-64"
       help     = "Qual string is encoded in Phred+64 integers"
       action   = :store_true
-    "--url"
+#=    "--url"
       help     = "FASTQ files are URLs to download/process on the fly"
       action   = :store_true
     "--ebi"
       help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --url=true)"
-      action   = :store_true
+      action   = :store_true =#
     "--circ"
       help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
       action   = :store_true
@@ -112,11 +112,11 @@ function main()
    const quant = GraphLibQuant( lib )
    const multi = Vector{Multimap}()
 
-   const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
+#   const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
    const enc_offset = args["phred-64"] ? 64 : 33
 
    # do we need to fetch data from ebi.ac.uk?
-   if args["ebi"]
+#=   if args["ebi"]
       ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
       ispaired = ebi_res.paired
       args["url"] = true
@@ -125,17 +125,17 @@ function main()
          args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
       end
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
-   end
+   end =#
 
-   const parser,response = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"],
-                                                         encoding=enc, forcegzip=args["force-gz"] ) : 
-                                          make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
-                                                         encoding=enc, forcegzip=args["force-gz"] )
+#   const parser,response = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"],
+#                                                         encoding=enc, forcegzip=args["force-gz"] ) : 
+    const parser =                                       make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
+                                                         forcegzip=args["force-gz"] )
    if ispaired
-      const mate_parser,mate_response = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
-                                                                      encoding=enc, forcegzip=args["force-gz"] ) :
-                                                       make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
-                                                                      encoding=enc, forcegzip=args["force-gz"] )
+#      const mate_parser,mate_response = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+#                                                                      encoding=enc, forcegzip=args["force-gz"] ) :
+    const mate_parser =                                               make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
+                                                                      forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -145,15 +145,15 @@ function main()
       println(STDERR, "Processing reads...")
       if ispaired
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
-                                                              sam=args["sam"], qualoffset=enc_offset, 
-                                                              response=response, mate_response=mate_response,
-                                                              http=args["url"] )
+                                                             sam=args["sam"], qualoffset=enc_offset ) 
+#                                                              response=response, mate_response=mate_response,
+#                                                              http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
-                                                       sam=args["sam"], qualoffset=enc_offset,
-                                                       response=response, http=args["url"] )
+                                                      sam=args["sam"], qualoffset=enc_offset )
+#                                                       response=response, http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
@@ -182,4 +182,4 @@ function main()
    println(STDERR, "Whippet $ver done." )
 end
 
-main()
+@timer main()
