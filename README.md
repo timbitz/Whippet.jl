@@ -22,7 +22,7 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Install [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install latest version of [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
