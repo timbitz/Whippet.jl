@@ -57,15 +57,6 @@ Or if you have paired-end RNA-seq data...
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
-```
-$ julia bin/whippet-quant.jl --ebi SRR1199010
-```
-is equivalent to
-```bash
-$ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
-```
-
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
