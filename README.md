@@ -22,7 +22,7 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Install [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Install latest version of [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 ### 2) Clone Whippet
 
@@ -43,7 +43,7 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1
 ```
 
 Notes: 
-* Whippet only uses GTF `exon` lines, which must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
+* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
 * You can specify the output name and location of the index to build using the `--index` parameter, the default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `Whippet.jl/index/graph`.
 
 
@@ -55,15 +55,6 @@ $ julia bin/whippet-quant.jl file.fastq.gz
 Or if you have paired-end RNA-seq data...
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
-```
-
-Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
-```
-$ julia bin/whippet-quant.jl --ebi SRR1199010
-```
-is equivalent to
-```bash
-$ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:

@@ -103,8 +103,9 @@ function main()
    println(STDERR, " $( round( toq(), 6 ) ) seconds" )
 
    indexpath = fixpath( args["index"] )
-   println(STDERR, "Loading splice graph index... $( indexpath ).jls")
-   @timer const lib = open(deserialize, "$( indexpath ).jls")
+   indexname = hasextension(indexpath, ".jls") ? indexpath : indexpath * ".jls"
+   println(STDERR, "Loading splice graph index... $indexname")
+   @timer const lib = open(deserialize, indexname)
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
 
