@@ -260,5 +260,5 @@ end
 
 function path_to_seq( path::IntSet, nodeoffset::Vector{CoordInt}, 
                       nodelen::Vector{CoordInt}, seq::SGSequence )
-    join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], path ) )
+    join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], collect(path) ) )
 end
