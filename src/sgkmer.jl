@@ -12,18 +12,20 @@ kmer_index{T,K}( kmer::BioSequences.Kmer{T,K} ) = Int(reinterpret(UInt64, kmer))
 kmer_index( seq::BioSequence ) = Int(kmer_index_trailing( seq )) + 1
 
 # calculate kmer index directly
-@inline function kmer_index_trailing( seq )
-   x     = UInt64(0)
+@inline function kmer_index_trailing( ::Type{T}, seq ) where T <: Unsigned
+   x     = T(0)
    for nt in seq
       ntint = convert(UInt8, trailing_zeros(nt))
       if ntint > 0x03 || isambiguous(nt)
-         return zero(UInt64)
+         return zero(T)
       else
          x = x << 2 | ntint
       end
    end
    x
 end
+
+kmer_index_trailing( seq ) = kmer_index_trailing(UInt64, seq )
 
 kmer(seq::SGSequence) = sgkmer(seq)
 sgkmer(seq::String) = convert(SGKmer, seq)

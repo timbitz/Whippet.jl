@@ -5,7 +5,7 @@ const SCALING_FACTOR = 1_000_000
 
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
-# as junction counts, which should always be at a lower level, e.g. bias < 1
+# as junction counts, which should always be at a lower level
 mutable struct SpliceGraphQuant
    node::Vector{Float64}
    edge::IntervalMap{ExonInt,Float64}
