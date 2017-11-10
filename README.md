@@ -42,7 +42,7 @@ _Important Notes_:
 * You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
 * It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
  
-### 3) Build an index.
+### 2) Build an index.
 
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome in `Whippet/anno`. 
 
@@ -55,7 +55,7 @@ Notes:
 * You can specify the output name and location of the index to build using the `-x / --index` parameter. The default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `~/.julia/v0.6/Whippet/index/graph.jls`, so you must have write-access to this location to use the default.
 
 
-### 4) Quantify FASTQ files.
+### 3) Quantify FASTQ files.
 ```bash
 $ julia bin/whippet-quant.jl file.fastq.gz
 ```
@@ -75,7 +75,7 @@ It is also possible to pool fastq files at runtime using shell commands, and the
 $ julia bin/whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
 ```
 
-### 5) Compare multiple psi files
+### 4) Compare multiple psi files
 Compare `.psi.gz` files from from two samples `-a` and `-b` with any number of replicates (comma delimited list of files or common pattern matching) per sample.
 ```bash
 $ ls *.psi.gz
