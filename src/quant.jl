@@ -1,49 +1,63 @@
 
-using IntervalTrees
 
 const SCALING_FACTOR = 1_000_000
+
+# use specialty type for "read counts"
+# with basic function: 'sum' that can be
+# overridden for more complex count bias models
+const ReadCount = Float64
 
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
 # as junction counts, which should always be at a lower level, e.g. bias < 1
 mutable struct SpliceGraphQuant
-   node::Vector{Float64}
-   edge::IntervalMap{ExonInt,Float64}
-   circ::Dict{Tuple{ExonInt,ExonInt},Float64}
+   node::Vector{ReadCount}
+   edge::IntervalMap{ExonInt,ReadCount}
+   circ::Dict{Tuple{ExonInt,ExonInt},ReadCount}
    leng::Vector{Float64}
    bias::Float64
 end
 
 # Default constructer
-SpliceGraphQuant() = SpliceGraphQuant( Vector{Float64}(),
-                                       IntervalMap{ExonInt,Float64}(),
-                                       Dict{Tuple{ExonInt,ExonInt},Float64}(),
+SpliceGraphQuant() = SpliceGraphQuant( Vector{ReadCount}(),
+                                       IntervalMap{ExonInt,ReadCount}(),
+                                       Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                        Vector{Float64}(), 1.0 )
 
+#!
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
                                                         IntervalMap{ExonInt,Float64}(),
                                                         Dict{Tuple{ExonInt,ExonInt},Float64}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
 
+# here we can quantify isoforms in a gene
+# and store comptibility of reads
+struct IsoQuant
+   tpm::Vector{Float64}
+   count::Vector{Float64}
+   length::Vector{Int32}
+   compat::Dict{Tuple,Float64}
+end
+
 # Here we store whole graphome quantification
 struct GraphLibQuant
    tpm::Vector{Float64}
    count::Vector{Float64}
-   length::Vector{Float64}
+   compat::Vector{IsoQuant}
    quant::Vector{SpliceGraphQuant}
 end
 
 function GraphLibQuant( lib::GraphLib )
    tpm    = zeros( length(lib.graphs) )
    count  = zeros( length(lib.graphs) )
-   len    =  ones( length(lib.graphs) )
+   isoq   = Vector{IsoQuant}( length(lib.graphs) )
    quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
    for i in 1:length( lib.graphs )
-      len[i] = lib.lengths[i] 
+      isoq[i]  = IsoQuant( lib.graphs[i] )
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end
-   GraphLibQuant( tpm, count, len, quant )
+   GraphLibQuant( tpm, count, isoq, quant )
 end
 
 @inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
