@@ -29,12 +29,16 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros(ReadCount, length(
                                                         Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
-
-mutable struct IsoCompat
-   class::IntSet
+# type-stable isoform compatibility class
+mutable struct IsoCompat{T <: Tuple}
+   class::T
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
+
+   function IsoCompat( tup::T, count::Float64 ) where T <: Tuple
+      return IsoCompat{T}( tup, ones( length(tup) ) / length(tup), 1.0, count )
+   end
 end
 
 # here we can quantify isoforms in a gene
@@ -43,7 +47,7 @@ struct IsoQuant
    tpm::Vector{Float64}
    count::Vector{Float64}
    length::Vector{Int32}
-   compat::Vector{IsoCompat}
+   classes::Vector{IsoCompat}
 end
 
 IsoQuant() = IsoQuant( Vector{Float64}(), Vector{Float64}(), 
@@ -53,6 +57,56 @@ IsoQuant( sg::SpliceGraph ) = IsoQuant( zeros( length(sg.annoname) ),
                                         zeros( length(sg.annoname) ),
                                         map( x->Int32(sum(map( y->sg.nodelen[y], collect(x) ))), sg.annopath ),
                                         Vector{IsoCompat}() )
+
+@inbounds function fill_isoquant!( graphq::GraphLibQuant, lib::GraphLib )
+   # initialize re-used data structures
+   iset = IntSet()
+   resize!(iset.bits, 64)
+   temp = Dict{Tuple,Float64}()
+
+   @inline function handle_iset_value!( value )
+      if length(iset) == 1
+         graphq.compat[i].count[first(iset)] += sum(value)
+      else
+         tup = tuple(collect(iset))
+         if haskey(temp, tup)
+            temp[tup] += sum(value)
+         else
+            temp[tup] = sum(value)
+         end
+      end
+   end
+
+   # go through splice graphs (to re-use temp data structures)
+   for i in 1:length(lib.graphs)
+      # go through single node mapping reads
+      for n in 1:length(graphq.quant[i].node)
+         for p in 1:length(lib.graphs[i].annopath)
+            if n in lib.graphs[i].annopath[p]
+               push!(iset, p)
+            end
+         end
+         handle_iset_value!( graphq.quant[i].node[n] )
+         empty!(iset)
+      end
+      # go through edges
+      for edg in graphq.quant[i].edge
+         for p in 1:length(lib.graphs[i].annopath)
+            if edg.first in lib.graphs[i].annopath[p] &&
+               edg.last  in lib.graphs[i].annopath[p]
+               push!(iset, p)
+            end
+         end
+         handle_iset_value!( edg.value )
+         empty!(iset)
+      end
+      # create compatibility classes for isoforms
+      for tup in keys(temp)
+         push!( graphq.compat[i].classes, IsoQuant(tup, temp[tup]) )
+      end
+      empty!(temp)
+   end
+end
 
 # Here we store whole graphome quantification
 struct GraphLibQuant
