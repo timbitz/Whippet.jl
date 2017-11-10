@@ -1,22 +1,25 @@
-
-function parallel_gc_content( seq::BioSequence, start=1, stop=length(seq) )
+function bitparallel_gc_content( seq::BioSequence, start=1, stop=length(seq) )
     gc   = 0
-    s = bitindex(seq, 1)
-    e = bitindex(seq, length(seq))
-    for i in index(s):index(e)
-        @inbounds data = seq.data[i]
+    bs = bitindex(seq, start)
+    be = bitindex(seq, stop)
+    for i in index(bs):index(be)
+        @inbounds x = seq.data[i]
         # mask nucleotides upstream of first(seq.part)
-        if i == index(s)
-            data &= 0xFFFFFFFFFFFFFFFF << offset(s)
+        if i == index(bs)
+            x &= 0xFFFFFFFFFFFFFFFF << offset(bs)
         end
         # mask nucleotides downstream of last(seq.part)
-        if i == index(e)
-            data &= 0xFFFFFFFFFFFFFFFF >> (64 - (offset(e)+4))
+        if i == index(be)
+            x &= 0xFFFFFFFFFFFFFFFF >> (64 - (offset(be)+4))
         end
-        # count unambiguous GC nucleotides
-        gc += count_ones(data & 0x6666666666666666)
+        # count GC nucleotides
+        a =  x & 0x1111111111111111
+        c = (x & 0x2222222222222222) >> 1
+        g = (x & 0x4444444444444444) >> 2
+        t = (x & 0x8888888888888888) >> 3
+        gc += count_ones((c | g) & ~(a | t))
     end
-    return length(seq) > 0 ? gc / length(seq) : 0.0
+    return length(seq) > 0 ? gc / (stop-start+1) : 0.0
 end
 
 struct GCBiasParams
@@ -37,7 +40,7 @@ function ExpectedGC( seq::BioSequence; gc_param = GCBiasParams(offset=50,
     col  = 1
     for len in gcp.offset:gcp.increment:gcp.max
         for i in 1:length(seq)-len
-            gc = div(parallel_gc_content(seq, i, i+len-1), gcp.width)
+            gc = div(bitparallel_gc_content(seq, i, i+len-1), gcp.width)
             @inbounds data[gc, col] += 1.0
         end
     end
