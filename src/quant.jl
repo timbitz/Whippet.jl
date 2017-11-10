@@ -25,9 +25,9 @@ SpliceGraphQuant() = SpliceGraphQuant( Vector{ReadCount}(),
                                        Vector{Float64}(), 1.0 )
 
 #!
-SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros( length(sg.nodelen) ),
-                                                        IntervalMap{ExonInt,Float64}(),
-                                                        Dict{Tuple{ExonInt,ExonInt},Float64}(),
+SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros(ReadCount, length(sg.nodelen) ),
+                                                        IntervalMap{ExonInt,ReadCount}(),
+                                                        Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
 
