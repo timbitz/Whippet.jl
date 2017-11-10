@@ -111,6 +111,7 @@ NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA 
 
 In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns.  Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
 
+Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the relative expression of the paths through the LSE. 
 
 Type | Interpretation
 ---- | --------------
