@@ -24,23 +24,19 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ### 1) Install 
 * Get latest version of [Julia](https://julialang.org/downloads) if you don't have it.  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
-* Install Whippet through the Julia REPL:
+Install Whippet through the Julia REPL:
 ```julia
 julia> Pkg.clone("https://github.com/timbitz/Whippet.jl.git")
 julia> using Whippet
 ```
 
-* The Whippet package directory can now be found in the default location:
+The Whippet package directory can now be found in the default location:
 ```bash
 cd ~/.julia/v0.6/Whippet
 ```
 
-Important Notes:
-* If you are having trouble finding the Whippet directory, you can ask the Julia REPL:
-```julia
-julia> Pkg.dir("Whippet")
-"/Users/timbitz/.julia/v0.6/Whippet"
-```
+_Important Notes_:
+* If you are having trouble finding the Whippet directory, you can ask the Julia REPL: `julia> Pkg.dir("Whippet")`
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 * You can always update to the latest version of Whippet using `Pkg.update()` in the Julia REPL!
 * You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
