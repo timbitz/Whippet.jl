@@ -32,7 +32,7 @@ julia> using Whippet
 
 The Whippet package directory can now be found in the default location:
 ```bash
-cd ~/.julia/v0.6/Whippet
+$ cd ~/.julia/v0.6/Whippet
 ```
 
 _Important Notes_:
