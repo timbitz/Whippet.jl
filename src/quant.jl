@@ -24,12 +24,18 @@ SpliceGraphQuant() = SpliceGraphQuant( Vector{ReadCount}(),
                                        Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                        Vector{Float64}(), 1.0 )
 
-#!
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros(ReadCount, length(sg.nodelen) ),
                                                         IntervalMap{ExonInt,ReadCount}(),
                                                         Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
+
+mutable struct IsoCompat
+   class::IntSet
+   prop::Vector{Float64}
+   prop_sum::Float64
+   count::Float64
+end
 
 # here we can quantify isoforms in a gene
 # and store comptibility of reads
@@ -37,8 +43,16 @@ struct IsoQuant
    tpm::Vector{Float64}
    count::Vector{Float64}
    length::Vector{Int32}
-   compat::Dict{Tuple,Float64}
+   compat::Vector{IsoCompat}
 end
+
+IsoQuant() = IsoQuant( Vector{Float64}(), Vector{Float64}(), 
+                       Vector{Int32}(), Vector{IsoCompat}() )
+
+IsoQuant( sg::SpliceGraph ) = IsoQuant( zeros( length(sg.annoname) ),
+                                        zeros( length(sg.annoname) ),
+                                        map( x->Int32(sum(map( y->sg.nodelen[y], collect(x) ))), sg.annopath ),
+                                        Vector{IsoCompat}() )
 
 # Here we store whole graphome quantification
 struct GraphLibQuant
@@ -74,11 +88,27 @@ end
    end
 end
 
+
+
+const MultiAln = Vector{SGAlignPath}
+
+mutable struct MultiAssign
+   prop::Vector{Float64}
+   prop_sum::Float64
+   count::ReadCount
+end
+
+# This hash structure stores multi-mapping
+# equivalence classes
+const MultiCompat = Dict{MultiAln,MultiAssign}
+
+#=
 mutable struct Multimap
    align::Vector{SGAlignment}
    prop::Vector{Float64}
    prop_sum::Float64
 end
+=#
 
 Multimap( aligns::Vector{SGAlignment} ) = length(aligns) >= 1 ? 
                                     Multimap( aligns, ones(length(aligns)) / length(aligns), 1.0 ) :
@@ -197,48 +227,10 @@ function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_s
    end
 end
 
-# This function recursively performs expectation maximization
+# This function performs expectation maximization
 # and sets the quant.tpm array as the proposed expression set
 # at each iteration.   It also requires that calculate_tpm! be 
-# run initially once prior to rec_gene_em!() call.
-function rec_gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap}; 
-                                 count_temp::Vector{Float64}=ones(length(quant.count)),
-                                 tpm_temp::Vector{Float64}=ones(length(quant.count)),
-                                 uniqsum::Float64=sum(quant.count),
-                                 ambigsum::Int64=length(ambig),
-                                 it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )
-   
-   unsafe_copy!( count_temp, quant.count )
-   unsafe_copy!( tpm_temp, quant.tpm )
-
-   for mm in ambig
-      if it > 1 # Maximization
-         mm.prop_sum = 0.0
-         for ai in 1:length(mm.align)
-            const init_gene = mm.align[ai].path[1].gene
-            const init_tpm  = quant.tpm[ init_gene ] * max( quant.length[init_gene] - readlen, 1.0 )
-            mm.prop[ai] = init_tpm
-            @fastmath mm.prop_sum += init_tpm
-         end
-      end
-      
-      for ai in 1:length(mm.align)
-         const init_gene = mm.align[ai].path[1].gene
-         @fastmath const prop = mm.prop[ai] / mm.prop_sum
-         mm.prop[ai] = isnan(prop) ? 0.0 : prop
-         @fastmath count_temp[ init_gene ] += mm.prop[ai]
-      end
-   end
-
-   calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
- 
-   #iterate
-   if tpm_temp != quant.tpm && it < maxit
-      it = rec_gene_em!( quant, ambig, count_temp=count_temp, tpm_temp=tpm_temp, uniqsum=uniqsum, ambigsum=ambigsum, 
-                        it=it+1, maxit=maxit, sig=sig, readlen=readlen)
-   end
-   it
-end
+# run initially once prior to gene_em!() call.
 
 function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
                    it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )

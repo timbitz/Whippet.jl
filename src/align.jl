@@ -61,6 +61,8 @@ struct SGAlignNode
    score::SGAlignScore
 end
 
+const SGAlignPath = Vector{SGAlignNode}
+
 @inline SGAlignNode(sgn::SGNode) = SGAlignNode(sgn.gene, sgn.node, zero(SGAlignScore))
 @inline Base.push!( v::Vector{SGAlignNode}, sgn::SGNode ) = push!( v, SGAlignNode(sgn) )
 

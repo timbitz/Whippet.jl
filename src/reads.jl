@@ -83,10 +83,8 @@ function allocate_fastq_records( size::Int=10000 )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                        multi::Vector{Multimap}; bufsize=150, sam=false, qualoffset=33 )
-#                         response=Requests.ResponseStream{TCPSocket}(), http=false )
+                         multi::MultiCompat; bufsize=150, sam=false, qualoffset=33 )
   
-   #const reads  = allocate_chunk( parser, size=bufsize )
    const reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
    total        = 0
@@ -96,11 +94,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
       write_sam_header( stdbuf, lib )
    end
    while length(reads) > 0
-      #if http
-      #   read_http_chunk!( reads, parser, response )
-      #else
-         read_chunk!( reads, parser )
-      #end
+      read_chunk!( reads, parser )
       total += length(reads)
       @inbounds for i in 1:length(reads)
          fill!( reads[i], qualoffset )
@@ -129,10 +123,7 @@ end
 
 
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                               multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33 )
-#                                     response=Requests.ResponseStream{TCPSocket}(), 
-#                                mate_response=Requests.ResponseStream{TCPSocket}(), 
-#                                http=false )
+                                multi::MultiCompat; bufsize=50, sam=false, qualoffset=33 )
 
    const fwd_reads  = allocate_fastq_records( bufsize )
    const rev_reads  = allocate_fastq_records( bufsize )
@@ -144,13 +135,8 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
       write_sam_header( stdbuf, lib )
    end
    while length(fwd_reads) > 0 && length(rev_reads) > 0
-      #if http
-      #   read_http_chunk!( fwd_reads, fwd_parser, response )
-      #   read_http_chunk!( rev_reads, rev_parser, mate_response )
-      #else
-         read_chunk!( fwd_reads, fwd_parser )
-         read_chunk!( rev_reads, rev_parser )
-      #end
+      read_chunk!( fwd_reads, fwd_parser )
+      read_chunk!( rev_reads, rev_parser )
       total += length(fwd_reads)
       @inbounds for i in 1:length(fwd_reads)
          fill!( fwd_reads[i], qualoffset )
@@ -158,8 +144,8 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
          fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
          if !isnull( fwd_aln ) && !isnull( rev_aln )
             if length( fwd_aln.value ) > 1
-               push!( multi, Multimap( fwd_aln.value ) )
-               push!( multi, Multimap( rev_aln.value ) )
+               push!( multi, Multimap( fwd_aln.value, level=0.5 ) )
+               push!( multi, Multimap( rev_aln.value, level=0.5 ) )
                sam && write_sam( stdbuf, fwd_reads[i], rev_reads[i], fwd_aln.value, rev_aln.value, lib,
                                  paired=true, is_pair_rc=param.is_pair_rc, qualoffset=qualoffset )
             else
