@@ -22,23 +22,23 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-* Install latest version of [Julia](https://julialang.org/downloads) if you don't have it.  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+* Get latest version of [Julia](https://julialang.org/downloads) if you don't have it.  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 * Install Whippet through the Julia REPL:
 ```julia
 julia> Pkg.clone("https://github.com/timbitz/Whippet.jl.git")
 ```
 
-* Whippet executables are located in (Whippet/bin) in the Whippet julia package directory, whose default location is:
-```
+* The Whippet julia package directory can now be found in the default location:
+```bash
 cd ~/.julia/v0.6/Whippet
 ```
 
-Notes: 
-* For all executables in Whippet/bin, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
-* It is probably a good idea to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory in your preferred location for easy access.
+Notes:
+* For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
+* It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
 
-### 3) Build an index.  
+### 3) Build an index.
 
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome. 
 
