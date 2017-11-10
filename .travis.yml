@@ -4,11 +4,9 @@ os:
   - osx
 julia:
   - 0.6
-install:
-  julia ./dependencies.jl
 notifications:
   email: false
 script:
-  - julia --check-bounds=yes --code-coverage ./test/runtests.jl
+  - julia --check-bounds=yes --code-coverage -e 'Pkg.clone(pwd()); Pkg.test("Whippet", coverage=true)'
 after_success:
   - julia -e 'Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'

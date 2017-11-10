@@ -22,49 +22,57 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Install latest version of [Julia](https://julialang.org/downloads) (Whippet v0.9 is compatible with Julia v0.6).  If you are new to julia, or installing programs via command line, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+* Install latest version of [Julia](https://julialang.org/downloads) if you don't have it.  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
-### 2) Clone Whippet
-
+* Open Julia and get Whippet by:
+```julia
+Pkg.clone("https://github.com/timbitz/Whippet.jl.git")
 ```
-git clone https://github.com/timbitz/Whippet.jl.git
-cd Whippet.jl
-julia dependencies.jl
+
+* Whippet executables `whippet-index.jl`, `whippet-quant.jl`, and `whippet-delta.jl` are located in the Whippet julia package directory, whose default location is:
+```
+~/.julia/v0.6/Whippet/bin
+```
+
+* It is probably a good idea to add a link to this directory in your preferred location for easy access, and to add Whippet/bin to your path.
+```bash
+ln -s ~/.julia/v0.6/Whippet
+$ export PATH=~/.julia/v0.6/Whippet/bin:$PATH
+$ echo 'export PATH=~/.julia/v0.6/Whippet/bin:$PATH' >> ~/.bashrc
 ```
 Notes: 
-* Deprecated syntax `warnings` for dependent packages can be ignored.
 * For all executables in Whippet.jl/bin, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 
 ### 3) Build an index.  
 You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome. 
 
 ```bash
-$ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
+$ whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
 Notes: 
-* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes, consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
-* You can specify the output name and location of the index to build using the `--index` parameter, the default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `Whippet.jl/index/graph`.
+* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes (which should not be the same, as is the default from the UCSC table browser!).  This GTF file should be consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
+* You can specify the output name and location of the index to build using the `-x / --index` parameter. The default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `~/.julia/v0.6/Whippet/index/graph.jls`, so you must have write-access to this location to use the default.
 
 
 ### 4) Quantify FASTQ files.
 ```bash
-$ julia bin/whippet-quant.jl file.fastq.gz
+$ whippet-quant.jl file.fastq.gz
 ```
 
 Or if you have paired-end RNA-seq data...
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
+$ whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
 You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
+$ whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
 ```
 
 It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
-$ julia bin/whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
+$ whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
 ```
 
 ### 5) Compare multiple psi files
@@ -72,9 +80,9 @@ Compare `.psi.gz` files from from two samples `-a` and `-b` with any number of r
 ```bash
 $ ls *.psi.gz
 sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
-$ julia bin/whippet-delta.jl -a sample1 -b sample2
+$ whippet-delta.jl -a sample1 -b sample2
 OR
-$ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
+$ whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
 Note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
 
