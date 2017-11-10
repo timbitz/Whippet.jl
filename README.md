@@ -28,20 +28,23 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ```julia
 julia> Pkg.clone("https://github.com/timbitz/Whippet.jl.git")
 julia> using Whippet
-julia> Pkg.dir("Whippet")
-"~/.julia/v0.6/Whippet"
 ```
 
-* The Whippet package directory can now be found in the default location (`Pkg.dir("Whippet")`):
+* The Whippet package directory can now be found in the default location:
 ```bash
 cd ~/.julia/v0.6/Whippet
 ```
 
-Notes:
+Important Notes:
+* If you are having trouble finding the Whippet directory, you can ask the Julia REPL:
+```julia
+julia> Pkg.dir("Whippet")
+"/Users/timbitz/.julia/v0.6/Whippet"
+```
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
-* It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
 * You can always update to the latest version of Whippet using `Pkg.update()` in the Julia REPL!
-* You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some info [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
+* You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
+* It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
  
 ### 3) Build an index.
 
