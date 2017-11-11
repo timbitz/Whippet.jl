@@ -58,6 +58,7 @@ IsoQuant( sg::SpliceGraph ) = IsoQuant( zeros( length(sg.annoname) ),
                                         map( x->Int32(sum(map( y->sg.nodelen[y], collect(x) ))), sg.annopath ),
                                         Vector{IsoCompat}() )
 
+# build isoquant compatibility classes from SpliceGraphQuant node and edge "counts"
 @inbounds function fill_isoquant!( graphq::GraphLibQuant, lib::GraphLib )
    # initialize re-used data structures
    iset = IntSet()
@@ -102,7 +103,7 @@ IsoQuant( sg::SpliceGraph ) = IsoQuant( zeros( length(sg.annoname) ),
       end
       # create compatibility classes for isoforms
       for tup in keys(temp)
-         push!( graphq.compat[i].classes, IsoQuant(tup, temp[tup]) )
+         push!( graphq.compat[i].classes, IsoCompat(tup, temp[tup]) )
       end
       empty!(temp)
    end
@@ -142,7 +143,11 @@ end
    end
 end
 
-
+function calculate_tpm!( quant::GraphLibQuant; readlen::Int64=50, sig::Int64=1 )
+   for i in 1:length(quant.compat)
+      
+   end
+end
 
 const MultiAln = Vector{SGAlignPath}
 
