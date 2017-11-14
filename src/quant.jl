@@ -31,30 +31,21 @@ SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros(ReadCount, length(
                                                         Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
+abstract type EquivalenceClass end
+
 # type-stable isoform compatibility class
-mutable struct IsoCompat
-   class::Vector{Int}
+mutable struct IsoCompat <: EquivalenceClass
+   class::Vector{Int16}
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
+   isdone::Bool
 
    function IsoCompat( arr::Vector{Int}, count::Float64 )
-      return IsoCompat{T}( arr, ones( length(arr) ) / length(arr), 1.0, count )
+      return IsoCompat( arr, ones( length(arr) ) / length(arr), 1.0, count, false )
    end
 end
 
-# here we can quantify isoforms in a gene
-# and store comptibility of reads
-struct IsoQuant
-   rpk::Vector{Float64}
-   count::Vector{Float64}
-   length::Vector{Int32}
-   classes::Vector{IsoCompat}
-   iterating::Bool
-end
-
-IsoQuant() = IsoQuant( Vector{Float64}(), Vector{Float64}(), 
-                       Vector{Int32}(), Vector{IsoCompat}(), true )
 
 IsoQuant( sg::SpliceGraph ) = IsoQuant( zeros( length(sg.annoname) ),
                                         zeros( length(sg.annoname) ),
@@ -127,8 +118,8 @@ end
          end
       end
       # create compatibility classes for isoforms
-      for arr in keys(temp)
-         push!( graphq.compat[i].classes, IsoCompat(arr, temp[arr]) )
+      for arr in keys(temp) #TODO
+         push!( graphq.classes, IsoCompat(arr, temp[arr]) )
       end
       empty!(temp)
    end
@@ -137,16 +128,25 @@ end
 # Here we store whole graphome quantification
 struct GraphLibQuant
    tpm::Vector{Float64}
-   compat::Vector{IsoQuant}
+   count::Vector{Float64}
+   length::Vector{Int64}
+   geneidx::Vector{Int64}
    quant::Vector{SpliceGraphQuant}
+   classes::Vector{IsoCompat}
 end
 
 function GraphLibQuant( lib::GraphLib )
-   tpm    = zeros( length(lib.graphs) )
-   isoq   = Vector{IsoQuant}( length(lib.graphs) )
-   quant  = Vector{SpliceGraphQuant}( length(lib.graphs) )
-   for i in 1:length( lib.graphs )
-      isoq[i]  = IsoQuant( lib.graphs[i] )
+   isonum  = map( x->length(x.annopath), lib.graphs )
+   tpm     = zeros( isolen )
+   count   = zeros( isolen )
+   length  = zeros( isolen )
+   geneoff = zeros(Int, length(lib.graphs))
+   quant   = Vector{SpliceGraphQuant}( length(lib.graphs) )
+   cumul_i = 0
+   for i in 1:length(lib.graphs)
+      geneoff[i] = cumul_i
+      cumul_i += isonum[i]
+      # START HERE!
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end
    GraphLibQuant( tpm, isoq, quant )
@@ -187,12 +187,13 @@ end
 
 const MultiAln = Vector{SGAlignPath}
 
-mutable struct MultiAssign
-   gene::Vector{NodeInt}
-   iso::Vector{Int16}
+mutable struct MultiCompat <: EquivalenceClass
+   class::Vector{Int16}
    prop::Vector{Float64}
    prop_sum::Float64
-   count::ReadCount
+   count::Float64
+   raw::ReadCount
+   isdone::Bool
 end
 
 function MultiAssign( 
