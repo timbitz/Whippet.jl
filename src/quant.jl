@@ -35,7 +35,7 @@ abstract type EquivalenceClass end
 
 # type-stable isoform compatibility class
 mutable struct IsoCompat <: EquivalenceClass
-   class::Vector{Int16}
+   class::Vector{Int32}
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
@@ -47,11 +47,6 @@ mutable struct IsoCompat <: EquivalenceClass
 end
 
 
-IsoQuant( sg::SpliceGraph ) = IsoQuant( zeros( length(sg.annoname) ),
-                                        zeros( length(sg.annoname) ),
-                                        map( x->Int32(sum(map( y->sg.nodelen[y], collect(x) ))), sg.annopath ),
-                                        Vector{IsoCompat}(), true )
-
 function Base.in( path::SGAlignPath, is::IntSet )
    for i in 1:length(path)
       if !(path[i].node in is)
@@ -61,16 +56,16 @@ function Base.in( path::SGAlignPath, is::IntSet )
    return true
 end
 
-# build isoquant compatibility classes from SpliceGraphQuant node and edge "counts"
-@inbounds function fill_isoquant!( graphq::GraphLibQuant, lib::GraphLib; assign_edge=true )
+# build compatibility classes from SpliceGraphQuant node and edge "counts"
+@inbounds function build_equivalence_classes!( graphq::GraphLibQuant, lib::GraphLib; assign_edge=true )
    # initialize re-used data structures
    iset = IntSet()
    resize!(iset.bits, 64)
-   temp = Dict{Tuple,Float64}()
+   temp = Dict{Vector{Int},Float64}()
 
-   @inline function handle_iset_value!( value )
+   @inline function handle_iset_value!( idx, value )
       if length(iset) == 1
-         graphq.compat[i].count[first(iset)] += sum(value)
+         graphq.count[first(iset) + idx] += sum(value)
       elseif length(iset) > 1
          arr = collect(iset)
          if haskey(temp, arr)
@@ -90,7 +85,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( sum(graphq.quant[i].node[n]) )
+         handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].node[n]) )
          empty!(iset)
       end
       # go through edges
@@ -101,7 +96,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( sum(edg.value) )
+         handle_iset_value!( graphq.geneidx[i], sum(edg.value) )
          empty!(iset)
       end
       # go through multi-edge crossing paths
@@ -111,15 +106,15 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( sum(graphq.quant[i].long[align]) )
+         handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].long[align]) )
          empty!(iset)
          if assign_edge
             #TODO!!!
          end
       end
       # create compatibility classes for isoforms
-      for arr in keys(temp) #TODO
-         push!( graphq.classes, IsoCompat(arr, temp[arr]) )
+      for arr in keys(temp)
+         push!( graphq.classes, IsoCompat(arr + graphq.geneidx[i], temp[arr]) )
       end
       empty!(temp)
    end
@@ -127,12 +122,12 @@ end
 
 # Here we store whole graphome quantification
 struct GraphLibQuant
-   tpm::Vector{Float64}
-   count::Vector{Float64}
-   length::Vector{Int64}
-   geneidx::Vector{Int64}
-   quant::Vector{SpliceGraphQuant}
-   classes::Vector{IsoCompat}
+   tpm::Vector{Float64}             # isoform tpm
+   count::Vector{Float64}           # isoform counts
+   length::Vector{Int64}            # isoform lengths
+   geneidx::Vector{Int64}           # 0-based offset of isoforms for gene
+   quant::Vector{SpliceGraphQuant}  # splice graph quant structs for gene
+   classes::Vector{IsoCompat}       # isoform compatibility classes
 end
 
 function GraphLibQuant( lib::GraphLib )
@@ -142,17 +137,20 @@ function GraphLibQuant( lib::GraphLib )
    length  = zeros( isolen )
    geneoff = zeros(Int, length(lib.graphs))
    quant   = Vector{SpliceGraphQuant}( length(lib.graphs) )
+   classes = Vector{IsoCompat}()
    cumul_i = 0
    for i in 1:length(lib.graphs)
       geneoff[i] = cumul_i
       cumul_i += isonum[i]
-      # START HERE!
+      for j in 1:length(lib.graphs[i].annopath)
+         length[cumul_i+j] = sum(map( y->sg.nodelen[y], collect(lib.graphs[i].annopath[j]) ))
+      end
       quant[i] = SpliceGraphQuant( lib.graphs[i] )
    end
-   GraphLibQuant( tpm, isoq, quant )
+   GraphLibQuant( tpm, count, length, geneoff, quant, classes )
 end
 
-#=
+
 @inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
    for i in 1:length(counts)
       @fastmath quant.tpm[ i ] = counts[i] / max( (quant.length[i] - readlen), 1.0 )
@@ -166,8 +164,8 @@ end
       end
    end
 end
-=#
 
+#=
 @inbounds function calculate_tpm!( quant::GraphLibQuant; readlen::Int64=50, sig::Int64=1 )
    for i in 1:length(quant.compat)
       quant.tpm[i] = 0.0
@@ -184,11 +182,12 @@ end
       end
    end
 end
+=#
 
 const MultiAln = Vector{SGAlignPath}
 
 mutable struct MultiCompat <: EquivalenceClass
-   class::Vector{Int16}
+   class::Vector{Int32}
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
@@ -196,7 +195,7 @@ mutable struct MultiCompat <: EquivalenceClass
    isdone::Bool
 end
 
-function MultiAssign( 
+# function MultiAssign( 
 
 # This hash structure stores multi-mapping
 # equivalence classes
@@ -333,9 +332,21 @@ function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int,
 end
 
 function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
-   for i in 1:length(src)
+   @inbounds for i in 1:length(src)
       dest[i+indx_shift] = src[i]
    end
+end
+
+function copy_isdone!( dest::Vector{T}, src::Vector{T}, denominator::Float64=1.0, sig::Int=4 ) where T <: AbstractFloat
+   isdifferent = false
+   for i in 1:length(dest)
+      const val = round( src[i] / denominator, sig )
+      if val != dest[i]
+         isdifferent = true
+      end
+      dest[i] = isnan(val) ? 0.0 : val
+   end
+   !isdifferent || sum(denominator) == 0
 end
 
 # This function performs expectation maximization
@@ -348,68 +359,44 @@ function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
 
    const count_temp = ones(length(quant.count))
    const tpm_temp   = ones(length(quant.count))
+   const prop_temp  = zeros( 500 )
    const uniqsum    = sum(quant.count)
    const ambigsum   = length(ambig)
+
+   @inline function maximize_and_assign!( eq::E, maximize::Bool=true ) where E <: EquivalenceClass
+      eq.isdone && return
+      if maximize
+         eq.prop_sum = 0.0
+         c = 1
+         for i in eq.class
+            const cur_tpm = quant.tpm[i] * max( quant.length[i] - readlen, 1.0 )
+            prop_temp[c] = cur_tpm
+            eq.prop_sum += cur_tpm
+            c += 1
+         end
+         eq.isdone = copy_isdone!( eq.prop, prop_temp, eq.prop_sum )
+      end
+      c = 1
+      for i in eq.class
+         if eq.isdone
+            quant.count[i] += eq.prop[c] * eq.count
+         end
+         count_temp[i] += eq.prop[c] * eq.count
+         c += 1
+      end
+   end
 
    while tpm_temp != quant.tpm && it < maxit
 
       unsafe_copy!( count_temp, quant.count )
       unsafe_copy!( tpm_temp, quant.tpm )
 
-      for mm in ambig
-         if it > 1 # Maximization
-            mm.prop_sum = 0.0
-            for ai in 1:length(mm.prop)
-               const init_gene = mm.align[ai].path[1].gene
-               const init_tpm  = quant.tpm[ init_gene ] * max( quant.length[ init_gene ] - readlen, 1.0 )
-               mm.prop[ai] = init_tpm
-               @fastmath mm.prop_sum += init_tpm
-            end
-         end
-
-         for ai in 1:length(mm.align)
-            const init_gene = mm.align[ai].path[1].gene
-            @fastmath const prop = mm.prop[ai] / mm.prop_sum
-            mm.prop[ai] = isnan(prop) ? 0.0 : prop
-            @fastmath count_temp[ init_gene ] += mm.prop[ai]
-         end
+      # Maximization
+      for eq in ambig
+         maximize_and_assign!( eq, (it > 1) )
       end
-
-      calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
- 
-      it += 1
-   end
-   it
-end
-
-function gene_em!( quant::GraphLibQuant, ambig::MultiCompat;
-                   it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )
-
-   const tpm_temp   = ones(length(quant.count))
-   const uniqsum    = sum(quant.count)
-   const ambigsum   = length(ambig)
-
-   while tpm_temp != quant.tpm && it < maxit
-
-      unsafe_copy!( tpm_temp, quant.tpm )
-
-      for (k,v) in ambig
-         if it > 1 # Maximization
-            v.prop_sum = 0.0
-            for ai in 1:length(k)
-               const init_gene = mm.align[ai].path[1].gene
-               const init_tpm  = quant.tpm[ init_gene ] * max( quant.length[ init_gene ] - readlen, 1.0 )
-               mm.prop[ai] = init_tpm
-               @fastmath mm.prop_sum += init_tpm
-            end
-         end
-
-         for ai in 1:length(mm.align)
-            const init_gene = mm.align[ai].path[1].gene
-            @fastmath const prop = mm.prop[ai] / mm.prop_sum
-            mm.prop[ai] = isnan(prop) ? 0.0 : prop
-            @fastmath count_temp[ init_gene ] += mm.prop[ai]
-         end
+      for eq in quant.classes
+         maximize_and_assign!( eq, (it > 1) )
       end
 
       calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
