@@ -6,13 +6,33 @@ const SCALING_FACTOR = 1_000_000
 # overridden for more complex count bias models
 const ReadCount = Float64
 
+abstract type SGAlignContainer end
+
+struct SGAlignSingle <: SGAlignContainer
+   fwd::SGAlignPath
+end
+
+struct SGAlignPaired <: SGAlignContainer
+   fwd::SGAlignPath
+   rev::SGAlignPath
+end
+
+Base.isequal( a::SGAlignSingle, b::SGAlignSingle ) = a.fwd == b.fwd
+Base.isequal( a::SGAlignPaired, b::SGAlignPaired ) = a.fwd == b.fwd && a.rev == b.rev
+
+Base.hash( v::SGAlignSingle ) = hash( v.fwd )
+Base.hash( v::SGAlignPaired ) = hash( v.fwd, hash( v.rev ) )
+
+ispaired( cont::SGAlignSingle ) = false
+ispaired( cont::SGAlignPaired ) = true
+
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
 # as junction counts, which should always be at a lower level, e.g. bias < 1
-mutable struct SpliceGraphQuant
+mutable struct SpliceGraphQuant{C <: SGAlignContainer}
    node::Vector{ReadCount}
    edge::IntervalMap{ExonInt,ReadCount}
-   long::Dict{SGAlignPath,ReadCount}
+   long::Dict{SGAlignContainer,ReadCount}
    circ::Dict{Tuple{ExonInt,ExonInt},ReadCount}
    leng::Vector{Float64}
    bias::Float64
@@ -21,13 +41,13 @@ end
 # Default constructer
 SpliceGraphQuant() = SpliceGraphQuant( Vector{ReadCount}(),
                                        IntervalMap{ExonInt,ReadCount}(),
-                                       Dict{SGAlignPath,ReadCount}(),
+                                       Dict{SGAlignContainer,ReadCount}(),
                                        Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                        Vector{Float64}(), 1.0 )
 
 SpliceGraphQuant( sg::SpliceGraph ) = SpliceGraphQuant( zeros(ReadCount, length(sg.nodelen) ),
                                                         IntervalMap{ExonInt,ReadCount}(),
-                                                        Dict{SGAlignPath,ReadCount}(),
+                                                        Dict{SGAlignContainer,ReadCount}(),
                                                         Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
                                                         zeros( length(sg.nodelen) ), 1.0 )
 
@@ -56,8 +76,11 @@ function Base.in( path::SGAlignPath, is::IntSet )
    return true
 end
 
+Base.in( aln::SGAlignSingle, is::IntSet ) = in( aln.fwd, is )
+Base.in( aln::SGAlignPaired, is::IntSet ) = in( aln.fwd, is ) && in( aln.rev, is )
+
 # build compatibility classes from SpliceGraphQuant node and edge "counts"
-@inbounds function build_equivalence_classes!( graphq::GraphLibQuant, lib::GraphLib; assign_edge=true )
+@inbounds function build_equivalence_classes!( graphq::GraphLibQuant, lib::GraphLib; assign_long=true )
    # initialize re-used data structures
    iset = IntSet()
    resize!(iset.bits, 64)
@@ -108,7 +131,7 @@ end
          end
          handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].long[align]) )
          empty!(iset)
-         if assign_edge
+         if assign_long
             #TODO!!!
          end
       end
@@ -199,7 +222,7 @@ end
 
 # This hash structure stores multi-mapping
 # equivalence classes
-const MultiCompat = Dict{MultiAln,MultiAssign}
+const MultiMapping = Dict{MultiAln,MultiCompat}
 
 function Base.push!( ambig::MultiCompat, aligns::Vector{SGAlignment} )
    
