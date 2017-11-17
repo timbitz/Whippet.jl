@@ -78,7 +78,8 @@ function main()
    =#
 
    println(STDERR, "Serializing splice graph index...")
-   open("$(args["index"]).jls", "w") do io
+   indexname = hasextension(args["index"], ".jls") ? args["index"] : args["index"] * ".jls"
+   open(indexname, "w") do io
       @timer serialize( io, graphome )
    end
 

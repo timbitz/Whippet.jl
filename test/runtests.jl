@@ -12,8 +12,6 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-#using Requests
-#using HTTP
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -27,7 +25,6 @@ include("../src/record.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
-#include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
