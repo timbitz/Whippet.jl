@@ -6,7 +6,6 @@ const SCALING_FACTOR = 1_000_000
 # overridden for more complex count bias models
 const ReadCount = Float64
 
-
 # Use this abstraction to store SGAlignPaths before
 # quantification or assignment
 abstract type SGAlignContainer end
@@ -68,9 +67,11 @@ end
 
 abstract type EquivalenceClass end
 
+const ClassType = Vector{Int32}
+
 # type-stable isoform compatibility class
 mutable struct IsoCompat <: EquivalenceClass
-   class::Vector{Int32}
+   class::ClassType
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
@@ -81,6 +82,16 @@ mutable struct IsoCompat <: EquivalenceClass
    end
 end
 
+function equivalence_class!( graphq::GraphLibQuant, lib::GraphLib, aligns::Vector{SGAlignment}, temp_iset::IntSet=IntSet() )
+   for aln in aligns
+      const g = aln.path[1].gene
+      for p in 1:length(lib.graphs[g].annopath)
+         if aln.path in lib.graphs[g].annopath[p]
+            push!(temp_iset, p + graphq.geneidx[g])
+         end
+      end
+   end
+end
 
 # build compatibility classes from SpliceGraphQuant node and edge "counts"
 @inbounds function build_equivalence_classes!( graphq::GraphLibQuant, lib::GraphLib; assign_long=true )
@@ -135,7 +146,7 @@ end
          handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].long[align]) )
          empty!(iset)
          if assign_long
-            #TODO!!!
+            ## TODO!
          end
       end
       # create compatibility classes for isoforms
@@ -191,29 +202,12 @@ end
    end
 end
 
-#=
-@inbounds function calculate_tpm!( quant::GraphLibQuant; readlen::Int64=50, sig::Int64=1 )
-   for i in 1:length(quant.compat)
-      quant.tpm[i] = 0.0
-      for j in 1:length(quant.compat[i].rpk)
-         @fastmath quant.tpm[i] += quant.compat[i].rpk[j] / max( quant.compat[i].length[j] - readlen, 1.0 )
-      end
-   end
-   const rpk_sum = max( sum( quant.tpm ), 1.0 )
-   for i in 1:length(quant.tpm)
-      if sig > 0
-         @fastmath quant.tpm[i] = round( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
-      else
-         @fastmath quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
-      end
-   end
-end
-=#
 
+## MultiAlignment containers & Equivalence classes
 const MultiAln{C} = Vector{C} where C <: SGAlignContainer
 
 mutable struct MultiCompat <: EquivalenceClass
-   class::Vector{Int32}
+   class::ClassType
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
@@ -221,21 +215,20 @@ mutable struct MultiCompat <: EquivalenceClass
    isdone::Bool
 end
 
-# function MultiAssign( 
-
 # This hash structure stores multi-mapping
 # equivalence classes
 const MultiMapping{C} = Dict{MultiAln{C},MultiCompat} where C <: SGAlignContainer
 
-function Base.push!( ambig::MultiMapping{SGAlignSingle}, aligns::Vector{SGAlignment} )
-   cont = Vector{SGAlignSingle}( length(aligns) )
-   for i in 1:length(aligns)
-      cont[i] = SGAlignSingle( aligns[i].path )
+function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignment}, value )
+   cont = Vector{SGAlignSingle}( length(alns) )
+   for i in 1:length(alns)
+      cont[i] = SGAlignSingle( alns[i].path )
    end
    if haskey( ambig, cont )
       ambig[cont].raw += value
    else
-
+      mc = MultiCompat()
+      ambig[cont] = mc
    end
 end
 
@@ -247,7 +240,8 @@ function Base.push!( ambig::MultiMapping, fwd::Vector{SGAlignment}, rev::Vector{
    if haskey( ambig, cont )
       ambig[cont].raw += value
    else
-      
+      mc = MultiCompat()
+      ambig[cont] = mc
    end
 end
 
@@ -304,6 +298,72 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
       end
    end
 end
+
+##### TODO
+## Extension of count! for paired end counting
+function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=1.0, used=IntSet() )
+   (fwd.isvalid == true && rev.isvalid == true) || return
+   const init_gene = fwd.path[1].gene
+   const rev_gene  = rev.path[1].gene
+   (init_gene == rev_gene) || return
+   sgquant = graphq.quant[ init_gene ]
+
+   # single node support
+   if length(fwd.path) == 1
+      # access node -> [ SGNode( gene, *node* ) ]
+      sgquant.node[ fwd.path[1].node ] += val
+      push!( used, fwd.path[1].node )
+   else # multi-node mapping read
+      for n in 1:length(fwd.path)
+         if fwd.path[n].gene != init_gene
+            return
+         end
+      end
+
+      # Otherwise, lets step through pairs of nodes and add val to those edges
+      for n in 1:(length(fwd.path)-1)
+         # trans-spicing off->
+         fwd.path[n].gene != init_gene && continue
+         fwd.path[n+1].gene != init_gene && continue
+         const lnode = fwd.path[n].node
+         const rnode = fwd.path[n+1].node
+         push!( used, lnode )
+         push!( used, rnode )
+         if lnode < rnode
+            interv = Interval{ExonInt}( lnode, rnode )
+            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
+         elseif lnode >= rnode
+            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
+         end
+      end
+   end
+
+   # now conditionally add rev if not already used.
+   if length(rev.path) == 1
+      # access node -> [ SGNode( gene, *node* ) ]
+      if !(rev.path[1].node in used)
+         sgquant.node[ rev.path[1].node ] += val
+      end
+   else
+      # Otherwise, lets step through pairs of nodes and add val to those edges
+      for n in 1:(length(rev.path)-1)
+         # trans-spicing off->
+         rev.path[n].gene != init_gene && continue
+         rev.path[n+1].gene != init_gene && continue
+         const lnode = rev.path[n].node
+         const rnode = rev.path[n+1].node
+         (lnode in used && rnode in used) && continue
+         if lnode < rnode
+            interv = Interval{ExonInt}( lnode, rnode )
+            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
+         elseif lnode >= rnode
+            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
+         end
+      end
+   end
+   #empty!( used )
+end
+
 
 function calculate_bias!( sgquant::SpliceGraphQuant )
    edgecnt = 0.0
@@ -388,7 +448,7 @@ end
 # at each iteration.   It also requires that calculate_tpm! be 
 # run initially once prior to gene_em!() call.
 
-function gene_em!( quant::GraphLibQuant, ambig::Vector{Multimap};
+function gene_em!( quant::GraphLibQuant, ambig::Vector{MultiCompat};
                    it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )
 
    const count_temp = ones(length(quant.count))
