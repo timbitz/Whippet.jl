@@ -19,11 +19,16 @@ struct SGAlignPaired <: SGAlignContainer
    rev::SGAlignPath
 end
 
+# Store unique path's for gene/node but ignore 
+# SGAlignScore which is irrelevant at this stage
 Base.isequal( a::SGAlignSingle, b::SGAlignSingle ) = a.fwd == b.fwd
 Base.isequal( a::SGAlignPaired, b::SGAlignPaired ) = a.fwd == b.fwd && a.rev == b.rev
-
+Base.:(==)( a::SGAlignSingle, b::SGAlignSingle ) = a.fwd == b.fwd
+Base.:(==)( a::SGAlignPaired, b::SGAlignPaired ) = a.fwd == b.fwd && a.rev == b.rev
 Base.hash( v::SGAlignSingle ) = hash( v.fwd )
+Base.hash( v::SGAlignSingle, h::UInt64 ) = hash( v.fwd, h )
 Base.hash( v::SGAlignPaired ) = hash( v.fwd, hash( v.rev ) )
+Base.hash( v::SGAlignPaired, h::UInt64 ) = hash( v.fwd, hash( v.rev, h ) )
 
 ispaired( cont::SGAlignSingle ) = false
 ispaired( cont::SGAlignPaired ) = true
@@ -51,23 +56,19 @@ mutable struct SpliceGraphQuant{C <: SGAlignContainer}
    leng::Vector{Float64}
    bias::Float64
 
-   # Default constructer
-   SpliceGraphQuant() = SpliceGraphQuant( Vector{ReadCount}(),
-                                          IntervalMap{ExonInt,ReadCount}(),
-                                          Dict{SGAlignContainer,ReadCount}(),
-                                          Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
-                                          Vector{Float64}(), 1.0 )
-
-   SpliceGraphQuant{C}( sg::SpliceGraph ) = SpliceGraphQuant{C}( zeros(ReadCount, length(sg.nodelen) ),
-                                                                 IntervalMap{ExonInt,ReadCount}(),
-                                                                 Dict{C,ReadCount}(),
-                                                                 Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
-                                                                 zeros( length(sg.nodelen) ), 1.0 )
+   function SpliceGraphQuant{C}( sg::SpliceGraph ) where C <: SGAlignContainer
+      return new( zeros(ReadCount, length(sg.nodelen) ),
+             IntervalMap{ExonInt,ReadCount}(),
+             Dict{C,ReadCount}(),
+             Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
+             zeros( length(sg.nodelen) ), 1.0 )
+   end
 end
 
 abstract type EquivalenceClass end
 
-const ClassType = Vector{Int32}
+const ClassInt  = Int32
+const ClassType = Vector{ClassInt}
 
 # type-stable isoform compatibility class
 mutable struct IsoCompat <: EquivalenceClass
@@ -78,17 +79,60 @@ mutable struct IsoCompat <: EquivalenceClass
    isdone::Bool
 
    function IsoCompat( arr::Vector{Int}, count::Float64 )
-      return IsoCompat( arr, ones( length(arr) ) / length(arr), 1.0, count, false )
+      return new( arr, ones( length(arr) ) / length(arr), 1.0, count, false )
    end
 end
 
-function equivalence_class!( graphq::GraphLibQuant, lib::GraphLib, aligns::Vector{SGAlignment}, temp_iset::IntSet=IntSet() )
-   for aln in aligns
-      const g = aln.path[1].gene
-      for p in 1:length(lib.graphs[g].annopath)
-         if aln.path in lib.graphs[g].annopath[p]
-            push!(temp_iset, p + graphq.geneidx[g])
+# Here we store whole graphome quantification
+struct GraphLibQuant{C <: SGAlignContainer}
+   tpm::Vector{Float64}                # isoform tpm
+   count::Vector{Float64}              # isoform counts
+   length::Vector{Int64}               # isoform lengths
+   geneidx::Vector{Int64}              # 0-based offset of isoforms for gene
+   quant::Vector{SpliceGraphQuant{C}}  # splice graph quant structs for gene
+   classes::Vector{IsoCompat}          # isoform compatibility classes
+
+   function GraphLibQuant{C}( lib::GraphLib ) where C <: SGAlignContainer
+      isonum = zeros(Int, length(lib.graphs))
+      for i in 1:length(lib.graphs)
+         isonum[i] = length(lib.graphs[i].annoname)
+      end
+      isolen  = sum( isonum )
+      tpm     = zeros( isolen )
+      count   = zeros( isolen )
+      leng    = zeros( isolen )
+      geneoff = zeros(Int, length(lib.graphs))
+      quant   = Vector{SpliceGraphQuant}( length(lib.graphs) )
+      classes = Vector{IsoCompat}()
+      cumul_i = 0
+      for i in 1:length(lib.graphs)
+         geneoff[i] = cumul_i
+         for j in 1:length(lib.graphs[i].annopath)
+            leng[cumul_i+j] = sum(map( y->lib.graphs[i].nodelen[y], collect(lib.graphs[i].annopath[j]) ))
          end
+         cumul_i += isonum[i]
+         quant[i] = SpliceGraphQuant{C}( lib.graphs[i] )
+      end
+      new( tpm, count, leng, geneoff, quant, classes )
+   end
+end
+
+function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, val )
+   const init_gene = path.fwd[1].gene
+   const sgquant = graphq.quant[ init_gene ]
+
+   if length(path.fwd) == 1
+      sgquant[ init_gene ] += val
+   else
+      for i in 1:length(path.fwd)-1
+         const lnode = path.fwd[i].node
+         const rnode = path.fwd[i+1].node
+         if lnode < rnode
+            interv = Interval{ExonInt}( lnode, rnode )
+            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
+         elseif lnode >= rnode
+            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
+         end 
       end
    end
 end
@@ -146,7 +190,7 @@ end
          handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].long[align]) )
          empty!(iset)
          if assign_long
-            ## TODO!
+            assign_path!( graphq, align, 1.0 )
          end
       end
       # create compatibility classes for isoforms
@@ -157,36 +201,26 @@ end
    end
 end
 
-# Here we store whole graphome quantification
-struct GraphLibQuant{C <: SGAlignContainer}
-   tpm::Vector{Float64}                # isoform tpm
-   count::Vector{Float64}              # isoform counts
-   length::Vector{Int64}               # isoform lengths
-   geneidx::Vector{Int64}              # 0-based offset of isoforms for gene
-   quant::Vector{SpliceGraphQuant{C}}  # splice graph quant structs for gene
-   classes::Vector{IsoCompat}          # isoform compatibility classes
-end
-
-function GraphLibQuant{C}( lib::GraphLib ) where C <: SGAlignContainer
-   isonum  = map( x->length(x.annopath), lib.graphs )
-   tpm     = zeros( isolen )
-   count   = zeros( isolen )
-   length  = zeros( isolen )
-   geneoff = zeros(Int, length(lib.graphs))
-   quant   = Vector{SpliceGraphQuant}( length(lib.graphs) )
-   classes = Vector{IsoCompat}()
-   cumul_i = 0
-   for i in 1:length(lib.graphs)
-      geneoff[i] = cumul_i
-      cumul_i += isonum[i]
-      for j in 1:length(lib.graphs[i].annopath)
-         length[cumul_i+j] = sum(map( y->sg.nodelen[y], collect(lib.graphs[i].annopath[j]) ))
+function equivalence_class!( graphq::GraphLibQuant, lib::GraphLib, aligns::Vector{SGAlignment}, temp_iset::IntSet=IntSet() )
+   matches_all = true
+   for aln in aligns
+      const g = aln.path[1].gene
+      has_match = false
+      for p in 1:length(lib.graphs[g].annopath)
+         if aln.path in lib.graphs[g].annopath[p]
+            push!(temp_iset, p + graphq.geneidx[g])
+            has_match = true
+         end
       end
-      quant[i] = SpliceGraphQuant{C}( lib.graphs[i] )
+      if !has_match
+         matches_all = false
+         return ClassType(),false
+      end
    end
-   GraphLibQuant{C}( tpm, count, length, geneoff, quant, classes )
+   retval = collect(ClassInt, temp_iset)
+   empty!(temp_iset)
+   retval,matches_all
 end
-
 
 @inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
    for i in 1:length(counts)
@@ -202,7 +236,6 @@ end
    end
 end
 
-
 ## MultiAlignment containers & Equivalence classes
 const MultiAln{C} = Vector{C} where C <: SGAlignContainer
 
@@ -211,8 +244,10 @@ mutable struct MultiCompat <: EquivalenceClass
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
-   raw::ReadCount
    isdone::Bool
+   postassign::Bool
+   raw::ReadCount
+   
 end
 
 # This hash structure stores multi-mapping
@@ -227,12 +262,12 @@ function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignmen
    if haskey( ambig, cont )
       ambig[cont].raw += value
    else
-      mc = MultiCompat()
+      mc = MultiCompat(  )
       ambig[cont] = mc
    end
 end
 
-function Base.push!( ambig::MultiMapping, fwd::Vector{SGAlignment}, rev::Vector{SGAlignment}, value )
+function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment}, rev::Vector{SGAlignment}, value )
    cont = Vector{SGAlignPaired}( length(fwd) )
    for i in 1:length(fwd)
       cont[i] = SGAlignPaired( fwd[i].path, rev[i].path )
@@ -246,11 +281,11 @@ function Base.push!( ambig::MultiMapping, fwd::Vector{SGAlignment}, rev::Vector{
 end
 
 # TODO
-function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap}; ispaired::Bool=false )
-   for mm in ambig
+function assign_ambig!( graphq::GraphLibQuant{C}, ambig::Vector{MultiMapping{C}} ) where C <: SGAlignContainer
+#=   for mm in ambig
       i = 1
       while i <= length(mm.prop)
-         if ispaired
+         if ispaired(_)
             (i == length(mm.prop)) && break
             count!( graphq, mm.align[i], mm.align[i+1], val=mm.prop[i] )
             i += 1
@@ -259,7 +294,7 @@ function assign_ambig!( graphq::GraphLibQuant, ambig::Vector{Multimap}; ispaired
          end
          i += 1
       end
-   end
+   end =#
 end
 
 function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
@@ -290,10 +325,11 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
             sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
          end         
       else # or we have long path, add long count
-         if haskey(sgquant.long, align.path)
-            sgquant.long[align.path] += val
+         curkey = SGAlignSingle(align.path)
+         if haskey(sgquant.long, curkey)
+            sgquant.long[curkey] += val
          else
-            sgquant.long[align.path] = val
+            sgquant.long[curkey] = val
          end
       end
    end

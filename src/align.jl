@@ -61,6 +61,11 @@ struct SGAlignNode
    score::SGAlignScore
 end
 
+Base.hash( sgn::SGAlignNode ) = hash( sgn.gene, hash(sgn.node) )
+Base.hash( sgn::SGAlignNode, h::UInt64 ) = hash( sgn.gene, hash(sgn.node, h) )
+Base.isequal( a::SGAlignNode, b::SGAlignNode ) = a.gene == b.gene && a.node == b.node
+Base.:(==)( a::SGAlignNode, b::SGAlignNode ) = a.gene == b.gene && a.node == b.node
+
 const SGAlignPath = Vector{SGAlignNode}
 
 @inline SGAlignNode(sgn::SGNode) = SGAlignNode(sgn.gene, sgn.node, zero(SGAlignScore))

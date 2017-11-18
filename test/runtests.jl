@@ -216,6 +216,14 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(STDERR, lib)
    end
 
+   # store general data structures outside of testset
+   score_range = 0.05
+   param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
+                          false, false, true, false, true )
+   println(map( x->length(x.annoname), lib.graphs ))
+   quant = GraphLibQuant{SGAlignSingle}( lib )
+   #multi = Vector{MultiMapping}() 
+
    @testset "Alignment and SAM Format" begin
       # reads
       fastq = IOBuffer("@1S10M%11,20%exon1
@@ -259,12 +267,6 @@ TCTTGTCTAATG
 +
 IIIIIIIIIIII
 ")
-
-      score_range = 0.05
-      param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
-                          false, false, true, false, true )
-      quant = GraphLibQuant( lib )
-      multi = Vector{Multimap}()
 
       const DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
       fqparse = FASTQ.Reader( BufferedInputStream(fastq), fill_ambiguous=DNA_C )
@@ -318,10 +320,57 @@ IIIIIIIIIIII
          # test that cigar reversal works for '-' strand genes.
       end 
 
-      @testset "TPM" begin
-         calculate_tpm!( quant, readlen=20 )
+      @testset "SGAlignContainer Hashing" begin
 
-         #println(quant)
+         @test SGAlignNode(1,1,zero(SGAlignScore)) == SGAlignNode(1,1,one(SGAlignScore))
+         @test hash( SGAlignNode(1,1,zero(SGAlignScore)) ) == hash( SGAlignNode(1,1,one(SGAlignScore)) )
+
+         @test SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))] == SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]
+         @test hash( SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))] ) == hash( SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))] )
+
+         @test SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) == SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))])
+         @test hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) ) == hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]) )
+
+         a = map( x->SGAlignSingle(SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))]), collect(1:5))
+         ab = map( x->SGAlignSingle(SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))]), collect(1:5))
+         b = map( x->SGAlignPaired(SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))], SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))]), collect(1:5))
+         bb = map( x->SGAlignPaired(SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))], SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))]), collect(1:5))
+
+         da = Dict{SGAlignSingle,Int}()
+         db = Dict{SGAlignPaired,Int}()
+
+         function settwice!( d, a, ab )
+            for i in a
+               d[i] = 1
+            end
+            for i in ab
+               d[i] = 2
+            end
+            for k in keys(d)
+               @test d[k] == 2
+            end
+         end
+         settwice!( da, a, ab )
+         settwice!( db, b, bb )
+         @test length(keys(da)) == length(a)
+         @test length(keys(db)) == length(b)
+
+      end
+
+      @testset "Isoform Equivalence Classes" begin
+
+         @test length(quant.tpm) == 7
+         @test length(quant.count) == 7
+         @test length(quant.length) == 7
+         @test quant.geneidx == [0, 2, 5, 6]
+         build_equivalence_classes!( quant, lib, assign_long=true )
+         println(quant)
+         println(quant.classes)
+         
+      end
+
+      @testset "MultiMapping Equivalence Classes" begin
+
       end
 
       function parse_edge{S <: AbstractString}( str::S )
