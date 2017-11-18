@@ -5,6 +5,7 @@ const SCALING_FACTOR = 1_000_000
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
 const ReadCount = Float64
+const DEF_READCOUNT = 0.0
 
 # Use this abstraction to store SGAlignPaths before
 # quantification or assignment
@@ -23,8 +24,10 @@ end
 # SGAlignScore which is irrelevant at this stage
 Base.isequal( a::SGAlignSingle, b::SGAlignSingle ) = a.fwd == b.fwd
 Base.isequal( a::SGAlignPaired, b::SGAlignPaired ) = a.fwd == b.fwd && a.rev == b.rev
+
 Base.:(==)( a::SGAlignSingle, b::SGAlignSingle ) = a.fwd == b.fwd
 Base.:(==)( a::SGAlignPaired, b::SGAlignPaired ) = a.fwd == b.fwd && a.rev == b.rev
+
 Base.hash( v::SGAlignSingle ) = hash( v.fwd )
 Base.hash( v::SGAlignSingle, h::UInt64 ) = hash( v.fwd, h )
 Base.hash( v::SGAlignPaired ) = hash( v.fwd, hash( v.rev ) )
@@ -117,21 +120,22 @@ struct GraphLibQuant{C <: SGAlignContainer}
    end
 end
 
-function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, val )
+# This function re-count!'s SGAlignPaths which were not count!'ed originally
+function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, value, def_value=DEF_READCOUNT )
    const init_gene = path.fwd[1].gene
    const sgquant = graphq.quant[ init_gene ]
 
    if length(path.fwd) == 1
-      sgquant[ init_gene ] += val
+      sgquant[ init_gene ] += value
    else
       for i in 1:length(path.fwd)-1
          const lnode = path.fwd[i].node
          const rnode = path.fwd[i+1].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
+            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value + value
          elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
+            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), DEF_READCOUNT) + value
          end 
       end
    end
@@ -222,19 +226,6 @@ function equivalence_class!( graphq::GraphLibQuant, lib::GraphLib, aligns::Vecto
    retval,matches_all
 end
 
-@inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
-   for i in 1:length(counts)
-      @fastmath quant.tpm[ i ] = counts[i] / max( (quant.length[i] - readlen), 1.0 )
-   end
-   const rpk_sum = max( sum( quant.tpm ), 1.0 )
-   for i in 1:length(quant.tpm)
-      if sig > 0
-         @fastmath quant.tpm[i] = round( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
-      else
-         @fastmath quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
-      end
-   end
-end
 
 ## MultiAlignment containers & Equivalence classes
 const MultiAln{C} = Vector{C} where C <: SGAlignContainer
@@ -247,7 +238,10 @@ mutable struct MultiCompat <: EquivalenceClass
    isdone::Bool
    postassign::Bool
    raw::ReadCount
-   
+
+   function MultiCompat( cont::MultiAln{C} ) where C <: SGAlignContainer
+      
+   end
 end
 
 # This hash structure stores multi-mapping
@@ -297,7 +291,7 @@ function assign_ambig!( graphq::GraphLibQuant{C}, ambig::Vector{MultiMapping{C}}
    end =#
 end
 
-function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
+function count!( graphq::GraphLibQuant, align::SGAlignment; value::Float64=1.0 )
    align.isvalid == true || return
    init_gene = align.path[1].gene
    sgquant   = graphq.quant[ init_gene ]
@@ -305,7 +299,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
    # single node support
    if length(align.path) == 1
       # access node -> [ SGNode( gene, *node* ) ]
-      sgquant.node[ align.path[1].node ] += val
+      sgquant.node[ align.path[1].node ] += value
    else # multi-node mapping read
       # if any node in path maps to other gene, ignore read
       for n in 1:length(align.path)
@@ -320,16 +314,16 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; val::Float64=1.0 )
          const rnode = align.path[2].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
+            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + value
          elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
+            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + value
          end         
       else # or we have long path, add long count
          curkey = SGAlignSingle(align.path)
          if haskey(sgquant.long, curkey)
-            sgquant.long[curkey] += val
+            sgquant.long[curkey] += value
          else
-            sgquant.long[curkey] = val
+            sgquant.long[curkey] = value
          end
       end
    end
@@ -400,6 +394,19 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=
    #empty!( used )
 end
 
+@inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
+   for i in 1:length(counts)
+      @fastmath quant.tpm[ i ] = counts[i] / max( (quant.length[i] - readlen), 1.0 )
+   end
+   const rpk_sum = max( sum( quant.tpm ), 1.0 )
+   for i in 1:length(quant.tpm)
+      if sig > 0
+         @fastmath quant.tpm[i] = round( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
+      else
+         @fastmath quant.tpm[i] = ( quant.tpm[i] * SCALING_FACTOR / rpk_sum )
+      end
+   end
+end
 
 function calculate_bias!( sgquant::SpliceGraphQuant )
    edgecnt = 0.0

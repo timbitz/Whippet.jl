@@ -224,7 +224,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    quant = GraphLibQuant{SGAlignSingle}( lib )
    #multi = Vector{MultiMapping}() 
 
-   @testset "Alignment and SAM Format" begin
+   @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
       fastq = IOBuffer("@1S10M%11,20%exon1
 NGCGGATTACA
@@ -370,6 +370,7 @@ IIIIIIIIIIII
       end
 
       @testset "MultiMapping Equivalence Classes" begin
+         
 
       end
 
