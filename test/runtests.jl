@@ -358,6 +358,26 @@ IIIIIIIIIIII
 
       @testset "Isoform Equivalence Classes" begin
 
+         is = IntSet([1, 2, 5, 6])
+         @test in( 1, 2, is ) == true
+         @test in( 1, 3, is ) == false
+         @test in( 2, 3, is ) == false
+         @test in( 2, 4, is ) == false
+         @test in( 2, 5, is ) == true
+         @test in( 5, 6, is ) == true
+         @test in( 1, 6, is ) == false
+         for i in [1,2,5,6]
+            @test (i in is) == true
+         end
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == false
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == true
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000003, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == false
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000005, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == true
+
          @test length(quant.tpm) == 7
          @test length(quant.count) == 7
          @test length(quant.length) == 7
@@ -396,7 +416,7 @@ IIIIIIIIIIII
          (parse(Int, String(s[1])), parse(Int, String(s[2])), parse(Float64, String(s[3])))
       end
 
-      @testset "Graph Reduction" begin
+      @testset "Graph Enumeration" begin
          #= Real Test based on node 23 (here annotated as 1) in ENSMUSG00000038685
          inclusion edges:
          1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10
