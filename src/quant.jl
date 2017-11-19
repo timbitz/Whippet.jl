@@ -205,19 +205,40 @@ end
    end
 end
 
-function equivalence_class!( graphq::GraphLibQuant, lib::GraphLib, aligns::Vector{SGAlignment}, temp_iset::IntSet=IntSet() )
+equivalence_class( graphq::GraphLibQuant, 
+                   lib::GraphLib, 
+                   cont::Vector{SGAlignSingle}, 
+                   temp_iset::IntSet=IntSet() ) = equivalence_class( graphq, lib, cont, temp_iset, false ) 
+
+equivalence_class( graphq::GraphLibQuant, 
+                   lib::GraphLib,
+                   cont::Vector{SGAlignPaired}, 
+                   temp_iset::IntSet=IntSet() ) = equivalence_class( graphq, lib, cont, temp_iset, true )
+
+# This function takes a vector of alignments and returns the compatibility class
+# and a boolean describing whether or not we can assign the read through EM
+function equivalence_class( graphq::GraphLibQuant, lib::GraphLib, 
+                            cont::Vector{C}, temp_iset::IntSet, ispaired::Bool ) where C <: SGAlignContainer
    matches_all = true
-   for aln in aligns
-      const g = aln.path[1].gene
+   for path in cont
+      const g = path.fwd[1].gene
       has_match = false
       for p in 1:length(lib.graphs[g].annopath)
-         if aln.path in lib.graphs[g].annopath[p]
-            push!(temp_iset, p + graphq.geneidx[g])
-            has_match = true
+         if !ispaired
+            if path.fwd in lib.graphs[g].annopath[p]
+               push!(temp_iset, p + graphq.geneidx[g])
+               has_match = true
+            end
+         else
+            if path.fwd in lib.graphs[g].annopath[p] &&
+               path.rev in lib.graphs[g].annopath[p]
+               has_match = true
+            end
          end
       end
       if !has_match
          matches_all = false
+         empty!(temp_iset)
          return ClassType(),false
       end
    end
@@ -228,7 +249,6 @@ end
 
 
 ## MultiAlignment containers & Equivalence classes
-const MultiAln{C} = Vector{C} where C <: SGAlignContainer
 
 mutable struct MultiCompat <: EquivalenceClass
    class::ClassType
@@ -239,25 +259,32 @@ mutable struct MultiCompat <: EquivalenceClass
    postassign::Bool
    raw::ReadCount
 
-   function MultiCompat( cont::MultiAln{C} ) where C <: SGAlignContainer
-      
+   function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
+      class,postbool = equivalence_class( graphq, lib, cont, temp_iset )
+      new( class, ones(length(class)) / length(class), 1.0, 1.0, false, postbool, DEF_READCOUNT )
    end
 end
 
 # This hash structure stores multi-mapping
 # equivalence classes
-const MultiMapping{C} = Dict{MultiAln{C},MultiCompat} where C <: SGAlignContainer
+struct MultiMapping{C <: SGAlignContainer}
+   map::Dict{Vector{C},MultiCompat}
+   iset::IntSet
+    
+   function MultiMapping{C}() where C <: SGAlignContainer
+      new( Dict{Vector{C},MultiCompat}(), IntSet() )
+   end
+end
 
-function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignment}, value )
+function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignment}, value, graphq::GraphLibQuant, lib::GraphLib )
    cont = Vector{SGAlignSingle}( length(alns) )
    for i in 1:length(alns)
       cont[i] = SGAlignSingle( alns[i].path )
    end
-   if haskey( ambig, cont )
-      ambig[cont].raw += value
+   if haskey( ambig.map, cont )
+      ambig.map[cont].raw += value
    else
-      mc = MultiCompat(  )
-      ambig[cont] = mc
+      ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
    end
 end
 
@@ -266,11 +293,10 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
    for i in 1:length(fwd)
       cont[i] = SGAlignPaired( fwd[i].path, rev[i].path )
    end
-   if haskey( ambig, cont )
-      ambig[cont].raw += value
+   if haskey( ambig.map, cont )
+      ambig.map[cont].raw += value
    else
-      mc = MultiCompat()
-      ambig[cont] = mc
+      ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
    end
 end
 
@@ -491,14 +517,15 @@ end
 # at each iteration.   It also requires that calculate_tpm! be 
 # run initially once prior to gene_em!() call.
 
-function gene_em!( quant::GraphLibQuant, ambig::Vector{MultiCompat};
-                   it::Int64=1, maxit::Int64=1000, sig::Int64=1, readlen::Int64=50 )
+function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C};
+                   it::Int64=1, maxit::Int64=1000, 
+                   sig::Int64=1, readlen::Int64=50 ) where C <: SGAlignContainer
 
    const count_temp = ones(length(quant.count))
    const tpm_temp   = ones(length(quant.count))
    const prop_temp  = zeros( 500 )
    const uniqsum    = sum(quant.count)
-   const ambigsum   = length(ambig)
+   const ambigsum   = length(ambig.map)
 
    @inline function maximize_and_assign!( eq::E, maximize::Bool=true ) where E <: EquivalenceClass
       eq.isdone && return
@@ -529,7 +556,7 @@ function gene_em!( quant::GraphLibQuant, ambig::Vector{MultiCompat};
       unsafe_copy!( tpm_temp, quant.tpm )
 
       # Maximization
-      for eq in ambig
+      for eq in values(ambig.map)
          maximize_and_assign!( eq, (it > 1) )
       end
       for eq in quant.classes
@@ -545,15 +572,31 @@ end
 
 
 function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
-   io = open( file, "w" )
-   stream = ZlibDeflateOutputStream( io )
-   output_tpm_header( stream )
+   geneio = open( file * ".gene.tpm.gz", "w" )
+   genestream = ZlibDeflateOutputStream( geneio )
+   isoio = open( file * ".isoform.tpm.gz", "w" )
+   isostream = ZlibDeflateOutputStream( isoio )
+   output_tpm_header( genestream )
+   output_tpm_header( isostream )
    for i in 1:length(lib.names)
-      tab_write( stream, lib.names[i] )
-      tab_write( stream, string(gquant.tpm[i]) )
-      tab_write( stream, string(gquant.count[i]) )
-      write( stream, '\n' )
+      idx = gquant.geneidx[i]
+      genetpm = 0.0
+      genecnt = 0.0
+      for j in 1:length(lib.graphs[i].annoname)
+         genetpm += gquant.tpm[j+idx]
+         genecnt += gquant.count[j+idx]
+         tab_write( isostream, lib.graphs[i].annoname[j] )
+         tab_write( isostream, string(gquant.tpm[j+idx]) )
+         tab_write( isostream, string(gquant.count[j+idx]) )
+         write( isostream, '\n' )
+      end
+      tab_write( genestream, lib.names[i] )
+      tab_write( genestream, string(genetpm) )
+      tab_write( genestream, string(genecnt) )
+      write( genestream, '\n' )
    end
-   close( stream )
-   close( io )
+   close( isostream )
+   close( isoio )
+   close( genestream )
+   close( geneio )
 end

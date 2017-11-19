@@ -14,7 +14,6 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-#using Requests
 
 include("types.jl")
 include("timer.jl")
@@ -28,7 +27,6 @@ include("record.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
-#include("ebi.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
@@ -55,27 +53,26 @@ export SpliceGraph,
        SGNucleotide,
        SGNucleotideSequence,
        SGSequence,
+       SGAlignSingle,
+       SGAlignPaired,
        @sg_str,
        reverse_complement,
        kmer,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
-       Multimap,
+       MultiMapping,
        AlignParam,
        ungapped_align,
        make_fqparser,
-#       make_http_fqparser,
        hasextension,
        isgzipped,
-       EBIResponse,
-       ident_to_fastq_url,
        load_refflat,
        load_gtf,
        fasta_to_index,
        process_reads!,
        process_paired_reads!,
+       build_equivalence_classes!,
        calculate_tpm!,
-       rec_gene_em!,
        gene_em!,
        output_tpm,
        output_stats,
