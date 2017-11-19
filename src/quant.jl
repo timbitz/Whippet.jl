@@ -36,10 +36,59 @@ Base.hash( v::SGAlignPaired, h::UInt64 ) = hash( v.fwd, hash( v.rev, h ) )
 ispaired( cont::SGAlignSingle ) = false
 ispaired( cont::SGAlignPaired ) = true
 
+# reimplementation of to edge code in events.jl
+# we require not just the nodes to exist in the intset
+# but also that they are adjacent in the intset
+function Base.in( first, last, is::IntSet )
+   if first in is &&
+      last in is
+      for i in first+1:last-1
+         if i in is
+            return false
+         end
+      end
+      return true
+   end
+   return false
+end
+
+Base.in( edge::I, is::IntSet ) where I <: IntervalValue = in( edge.first, edge.last, is )
+
+# This looks for an edge in a Vector of IntSets using ^
+function Base.in{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+   for iset in viset
+      if edge in iset
+         return true
+      end
+   end
+   false
+end
+
+# For events.jl:
+function inall{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+   inone = false
+   for iset in viset
+      if edge.first >= first(iset) && edge.last <= last(iset)
+         if !(edge in iset)
+            return false
+         end
+         inone = true
+      end
+   end
+   inone ? true : false
+end
+
+# each edge in the path must exist in the int set to be true
 function Base.in( path::SGAlignPath, is::IntSet )
-   for i in 1:length(path)
-      if !(path[i].node in is)
+   if length(path) == 1
+      if !(path[1].node in is)
          return false
+      end
+   else
+      for i in 1:length(path)-1
+         if !in( path[i].node, path[i+1].node, is )
+            return false
+         end
       end
    end
    return true
@@ -176,8 +225,7 @@ end
       # go through edges
       for edg in graphq.quant[i].edge
          for p in 1:length(lib.graphs[i].annopath)
-            if edg.first in lib.graphs[i].annopath[p] &&
-               edg.last  in lib.graphs[i].annopath[p]
+            if edg in lib.graphs[i].annopath[p]
                push!(iset, p)
             end
          end
@@ -256,12 +304,11 @@ mutable struct MultiCompat <: EquivalenceClass
    prop_sum::Float64
    count::Float64
    isdone::Bool
-   postassign::Bool
    raw::ReadCount
 
    function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
-      class,postbool = equivalence_class( graphq, lib, cont, temp_iset )
-      new( class, ones(length(class)) / length(class), 1.0, 1.0, false, postbool, DEF_READCOUNT )
+      class,matches = equivalence_class( graphq, lib, cont, temp_iset )
+      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, DEF_READCOUNT )
    end
 end
 

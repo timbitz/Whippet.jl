@@ -222,7 +222,6 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
                           false, false, true, false, true )
    println(map( x->length(x.annoname), lib.graphs ))
    quant = GraphLibQuant{SGAlignSingle}( lib )
-   #multi = Vector{MultiMapping}() 
 
    @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
@@ -364,15 +363,32 @@ IIIIIIIIIIII
          @test length(quant.length) == 7
          @test quant.geneidx == [0, 2, 5, 6]
          build_equivalence_classes!( quant, lib, assign_long=true )
-         println(quant)
-         println(quant.classes)
+         println(STDERR, quant)
+         println(STDERR, quant.classes)
          
       end
 
       @testset "MultiMapping Equivalence Classes" begin
-         
 
+         multi  = MultiMapping{SGAlignSingle}() 
+         aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true), 
+                              SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000004, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
 
+         push!( multi, aligns, 1.0, quant, lib )
+         println(STDERR, multi.map)
+         compats = collect(values(multi.map))
+         @test compats[1].isdone == true
+
+         multi  = MultiMapping{SGAlignSingle}()
+
+         aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
+                              SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
+ 
+         push!( multi, aligns, 1.0, quant, lib )
+         println(STDERR, multi.map)
+         compats = collect(values(multi.map))
+         @test compats[1].isdone == false
+         @test [3,4,5] == compats[1].class        
       end
 
       function parse_edge{S <: AbstractString}( str::S )
