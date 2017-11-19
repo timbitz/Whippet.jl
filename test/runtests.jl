@@ -398,6 +398,7 @@ IIIIIIIIIIII
          println(STDERR, multi.map)
          compats = collect(values(multi.map))
          @test compats[1].isdone == true
+         @test sum(multi.iset) == 0
 
          multi  = MultiMapping{SGAlignSingle}()
 
@@ -408,7 +409,8 @@ IIIIIIIIIIII
          println(STDERR, multi.map)
          compats = collect(values(multi.map))
          @test compats[1].isdone == false
-         @test [3,4,5] == compats[1].class        
+         @test [3,4,5] == compats[1].class 
+         @test sum(multi.iset) == 0
       end
 
       function parse_edge{S <: AbstractString}( str::S )
