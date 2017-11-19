@@ -142,12 +142,12 @@ function main()
    end
 
    # TPM_EM
-   println(STDERR, "Calculating expression values and MLE of equivalence classes with EM...:")
-   println(STDERR, "\t$( length(multi.map) ) multi-gene mapping read equivalence classes...")
+   println(STDERR, "Calculating expression values and MLE of equivalence classes with EM:")
+   println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
    build_equivalence_classes!( quant, lib, assign_long=true )
-   println(STDERR, "\t$( length(quant.classes) ) multi-isoform equivalence classes...")
+   println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
    calculate_tpm!( quant, readlen=readlen )
-   @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=250 ) 
+   @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=1000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    output_tpm( args["out"], lib, quant )
