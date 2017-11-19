@@ -184,10 +184,10 @@ end
 end
 
 assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, 
-             value, def_value=DEF_READVALUE, temp_iset::IntSet ) = assign_path!( graphq, path, value, def_value ) 
+             value, temp_iset::IntSet ) = assign_path!( graphq, path, value ) 
 
 # This function re-count!'s SGAlignPaths which were not count!'ed originally
-@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, value, def_value=DEF_READVALUE )
+@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, value )
    const init_gene = path.fwd[1].gene
    const sgquant = graphq.quant[ init_gene ]
 
@@ -208,7 +208,7 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle,
 end
 
 # This function re-counts paired SGAlignPaths that weren't counted because they were too long, disjointed, or both
-@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignPaired}, path::SGAlignPaired, value, def_value=DEF_READVALUE, temp_iset::IntSet=IntSet() )
+@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignPaired}, path::SGAlignPaired, value, temp_iset::IntSet=IntSet() )
    const init_gene = path.fwd[1].gene
    const sgquant = graphq.quant[ init_gene ]
 
