@@ -273,56 +273,6 @@ end
    end
 end
 
-#= this is not faster than reduce_graph, should be deprecated.
-@inline function reduce_graph_min( edges::PsiGraph, graph::PsiGraph=deepcopy(edges) )
-   const ExonIntType = UInt8
-   edgevec  = map( y->map(x->convert(ExonIntType, x), collect(y)), edges.nodes )
-   graphvec = map( y->map(x->convert(ExonIntType, x), collect(y)), graph.nodes )
-   results,gmin,gmax = reduce_graph_uint( edgevec, graphvec )
-   newgraph = PsiGraph( Vector{IntSet}(),  Vector{Float64}(),
-                        Vector{Float64}(), Vector{Float64}(),
-                        gmin, gmax )
-   for path in results
-      push!( newgraph.nodes, IntSet(path) )
-      push!( newgraph.length, length(path) )
-      push!( newgraph.count, 0.0 )
-   end
-   newgraph
-end
-
-function reduce_graph_uint{T}( edges::Vector{Vector{T}}, graph::Vector{Vector{T}}=deepcopy(edges) )
-   newgraph = Vector{Vector{T}}()
-   graphmin = typemax(T)
-   graphmax = typemin(T)
-   it = 1
-   while newgraph != graph || it == 1
-      if it > 1
-         graph,newgraph = newgraph,graph
-         empty!( newgraph )
-      end
-      @inbounds for i in 1:length(graph)
-         push_i = false
-         for j in 1:length(edges)
-            if hasintersect_terminal( graph[i], edges[j] )
-               const jointset = sort(union( graph[i], edges[j] ))
-               push_i = true
-               (jointset in newgraph) && continue
-               push!( newgraph,  jointset )
-               graphmin = min( min(first(graph[i]), first(edges[j])), graphmin )
-               graphmax = max( max(last(graph[i]),  last(edges[j])),  graphmax )
-            end
-         end
-         if !push_i && !(graph[i] in newgraph)
-            push!( newgraph, graph[i] )
-            graphmin = min( first(graph[i]), graphmin )
-            graphmax = max( last(graph[i]),  graphmax )
-         end
-      end
-      it += 1
-   end
-   newgraph,graphmin,graphmax
-end
-=#
 
 function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; 
                                             value_bool=true, length=1.0 )

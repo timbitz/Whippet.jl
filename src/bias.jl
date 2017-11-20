@@ -2,6 +2,18 @@
 abstract type ReadCounter end
 abstract type BiasModel end
 
+#This may introduce type-instability
+#Though it may be necessary...
+#Base.get( num::Float64 ) = num 
+
+function Base.get( cnt::R ) where R <: ReadCounter
+   if !cnt.isadjusted
+      error("Cannot get() read count from model thats not already adjusted!")
+   else
+      return cnt.count
+   end
+end
+
 struct DefaultBiasMod <: BiasModel end
 
 mutable struct DefaultCounter <: ReadCounter
@@ -9,11 +21,18 @@ mutable struct DefaultCounter <: ReadCounter
    isadjusted::Bool
 
    DefaultCounter() = new( 1.0, true )
+   DefaultCounter( i::Float64 ) = new( i, true )
 end
 
-adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
+const DEFAULTCOUNTER_ZERO = DefaultCounter(0.0)
+const DEFAULTCOUNTER_ONE  = DefaultCounter(1.0)
+
+Base.zero( ::Type{DefaultCounter} ) = DEFAULTCOUNTER_ZERO
+Base.one( ::Type{DefaultCounter} )  = DEFAULTCOUNTER_ONE
 Base.push!( cnt::DefaultCounter, value::Float64 ) = (cnt.count += value)
 
+adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
+count!( mod::DefaultBiasMod, anything ) = 1.0
 
 # 5' Sequence bias model
 # Implementation of Hansen et al, NAR 2010 
@@ -32,7 +51,7 @@ struct PrimerBiasMod <: BiasModel
    end
 end
 
-function count!( mod::PrimerBiasMod, seq::BioSequence )
+function count!( mod::PrimerBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
    hept = kmer_index_trailing(UInt16, seq[1:mod.size])
    mod.fore[hept+1] += 1.0
    for i in mod.offset:(mod.offset+mod.npos)

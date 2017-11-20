@@ -4,7 +4,7 @@ const SCALING_FACTOR = 1_000_000
 # use specialty type for "read counts"
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
-const ReadCount = Float64
+const ReadCount = DefaultCounter
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
 
@@ -211,16 +211,16 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle,
    const sgquant = graphq.quant[ init_gene ]
 
    if length(path.fwd) == 1
-      sgquant.node[ path.fwd[1].node ] += value
+      push!( sgquant.node[ path.fwd[1].node ], value )
    else
       for i in 1:length(path.fwd)-1
          const lnode = path.fwd[i].node
          const rnode = path.fwd[i+1].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value + value
+            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
          elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), DEF_READCOUNT) + value
+            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
          end 
       end
    end
@@ -232,8 +232,8 @@ end
    const sgquant = graphq.quant[ init_gene ]
 
    if length(path.fwd) == 1
-      sgquant.node[ path.fwd[1].node ] += value
-      push!(temp_iset, path.fwd[1].node)
+      push!( sgquant.node[ path.fwd[1].node ], value )
+      push!( temp_iset, path.fwd[1].node )
    else
       for i in 1:length(path.fwd)-1
          const lnode = path.fwd[i].node
@@ -242,16 +242,16 @@ end
          push!(temp_iset, rnode)
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value + value
+            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
          elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), DEF_READCOUNT) + value
+            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
          end 
       end
    end
 
    if length(path.rev) == 1
       if !(path.rev[1].node in temp_iset)
-         sgquant.node[ path.rev[1].node ] += value
+         push!( sgquant.node[ path.rev[1].node ], value )
       end
    else
       for i in 1:length(path.rev)-1
@@ -260,9 +260,9 @@ end
          (lnode in temp_iset && rnode in temp_iset) && continue
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value + value
+            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
          elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), DEF_READCOUNT) + value
+            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
          end
       end   
    end
@@ -278,13 +278,13 @@ end
 
    @inline function handle_iset_value!( idx, value )
       if length(iset) == 1
-         graphq.count[first(iset) + idx] += sum(value)
+         graphq.count[first(iset) + idx] += get(value)
       elseif length(iset) > 1
          arr = collect(iset)
          if haskey(temp, arr)
-            temp[arr] += value
+            temp[arr] += get(value)
          else
-            temp[arr] = value
+            temp[arr] = get(value)
          end
       end
    end
@@ -298,7 +298,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].node[n]) )
+         handle_iset_value!( graphq.geneidx[i], graphq.quant[i].node[n] )
          empty!(iset)
       end
       # go through edges
@@ -308,7 +308,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( graphq.geneidx[i], sum(edg.value) )
+         handle_iset_value!( graphq.geneidx[i], edg.value )
          empty!(iset)
       end
       # go through multi-edge crossing paths
@@ -318,10 +318,10 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].long[align]) )
+         handle_iset_value!( graphq.geneidx[i], graphq.quant[i].long[align] )
          empty!(iset)
          if assign_long
-            assign_path!( graphq, align, DEF_READVALUE, iset )
+            assign_path!( graphq, align, get(graphq.quant[i].long[align]), iset )
          end
       end
       # create compatibility classes for isoforms
@@ -396,7 +396,7 @@ function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignmen
       cont[i] = SGAlignSingle( alns[i].path )
    end
    if haskey( ambig.map, cont )
-      ambig.map[cont].raw += value
+      push!( ambig.map[cont].raw, value )
    else
       ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
    end
@@ -409,7 +409,7 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
       cont[i] = SGAlignPaired( fwd[i].path, rev[i].path )
    end
    if haskey( ambig.map, cont )
-      ambig.map[cont].raw += value
+      push!( ambig.map[cont].raw, value )
    else
       ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
    end
@@ -473,7 +473,7 @@ function assign_ambig!( graphq::GraphLibQuant{C}, lib::GraphLib, ambig::MultiMap
 end
 
 # Count a single alignment in quant
-function count!( graphq::GraphLibQuant, align::SGAlignment; value::Float64=DEF_READVALUE )
+function count!( graphq::GraphLibQuant, align::SGAlignment, value )
    align.isvalid == true || return
    init_gene = align.path[1].gene
    sgquant   = graphq.quant[ init_gene ]
@@ -481,7 +481,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; value::Float64=DEF_R
    # single node support
    if length(align.path) == 1
       # access node -> [ SGNode( gene, *node* ) ]
-      sgquant.node[ align.path[1].node ] += value
+      push!( sgquant.node[ align.path[1].node ], value )
    else # multi-node mapping read
       # if any node in path maps to other gene, ignore read
       for n in 1:length(align.path)
@@ -496,23 +496,25 @@ function count!( graphq::GraphLibQuant, align::SGAlignment; value::Float64=DEF_R
          const rnode = align.path[2].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value + value
+            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
          elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), DEF_READCOUNT) + value
+            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount) ), value )
          end         
       else # or we have long path, add long count
          curkey = SGAlignSingle(align.path)
          if haskey(sgquant.long, curkey)
-            sgquant.long[curkey] += value
+            push!( sgquant.long[curkey], value )
          else
-            sgquant.long[curkey] = value
+            entry = zero(ReadCount)
+            push!( entry, value )
+            sgquant.long[curkey] = entry
          end
       end
    end
 end
 
 ## Extension of count! for paired end counting
-function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; value=DEF_READVALUE )
+function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment, value )
    (fwd.isvalid == true && rev.isvalid == true) || return
    const init_gene = fwd.path[1].gene
    const rev_gene  = rev.path[1].gene
@@ -536,7 +538,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; valu
    if singlebool
       if length(single) == 1
          # access node -> [ SGNode( gene, *node* ) ]
-         sgquant.node[ single[1].node ] += value
+         push!( sgquant.node[ single[1].node ], value )
       else # multi-node mapping read
          # if any node in path maps to other gene, ignore read
          for n in 1:length(single)
@@ -551,9 +553,9 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; valu
             const rnode = single[2].node
             if lnode < rnode
                interv = Interval{ExonInt}( lnode, rnode )
-               sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value + value
+               push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
             elseif lnode >= rnode
-               sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), DEF_READCOUNT) + value
+               push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
             end
          end
       end
@@ -561,9 +563,11 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; valu
        # or we have two paths, add long count
        curkey = SGAlignPaired(fwd.path, rev.path)
        if haskey(sgquant.long, curkey)
-          sgquant.long[curkey] += value
+          push!( sgquant.long[curkey], value )
        else
-          sgquant.long[curkey] = value
+          entry = zero(ReadCount)
+          push!( entry, value )
+          sgquant.long[curkey] = entry
        end
    end
 end
@@ -667,7 +671,7 @@ end
 
 function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C};
                    it::Int64=1, maxit::Int64=1000, 
-                   sig::Int64=1, readlen::Int64=50 ) where C <: SGAlignContainer
+                   sig::Int64=4, readlen::Int64=50 ) where C <: SGAlignContainer
 
    const count_temp = ones(length(quant.count))
    const tpm_temp   = ones(length(quant.count))

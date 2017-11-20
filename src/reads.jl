@@ -41,7 +41,8 @@ function allocate_fastq_records( size::Int=10000 )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                         multi::MultiMapping{SGAlignSingle}; bufsize=150, sam=false, qualoffset=33 )
+                         multi::MultiMapping{SGAlignSingle}, mod::B; 
+                         bufsize=150, sam=false, qualoffset=33 ) where B <: BiasModel
   
    const reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
@@ -58,6 +59,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
          fill!( reads[i], qualoffset )
          align = ungapped_align( param, lib, reads[i] )
          if !isnull( align )
+            biasval = count!( mod, reads[i].sequence )
             if length( align.value ) > 1
                push!( multi, align.value, DEF_READVALUE, quant, lib )
                sam && write_sam( stdbuf, reads[i], align.value, lib, qualoffset=qualoffset )
