@@ -70,3 +70,30 @@ function Base.push!( cnt::PrimerBiasCounter, hept::UInt16 )
 end
 
 
+# GC-Content Bias Correction
+
+struct GCBiasParams
+   length::Int64           # length offset
+   width::Float64          # gc bin size
+end
+
+const ExpectedGC = Vector{Float16}
+
+function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(length=50, width=0.05) ) where A <: BioSequences.Alphabet
+    bins = zeros(Float16, div(1.0, gcp.width))
+    for i in 1:length(seq)-len
+        gc = div(gc_content(seq[i:i+len-1]), gcp.width)
+        @inbounds bins[gc] += 1.0
+    end
+    # normalize columns
+    bins /= sum(bins)
+    bins
+end
+
+mutable struct GCBiasCounter <: ReadCounter
+   count::Float64
+   gc::ExpectedGC
+   isadjusted::Bool
+end
+
+
