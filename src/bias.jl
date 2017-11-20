@@ -90,21 +90,39 @@ function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(length=50, wid
    bins
 end
 
+struct GCBiasMod <: BiasModel
+   fore::ExpectedGC
+   back::ExpectedGC
+end
+
 mutable struct GCBiasCounter <: ReadCounter
    count::Float64
    gc::ExpectedGC
    isadjusted::Bool
 end
 
+value!( mod::GCBiasMod, bin::Int ) = mod.back[bin] / mod.fore[bin]
+
+function adjust!( cnt::GCBiasCounter, mod::GCBiasMod )
+   for i in 1:length(cnt.gc)
+      cnt.count += value!( mod, i ) * cnt.gc[i]
+   end
+   cnt.isadjusted = true
+end
+
+function Base.push!( cnt::GCBiasCounter, gc::F ) where F <: AbstractFloat
+   const bin = div( gc, 1.0 / length(cnt.gc) )
+   gc[bin] += 1.0
+end
+
+#=
 # Combined Bias Correction
 
 mutable struct WhippetBiasCounter <: ReadCounter
    count::Float64
    map::Dict{UInt16,Int32}
    gc::ExpectedGC
-   isadjusted::Bool
-
-   
+   isadjusted::Bool   
 end
-
+=#
 
