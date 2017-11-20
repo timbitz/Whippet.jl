@@ -147,7 +147,7 @@ function main()
    build_equivalence_classes!( quant, lib, assign_long=true )
    println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
    calculate_tpm!( quant, readlen=readlen )
-   @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=1000 ) 
+   @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=10000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
    output_tpm( args["out"], lib, quant )
@@ -156,7 +156,7 @@ function main()
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
-   @timer assign_ambig!( quant, multi, ispaired=ispaired )
+   @timer assign_ambig!( quant, lib, multi )
 
    println(STDERR, "Calculating effective lengths...")
    @timer effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )

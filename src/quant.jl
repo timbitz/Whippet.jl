@@ -37,6 +37,25 @@ Base.hash( v::SGAlignPaired, h::UInt64 ) = hash( v.fwd, hash( v.rev, h ) )
 ispaired( cont::SGAlignSingle ) = false
 ispaired( cont::SGAlignPaired ) = true
 
+# check if one alignment path is a subset of another
+function Base.in( first::SGAlignPath, last::SGAlignPath )
+   for i in 1:(length(last)-length(first))+1
+      offset = i - 1
+      match = true
+      for j in 1:length(first)
+         if !(first[j] == last[offset+j])
+            match = false
+            break
+         end
+      end
+      if match
+         return true
+      end
+   end
+   return false
+end
+
+
 # reimplementation of to edge code in events.jl
 # we require not just the nodes to exist in the intset
 # but also that they are adjacent in the intset
@@ -236,8 +255,8 @@ end
       end
    else
       for i in 1:length(path.rev)-1
-         const lnode = path.fwd[i].node
-         const rnode = path.fwd[i+1].node
+         const lnode = path.rev[i].node
+         const rnode = path.rev[i+1].node
          (lnode in temp_iset && rnode in temp_iset) && continue
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
@@ -408,20 +427,52 @@ end
    end
 end
 
-function assign_ambig!( graphq::GraphLibQuant{C}, lib::GraphLib, ambig::MultiMapping{C} ) where C <: SGAlignContainer
-   for (vp,mc) in ambig.map
-      if mc.postassign  # not all paths match annotated transcripts, use gene level values to assign
+function get_class_value( iset::IntSet, compat::MultiCompat )
+   value = 0.0
+   @inbounds for i in 1:length(compat.class)
+      if compat.class[i] in iset
+         value += compat.prop[i]
+      end
+   end
+   value
+end
 
-      else # assign based on transcripts
-         for p in vp
-            set_equivalence_class!( multi, graphq, lib, p )
-             
+function assign_ambig!( graphq::GraphLibQuant{C}, lib::GraphLib, ambig::MultiMapping{C} ) where C <: SGAlignContainer
+   @inbounds for (vp,mc) in ambig.map
+      # store relative weight of each alignment path
+      vals = zeros(length(vp))
+
+      if mc.postassign  # not all paths match annotated transcripts, use gene level values to assign
+         total_tpm = 0.0
+         for i in 1:length(vp)
+            vals[i] = graphq.genetpm[ vp[i].fwd[1].gene ]
+            total_tpm += vals[i]
          end
+         @fastmath vals /= sum(vals)
+      else # assign based on transcripts
+         # since two alignments for a read can match the same transcript
+         # lets sum the prop values of the MultiCompat for each alignment
+         # then we normalize by the total sum of those, and assign reads accordingly.
+         # Example: imagine a single read matches the same transcript in to positions
+         # that creates a single MultiCompat object that has two alignments hitting the same
+         # transcript class.  This method would assign that prop to both, and then re-normalize
+         # so that the total count of the MultiCompat is assigned for the sum of the alignments
+         vals = zeros(length(vp))
+         for i in 1:length(vp)
+            set_equivalence_class!( ambig, graphq, lib, vp[i] )
+            vals[i] = get_class_value( ambig.iset, mc )
+         end
+         @fastmath vals /= sum(vals)
+      end
+
+      # now assign alignment paths proportional to their weight
+      for i in 1:length(vp)
+         assign_path!( graphq, vp[i], vals[i] * mc.count, ambig.iset )
       end
    end 
 end
 
-
+# Count a single alignment in quant
 function count!( graphq::GraphLibQuant, align::SGAlignment; value::Float64=DEF_READVALUE )
    align.isvalid == true || return
    init_gene = align.path[1].gene

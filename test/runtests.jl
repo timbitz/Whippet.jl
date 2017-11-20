@@ -221,7 +221,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                           false, false, true, false, true )
    println(map( x->length(x.annoname), lib.graphs ))
-   quant = GraphLibQuant{SGAlignSingle}( lib )
+   gquant = GraphLibQuant{SGAlignSingle}( lib )
 
    @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
@@ -299,7 +299,7 @@ IIIIIIIIIIII
          ex_num = length(split(readname, '-', keep=false))
          @test length(align.value[best_ind].path) == ex_num
 
-         count!( quant, align.value[best_ind] )
+         count!( gquant, align.value[best_ind] )
 
          const curgene   = align.value[best_ind].path[1].gene
          const firstnode = align.value[best_ind].path[1].node
@@ -356,6 +356,25 @@ IIIIIIIIIIII
 
       end
 
+      @testset "SGAlignPath Overlap" begin
+          
+         single     = SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]
+         single_two = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore))]
+         two_three  = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))] 
+         larger     = SGAlignNode[SGAlignNode(1,1,one(SGAlignScore)), SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))]
+
+         println(STDERR, @which single in single)
+
+         @test single in single
+         @test !(single in single_two)
+         @test single_two in two_three
+         @test !(single in two_three)
+         @test single in larger
+         @test single_two in larger
+         @test two_three in larger
+
+      end
+
       @testset "Isoform Equivalence Classes" begin
 
          is = IntSet([1, 2, 5, 6])
@@ -378,13 +397,13 @@ IIIIIIIIIIII
          path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000005, SGAlignScore(0x0a, 0x00, 0.0))]
          @test (path in is) == true
 
-         @test length(quant.tpm) == 7
-         @test length(quant.count) == 7
-         @test length(quant.length) == 7
-         @test quant.geneidx == [0, 2, 5, 6]
-         build_equivalence_classes!( quant, lib, assign_long=true )
-         println(STDERR, quant)
-         println(STDERR, quant.classes)
+         @test length(gquant.tpm) == 7
+         @test length(gquant.count) == 7
+         @test length(gquant.length) == 7
+         @test gquant.geneidx == [0, 2, 5, 6]
+         build_equivalence_classes!( gquant, lib, assign_long=true )
+         println(STDERR, gquant)
+         println(STDERR, gquant.classes)
          
       end
 
@@ -394,7 +413,7 @@ IIIIIIIIIIII
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true), 
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000004, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
 
-         push!( multi, aligns, 1.0, quant, lib )
+         push!( multi, aligns, 1.0, gquant, lib )
          println(STDERR, multi.map)
          compats = collect(values(multi.map))
          @test compats[1].isdone == true
@@ -405,12 +424,24 @@ IIIIIIIIIIII
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
  
-         push!( multi, aligns, 1.0, quant, lib )
+         push!( multi, aligns, 1.0, gquant, lib )
          println(STDERR, multi.map)
          compats = collect(values(multi.map))
          @test compats[1].isdone == false
          @test [3,4,5] == compats[1].class 
          @test sum(multi.iset) == 0
+
+         # Assignment
+         compats[1].count = 10
+         prev_node = gquant.quant[2].node[1]
+         println(STDERR, "prev_quant = $(gquant.quant[2])")
+         interv = Interval{ExonInt}( 1, 2 )
+         prev_edge = get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value
+
+         assign_ambig!( gquant, lib, multi )
+         println(STDERR, "cur_quant = $(gquant.quant[2])")
+         @test gquant.quant[2].node[1] == prev_node + 7.5
+         @test get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value == prev_edge + 2.5
       end
 
       function parse_edge{S <: AbstractString}( str::S )
@@ -473,7 +504,7 @@ IIIIIIIIIIII
             name = lib.names[g]
             chr  = lib.info[g].name
             strand = lib.info[g].strand ? '+' : '-'
-            _process_events( bs, lib.graphs[g], quant.quant[g], (name,chr,strand), isnodeok=false )
+            _process_events( bs, lib.graphs[g], gquant.quant[g], (name,chr,strand), isnodeok=false )
          end
          flush(bs)
          seek(out,0)
