@@ -82,7 +82,7 @@ struct SpliceGraph{K}
    edgeright::Vector{SGKmer{K}}
    annopath::Vector{IntSet}
    annoname::Vector{String}
-   annobias::Vector{ExpectedGC}
+#   annobias::Vector{ExpectedGC}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
