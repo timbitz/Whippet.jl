@@ -108,35 +108,19 @@ function main()
    @timer const lib = open(deserialize, indexname)
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
+   const ContainerType = ispaired ? SGAlignPaired : SGAlignSingle
 
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
-   const quant = GraphLibQuant( lib )
-   const multi = Vector{Multimap}()
+   const quant = GraphLibQuant{ContainerType}( lib )
+   const multi = MultiMapping{ContainerType}()
 
-#   const enc        = args["phred-64"] ? Bio.Seq.ILLUMINA15_QUAL_ENCODING : Bio.Seq.ILLUMINA18_QUAL_ENCODING
    const enc_offset = args["phred-64"] ? 64 : 33
 
-   # do we need to fetch data from ebi.ac.uk?
-#=   if args["ebi"]
-      ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
-      ispaired = ebi_res.paired
-      args["url"] = true
-      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
-      if ispaired
-         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
-      end
-      ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
-   end =#
-
-#   const parser,response = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"],
-#                                                         encoding=enc, forcegzip=args["force-gz"] ) : 
-    const parser =                                       make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
-                                                         forcegzip=args["force-gz"] )
+   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
+                                 forcegzip=args["force-gz"] )
    if ispaired
-#      const mate_parser,mate_response = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
-#                                                                      encoding=enc, forcegzip=args["force-gz"] ) :
-    const mate_parser =                                               make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
-                                                                      forcegzip=args["force-gz"] )
+    const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
+                                       forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -147,32 +131,32 @@ function main()
       if ispaired
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
                                                              sam=args["sam"], qualoffset=enc_offset ) 
-#                                                              response=response, mate_response=mate_response,
-#                                                              http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
                                                       sam=args["sam"], qualoffset=enc_offset )
-#                                                       response=response, http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
    end
 
    # TPM_EM
-   println(STDERR, "Calculating expression values and MLE for $( length(multi) ) repetitive reads with EM...")
+   println(STDERR, "Calculating expression values and MLE of equivalence classes with EM:")
+   println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
+   build_equivalence_classes!( quant, lib, assign_long=true )
+   println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
    calculate_tpm!( quant, readlen=readlen )
-   @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=250 ) 
+   @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=10000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
 
-   output_tpm( args["out"] * ".tpm.gz", lib, quant )
-   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi), readlen, ver )
+   output_tpm( args["out"], lib, quant )
+   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi.map), readlen, ver )
    output_junctions( args["out"] * ".jnc.gz", lib, quant )
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
-   @timer assign_ambig!( quant, multi, ispaired=ispaired )
+   @timer assign_ambig!( quant, lib, multi )
 
    println(STDERR, "Calculating effective lengths...")
    @timer effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
