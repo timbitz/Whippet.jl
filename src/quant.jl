@@ -278,13 +278,13 @@ end
 
    @inline function handle_iset_value!( idx, value )
       if length(iset) == 1
-         graphq.count[first(iset) + idx] += get(value)
+         graphq.count[first(iset) + idx] += value
       elseif length(iset) > 1
          arr = collect(iset)
          if haskey(temp, arr)
-            temp[arr] += get(value)
+            temp[arr] += value
          else
-            temp[arr] = get(value)
+            temp[arr] = value
          end
       end
    end
@@ -298,7 +298,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( graphq.geneidx[i], graphq.quant[i].node[n] )
+         handle_iset_value!( graphq.geneidx[i], get(graphq.quant[i].node[n]) )
          empty!(iset)
       end
       # go through edges
@@ -308,7 +308,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( graphq.geneidx[i], edg.value )
+         handle_iset_value!( graphq.geneidx[i], get(edg.value) )
          empty!(iset)
       end
       # go through multi-edge crossing paths
@@ -318,7 +318,7 @@ end
                push!(iset, p)
             end
          end
-         handle_iset_value!( graphq.geneidx[i], graphq.quant[i].long[align] )
+         handle_iset_value!( graphq.geneidx[i], get(graphq.quant[i].long[align]) )
          empty!(iset)
          if assign_long
             assign_path!( graphq, align, get(graphq.quant[i].long[align]), iset )
@@ -326,7 +326,9 @@ end
       end
       # create compatibility classes for isoforms
       for arr in keys(temp)
-         push!( graphq.classes, IsoCompat(arr + graphq.geneidx[i], temp[arr]) )
+         if temp[arr] > 0.0
+            push!( graphq.classes, IsoCompat(arr + graphq.geneidx[i], temp[arr]) )
+         end
       end
       empty!(temp)
    end
@@ -374,7 +376,7 @@ mutable struct MultiCompat <: EquivalenceClass
 
    function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
       class,matches = equivalence_class( graphq, lib, cont, temp_iset )
-      new( class, ones(length(class)) / length(class), 1.0, 0.0, !matches, !matches, one(ReadCount) )
+      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, !matches, zero(ReadCount) )
    end
 end
 

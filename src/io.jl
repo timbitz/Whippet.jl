@@ -497,7 +497,7 @@ function count_read_types( lib::GraphLib, graphq::GraphLibQuant )
    junccnt   = 0
    annocnt   = 0
    for i in 1:length(lib.graphs)
-      bodyreads += sum(graphq.quant[i].node)
+      bodyreads += sum(map(get, graphq.quant[i].node))
       areads,acnt,treads,tcnt = count_annotated_edges( lib.graphs[i], graphq.quant[i] )
       annoreads += areads
       juncreads += treads
