@@ -2,6 +2,7 @@ using Base.Test
 
 importall BioSymbols
 importall BioSequences
+importall IntervalTrees
 
 using DataStructures
 using BufferedStreams
@@ -47,6 +48,15 @@ include("../src/diff.jl")
 end
 
 @testset "Bias Models" begin
+   # default 'empty' model
+   def = zero(DefaultCounter)
+   @test get(def) == 0.0
+   def = one(DefaultCounter)
+   @test get(def) == 1.0
+   push!( def, 1.0 )
+   @test get(def) == 2.0
+   adjust!( def, DefaultBiasMod() )
+
    function randdna(n)
       return BioSequence{DNAAlphabet{2}}(rand([DNA_A, DNA_C, DNA_G, DNA_T], n))
    end
@@ -60,7 +70,25 @@ end
          @test 0.85 < mod.back[i] / mod.fore[i] < 1.15
       end
    end
-   test_uniform_bias!( PrimerBiasMod( 5 ) )
+
+   # primer count model
+   mod = PrimerBiasMod( 5 )
+   test_uniform_bias!( mod )
+   cnt = PrimerBiasCounter()
+   @test cnt.count == 0.0
+   hept = kmer_index_trailing(UInt16, dna"ATGAC")
+   push!( cnt, hept )
+   adjust!( cnt, mod )
+   @test get(cnt) == value!( mod, hept )
+
+   # gc content bias
+   seq = dna"AAAAAGCGCG" ^ 5
+   egc = ExpectedGC( seq )
+   @test length(egc) == 20
+   @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
+   
+
+
 end
 
 @testset "Splice Graphs" begin
@@ -318,7 +346,7 @@ IIIIIIIIIIII
          ex_num = length(split(readname, '-', keep=false))
          @test length(align.value[best_ind].path) == ex_num
 
-         count!( gquant, align.value[best_ind] )
+         count!( gquant, align.value[best_ind], 1.0 )
 
          const curgene   = align.value[best_ind].path[1].gene
          const firstnode = align.value[best_ind].path[1].node
@@ -451,16 +479,18 @@ IIIIIIIIIIII
          @test sum(multi.iset) == 0
 
          # Assignment
-         compats[1].count = 10
+         compats[1].count = 10.0
          prev_node = gquant.quant[2].node[1]
          println(STDERR, "prev_quant = $(gquant.quant[2])")
          interv = Interval{ExonInt}( 1, 2 )
          prev_edge = get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value
 
+         println(DEFAULTCOUNTER_ZERO)
+
          assign_ambig!( gquant, lib, multi )
          println(STDERR, "cur_quant = $(gquant.quant[2])")
-         @test gquant.quant[2].node[1] == prev_node + 7.5
-         @test get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value == prev_edge + 2.5
+         @test get(gquant.quant[2].node[1]) == get(prev_node) + 7.5
+         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value) == get(prev_edge) + 2.5
       end
 
       function parse_edge{S <: AbstractString}( str::S )

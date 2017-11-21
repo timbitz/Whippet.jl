@@ -203,7 +203,7 @@ end
 end
 
 assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, 
-             value, temp_iset::IntSet ) = assign_path!( graphq, path, value ) 
+              value, temp_iset::IntSet ) = assign_path!( graphq, path, value ) 
 
 # This function re-count!'s SGAlignPaths which were not count!'ed originally
 @inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, value )
@@ -218,9 +218,9 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle,
          const rnode = path.fwd[i+1].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
+            pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
-            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
+            pushzero!( sgquant.circ, (lnode,rnode), value )
          end 
       end
    end
@@ -242,7 +242,7 @@ end
          push!(temp_iset, rnode)
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
+            pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
             push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
          end 
@@ -260,7 +260,7 @@ end
          (lnode in temp_iset && rnode in temp_iset) && continue
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
+            pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
             push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
          end
@@ -374,7 +374,7 @@ mutable struct MultiCompat <: EquivalenceClass
 
    function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
       class,matches = equivalence_class( graphq, lib, cont, temp_iset )
-      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, !matches, DEF_READVALUE )
+      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, !matches, zero(ReadCount) )
    end
 end
 
@@ -398,7 +398,9 @@ function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignmen
    if haskey( ambig.map, cont )
       push!( ambig.map[cont].raw, value )
    else
-      ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
+      mc = MultiCompat( graphq, lib, cont, ambig.iset )
+      push!( mc.raw, value )
+      ambig.map[cont] = mc
    end
 end
 
@@ -411,7 +413,9 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
    if haskey( ambig.map, cont )
       push!( ambig.map[cont].raw, value )
    else
-      ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
+      mc = MultiCompat( graphq, lib, cont, ambig.iset )
+      push!( mc.raw, value )
+      ambig.map[cont] = mc
    end
 end
 
@@ -496,9 +500,9 @@ function count!( graphq::GraphLibQuant, align::SGAlignment, value )
          const rnode = align.path[2].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
-            push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
+            pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
-            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount) ), value )
+            pushzero!( sgquant.circ, (lnode,rnode), value )
          end         
       else # or we have long path, add long count
          curkey = SGAlignSingle(align.path)
@@ -553,7 +557,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment, valu
             const rnode = single[2].node
             if lnode < rnode
                interv = Interval{ExonInt}( lnode, rnode )
-               push!( get!( sgquant.edge, interv, zero(ReadCount) ).value, value )
+               pushzero!( sgquant.edge, interv, value )
             elseif lnode >= rnode
                push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
             end

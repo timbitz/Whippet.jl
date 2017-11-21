@@ -82,7 +82,7 @@ struct SpliceGraph{K}
    edgeright::Vector{SGKmer{K}}
    annopath::Vector{IntSet}
    annoname::Vector{String}
-#   annobias::Vector{ExpectedGC}
+   annobias::Vector{ExpectedGC}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -260,5 +260,5 @@ end
 
 function path_to_seq( path::IntSet, nodeoffset::Vector{CoordInt}, 
                       nodelen::Vector{CoordInt}, seq::SGSequence )
-    join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], collect(path) ) )
+   SGSequence(join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], collect(path) ) ))
 end

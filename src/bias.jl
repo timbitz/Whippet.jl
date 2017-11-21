@@ -6,6 +6,20 @@ abstract type BiasModel end
 #Though it may be necessary...
 #Base.get( num::Float64 ) = num 
 
+function pushzero!( collection::Dict{K,V}, key::K, value ) where {K, V <: ReadCounter}
+   if !haskey( collection, key )
+      collection[key] = zero(ReadCount)
+   end
+   push!( collection[key], value )
+end
+
+function pushzero!( collection::IntervalMap{K,V}, key, value ) where {K <: Integer, V <: ReadCounter}
+   if !haskey( collection, (key.first,key.last) )
+      collection[key] = zero(ReadCount)
+   end
+   push!( get(collection, key, IntervalValue(0,0,DEFAULTCOUNTER_ZERO)).value, value )
+end
+
 function Base.get( cnt::R ) where R <: ReadCounter
    if !cnt.isadjusted
       error("Cannot get() read count from model thats not already adjusted!")
@@ -27,8 +41,8 @@ end
 const DEFAULTCOUNTER_ZERO = DefaultCounter(0.0)
 const DEFAULTCOUNTER_ONE  = DefaultCounter(1.0)
 
-Base.zero( ::Type{DefaultCounter} ) = DEFAULTCOUNTER_ZERO
-Base.one( ::Type{DefaultCounter} )  = DEFAULTCOUNTER_ONE
+Base.zero( ::Type{DefaultCounter} ) = DefaultCounter(0.0) #DEFAULTCOUNTER_ZERO
+Base.one( ::Type{DefaultCounter} )  = DefaultCounter(1.0) #DEFAULTCOUNTER_ONE
 Base.push!( cnt::DefaultCounter, value::Float64 ) = (cnt.count += value)
 
 adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
@@ -107,15 +121,19 @@ end
 
 const ExpectedGC = Vector{Float16}
 
-function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(length=50, width=0.05) ) where A <: BioSequences.Alphabet
-   bins = zeros(Float16, div(1.0, gcp.width))
-   for i in 1:length(seq)-len
-      gc = div(gc_content(seq[i:i+len-1]), gcp.width)
+function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.05) ) where A <: BioSequences.Alphabet
+   const bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
+   for i in 1:length(seq)-gc_param.length+1
+      gc = Int(div(gc_content(seq[i:i+gc_param.length-1]), gc_param.width)+1)
       @inbounds bins[gc] += 1.0
    end
    # normalize columns
-   bins /= sum(bins)
-   bins
+   binsum = sum(bins)
+   binsum == 0.0 && (return bins)
+   for i in 1:length(bins)
+      @fastmath bins[i] /= binsum
+   end
+   return bins
 end
 
 struct GCBiasMod <: BiasModel
