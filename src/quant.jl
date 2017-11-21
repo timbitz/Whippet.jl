@@ -326,7 +326,9 @@ end
       end
       # create compatibility classes for isoforms
       for arr in keys(temp)
-         push!( graphq.classes, IsoCompat(arr + graphq.geneidx[i], temp[arr]) )
+         if temp[arr] > 0.0
+            push!( graphq.classes, IsoCompat(arr + graphq.geneidx[i], temp[arr]) )
+         end
       end
       empty!(temp)
    end
