@@ -374,7 +374,7 @@ mutable struct MultiCompat <: EquivalenceClass
 
    function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
       class,matches = equivalence_class( graphq, lib, cont, temp_iset )
-      new( class, ones(length(class)) / length(class), 1.0, 0.0, !matches, !matches, zero(ReadCount) )
+      new( class, ones(length(class)) / length(class), 1.0, 0.0, !matches, !matches, one(ReadCount) )
    end
 end
 
