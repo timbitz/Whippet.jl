@@ -51,11 +51,20 @@ struct PrimerBiasMod <: BiasModel
    end
 end
 
+function normalize!( mod::PrimerBiasMod )
+   foresum = sum(mod.fore)
+   backsum = sum(mod.back)
+   @inbounds for i in 1:length(mod.fore)
+      @fastmath mod.fore[i] = mod.fore[i] / foresum
+      @fastmath mod.back[i] = mod.back[i] / backsum
+   end
+end
+
 function count!( mod::PrimerBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
    hept = kmer_index_trailing(UInt16, seq[1:mod.size])
    mod.fore[hept+1] += 1.0
    for i in mod.offset:(mod.offset+mod.npos)
-      mod.back[kmer_index_trailing(UInt16, seq[i:(i+mod.npos-1)])+1] += 1.0
+      mod.back[kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])+1] += 1.0
    end
    return hept
 end

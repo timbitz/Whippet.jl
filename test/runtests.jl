@@ -18,6 +18,7 @@ include("../src/timer.jl")
 include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
+include("../src/bias.jl")
 include("../src/graph.jl")
 include("../src/edges.jl")
 include("../src/index.jl")
@@ -44,6 +45,24 @@ include("../src/diff.jl")
       @test isa( curkmer, SGKmer{i} )
    end
 end
+
+@testset "Bias Models" begin
+   function randdna(n)
+      return BioSequence{DNAAlphabet{2}}(rand([DNA_A, DNA_C, DNA_G, DNA_T], n))
+   end
+
+   function test_uniform_bias!( mod::B ) where B <: BiasModel
+      for i in 1:5000000
+         count!( mod, randdna(36) )
+      end
+      normalize!( mod )
+      for i in 1:length(mod.fore)
+         @test 0.85 < mod.back[i] / mod.fore[i] < 1.15
+      end
+   end
+   test_uniform_bias!( PrimerBiasMod( 5 ) )
+end
+
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
