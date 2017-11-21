@@ -113,6 +113,7 @@ function main()
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
    const quant = GraphLibQuant{ContainerType}( lib )
    const multi = MultiMapping{ContainerType}()
+   const mod   = DefaultBiasMod()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
@@ -129,12 +130,12 @@ function main()
    else
       println(STDERR, "Processing reads...")
       if ispaired
-         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
+         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod, 
                                                              sam=args["sam"], qualoffset=enc_offset ) 
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
-         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
+         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
                                                       sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
@@ -146,6 +147,7 @@ function main()
    println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
    build_equivalence_classes!( quant, lib, assign_long=true )
    println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
+   adjust!( multi, mod )
    calculate_tpm!( quant, readlen=readlen )
    @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=10000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")

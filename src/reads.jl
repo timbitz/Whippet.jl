@@ -64,7 +64,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
                push!( multi, align.value, DEF_READVALUE, quant, lib )
                sam && write_sam( stdbuf, reads[i], align.value, lib, qualoffset=qualoffset )
             else
-               count!( quant, align.value[1] )
+               count!( quant, align.value[1], biasval )
                sam && write_sam( stdbuf, reads[i], align.value[1], lib, qualoffset=qualoffset )
             end
             mapped += 1

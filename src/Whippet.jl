@@ -20,6 +20,7 @@ include("timer.jl")
 include("sgkmer.jl")
 include("fmindex_patch.jl")
 include("refset.jl")
+include("bias.jl")
 include("graph.jl")
 include("edges.jl") 
 include("index.jl")
@@ -61,6 +62,9 @@ export SpliceGraph,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
        MultiMapping,
+       DefaultBiasMod,
+       PrimerBiasMod,
+       GCBiasMod,
        AlignParam,
        ungapped_align,
        make_fqparser,
@@ -72,6 +76,7 @@ export SpliceGraph,
        process_reads!,
        process_paired_reads!,
        build_equivalence_classes!,
+       adjust!,
        calculate_tpm!,
        gene_em!,
        output_tpm,

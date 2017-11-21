@@ -6,7 +6,30 @@ abstract type BiasModel end
 #Though it may be necessary...
 #Base.get( num::Float64 ) = num 
 
-function pushzero!( collection::Dict{K,V}, key::K, value ) where {K, V <: ReadCounter}
+function pushto!(t::IntervalTrees.IntervalBTree{K, V, B}, key::I, value) where {K, V, B, I <: AbstractInterval{K}}
+    return _push!(t.root, key, value)
+end
+
+function _push!(t::IntervalTrees.InternalNode{K, V, B}, key::AbstractInterval{K}, value) where {K, V, B}
+    i = IntervalTrees.findidx(t, key)
+    if 1 <= length(t) - 1 && key >= t.keys[i]
+        return _push!(t.children[i+1], key, value)
+    else
+        return _push!(t.children[i], key, value)
+    end
+end
+
+function _push!(t::IntervalTrees.LeafNode{K, V, B}, key::AbstractInterval{K}, value) where {K, V, B}
+    i = IntervalTrees.findidx(t, key)
+    if 1 <= i <= length(t) &&
+        first(t.entries[i]) == first(key) && last(t.entries[i]) == last(key)
+        push!( t.entries[i].value, value )
+        return true
+    end
+    return false
+end
+
+function pushzero!( collection::Dict{K,V}, key, value ) where {K, V <: ReadCounter}
    if !haskey( collection, key )
       collection[key] = zero(ReadCount)
    end
@@ -17,7 +40,7 @@ function pushzero!( collection::IntervalMap{K,V}, key, value ) where {K <: Integ
    if !haskey( collection, (key.first,key.last) )
       collection[key] = zero(ReadCount)
    end
-   push!( get(collection, key, IntervalValue(0,0,DEFAULTCOUNTER_ZERO)).value, value )
+   pushto!( collection, key, value )
 end
 
 function Base.get( cnt::R ) where R <: ReadCounter

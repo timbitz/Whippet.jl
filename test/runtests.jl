@@ -480,17 +480,19 @@ IIIIIIIIIIII
 
          # Assignment
          compats[1].count = 10.0
-         prev_node = gquant.quant[2].node[1]
+         prev_node = get(gquant.quant[2].node[1])
          println(STDERR, "prev_quant = $(gquant.quant[2])")
          interv = Interval{ExonInt}( 1, 2 )
-         prev_edge = get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value
+         prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(ReadCount)) ).value)
 
-         println(DEFAULTCOUNTER_ZERO)
+         println(gquant.quant[2].edge)
 
          assign_ambig!( gquant, lib, multi )
+         println(gquant.quant[2].edge)
+         
          println(STDERR, "cur_quant = $(gquant.quant[2])")
-         @test get(gquant.quant[2].node[1]) == get(prev_node) + 7.5
-         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value) == get(prev_edge) + 2.5
+         @test get(gquant.quant[2].node[1]) == prev_node + 7.5
+         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value) == prev_edge + 2.5
       end
 
       function parse_edge{S <: AbstractString}( str::S )

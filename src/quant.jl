@@ -374,7 +374,7 @@ mutable struct MultiCompat <: EquivalenceClass
 
    function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
       class,matches = equivalence_class( graphq, lib, cont, temp_iset )
-      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, !matches, zero(ReadCount) )
+      new( class, ones(length(class)) / length(class), 1.0, 0.0, !matches, !matches, zero(ReadCount) )
    end
 end
 
@@ -417,6 +417,15 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
       push!( mc.raw, value )
       ambig.map[cont] = mc
    end
+end
+
+# Adjust each MultiCompat raw value and assign its adjusted to .count
+function adjust!( multi::MultiMapping{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel}
+   for mc in values(multi.map)
+      adjust!( mc.raw, mod )
+      mc.count = get(mc.raw)
+   end
+   multi
 end
 
 # for a given alignment container, set the temp_iset in multi to the compatibility class
