@@ -5,6 +5,7 @@ const SCALING_FACTOR = 1_000_000
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
 const ReadCount = DefaultCounter
+const DEFAULT_ZERO  = zero(ReadCount)
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
 
@@ -604,12 +605,12 @@ end
 function calculate_bias!( sgquant::SpliceGraphQuant )
    edgecnt = 0.0
    for edgev in sgquant.edge
-      edgecnt += edgev.value
+      edgecnt += get(edgev.value)
    end
    @fastmath edgelevel = edgecnt / length(sgquant.edge)
    nodecnt = 0.0
    for nodev in sgquant.node
-      nodecnt += nodev
+      nodecnt += get(nodev)
    end
    @fastmath nodelevel = nodecnt / sum( sgquant.leng )
    # never down-weight junction reads, only exon-body reads

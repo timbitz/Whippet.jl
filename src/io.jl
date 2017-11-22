@@ -48,7 +48,7 @@ function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, si
    tab && write( io, '\t' )
 end
 
-function edges_write( io::BufOut, edges::IntervalMap{ExonInt,Float64}, range::UnitRange )
+function edges_write( io::BufOut, edges::IntervalMap{ExonInt,C}, range::UnitRange ) where C <: ReadCounter
    first = true
    for i in edges
       if i.first in range && i.last in range
@@ -57,7 +57,7 @@ function edges_write( io::BufOut, edges::IntervalMap{ExonInt,Float64}, range::Un
          write( io, '-' )
          write( io, string(i.last) )
          write( io, ':' )
-         write( io, string(round(i.value, 1)) )
+         write( io, string(round(get(i.value), 1)) )
          first = false
       end
    end
@@ -320,8 +320,8 @@ end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
                      total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, 
-                     sg::SpliceGraph, edges::IntervalMap{ExonInt,Float64}, 
-                     node::Int, info::GeneMeta, bias )
+                     sg::SpliceGraph, edges::IntervalMap{ExonInt,C}, 
+                     node::Int, info::GeneMeta, bias ) where C <: ReadCounter
 
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene

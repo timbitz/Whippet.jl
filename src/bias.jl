@@ -51,6 +51,9 @@ function Base.get( cnt::R ) where R <: ReadCounter
    end
 end
 
+Base.identity( cnt::R ) where R <: ReadCounter = get( cnt )
+Base.identity( cnt::IntervalValue{I,R} ) where R <: ReadCounter = get( cnt.value )
+
 struct DefaultBiasMod <: BiasModel end
 
 mutable struct DefaultCounter <: ReadCounter
