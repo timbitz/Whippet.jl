@@ -398,7 +398,7 @@ function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignmen
       cont[i] = SGAlignSingle( alns[i].path )
    end
    if haskey( ambig.map, cont )
-      ambig.map[cont].raw += value
+      ambig.map[cont].count += value
    else
       ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
    end
@@ -411,7 +411,7 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
       cont[i] = SGAlignPaired( fwd[i].path, rev[i].path )
    end
    if haskey( ambig.map, cont )
-      ambig.map[cont].raw += value
+      ambig.map[cont].count += value
    else
       ambig.map[cont] = MultiCompat( graphq, lib, cont, ambig.iset )
    end
