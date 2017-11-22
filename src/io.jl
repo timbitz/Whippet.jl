@@ -369,7 +369,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       for edg in intersect( sgquant.edge, (st, st) )
          if edg.first == st
             back_len += 1
-            back_cnt += edg.value
+            back_cnt += get(edg.value)
          end
       end
       total_reads = (fore_cnt + back_cnt)
@@ -480,10 +480,10 @@ function count_annotated_edges( sg::SpliceGraph, sgquant::SpliceGraphQuant )
    totalreads = 0.0
    totalcnt   = 0
    for edg in sgquant.edge
-      totalreads += edg.value
+      totalreads += get(edg.value)
       totalcnt   += 1
       if edg in sg.annopath
-         annoreads += edg.value
+         annoreads += get(edg.value)
          annocnt   += 1
       end
    end
@@ -588,7 +588,7 @@ function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
       plug_write( io, string(edg.first), plug='-' )
       plug_write( io, string(edg.last), plug=':' )
       tab_write( io, str )
-      tab_write( io, string(edg.value) )
+      tab_write( io, string(get(edg.value)) )
       end_write( io, lib.info[i].strand ? '+' : '-' )
    end
 
