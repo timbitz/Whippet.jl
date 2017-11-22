@@ -129,7 +129,7 @@ mutable struct SpliceGraphQuant{C <: SGAlignContainer}
    bias::Float64
 
    function SpliceGraphQuant{C}( sg::SpliceGraph ) where C <: SGAlignContainer
-      return new( zeros(ReadCount, length(sg.nodelen) ),
+      return new( ReadCount[zero(ReadCount) for x in 1:length(sg.nodelen)],
              IntervalMap{ExonInt,ReadCount}(),
              Dict{C,ReadCount}(),
              Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
