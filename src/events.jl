@@ -468,7 +468,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, igraph::PsiGraph,
                break
             end
          end
-         if !exists && sgquant.node[n] > 0
+         if !exists && get(sgquant.node[n]) > 0
             push!( ambig, AmbigCounts( collect(iset), 
                                        ones( length(iset) ) / length(iset), 
                                        1.0, get(sgquant.node[n]) * bias / sgquant.leng[n] ) )

@@ -245,7 +245,7 @@ end
             interv = Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
-            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
+            pushzero!( sgquant.circ, (lnode,rnode), value )
          end 
       end
    end
@@ -263,7 +263,7 @@ end
             interv = Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
-            push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
+            pushzero!( sgquant.circ, (lnode,rnode), value )
          end
       end   
    end
@@ -571,7 +571,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment, valu
                interv = Interval{ExonInt}( lnode, rnode )
                pushzero!( sgquant.edge, interv, value )
             elseif lnode >= rnode
-               push!( get!( sgquant.circ, (lnode,rnode), zero(ReadCount)), value )
+               pushzero!( sgquant.circ, (lnode,rnode), value )
             end
          end
       end
