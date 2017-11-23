@@ -321,7 +321,7 @@ end
          handle_iset_value!( graphq.geneidx[i], sum(graphq.quant[i].long[align]) )
          empty!(iset)
          if assign_long
-            assign_path!( graphq, align, DEF_READVALUE, iset )
+            assign_path!( graphq, align, graphq.quant[i].long[align], iset )
          end
       end
       # create compatibility classes for isoforms
