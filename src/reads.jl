@@ -83,7 +83,8 @@ end
 
 
 function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                                multi::MultiMapping{SGAlignPaired}; bufsize=50, sam=false, qualoffset=33 )
+                                multi::MultiMapping{SGAlignPaired}, mod::B; 
+                                bufsize=50, sam=false, qualoffset=33 ) where B <: BiasModel
 
    const fwd_reads  = allocate_fastq_records( bufsize )
    const rev_reads  = allocate_fastq_records( bufsize )
@@ -103,12 +104,13 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
          fill!( rev_reads[i], qualoffset )
          fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
          if !isnull( fwd_aln ) && !isnull( rev_aln )
+            biasval = count!( mod, fwd_reads[i].sequence )
             if length( fwd_aln.value ) > 1
-               push!( multi, fwd_aln.value, rev_aln.value, DEF_READVALUE, quant, lib )
+               push!( multi, fwd_aln.value, rev_aln.value, biasval, quant, lib )
                sam && write_sam( stdbuf, fwd_reads[i], rev_reads[i], fwd_aln.value, rev_aln.value, lib,
                                  paired=true, is_pair_rc=param.is_pair_rc, qualoffset=qualoffset )
             else
-               count!( quant, fwd_aln.value[1], rev_aln.value[1] )
+               count!( quant, fwd_aln.value[1], rev_aln.value[1], biasval )
                sam && write_sam( stdbuf, fwd_reads[i], fwd_aln.value[1], lib, 
                                  paired=true, fwd_mate=true, is_pair_rc=param.is_pair_rc, 
                                  qualoffset=qualoffset )
