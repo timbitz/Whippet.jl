@@ -113,7 +113,7 @@ function main()
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
    const quant = GraphLibQuant{ContainerType}( lib )
    const multi = MultiMapping{ContainerType}()
-   const mod   = DefaultBiasMod()
+   const mod   = PrimerBiasMod()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
@@ -145,6 +145,7 @@ function main()
    # TPM_EM
    println(STDERR, "Calculating expression values and MLE of equivalence classes with EM:")
    println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
+   adjust!( quant, mod )
    build_equivalence_classes!( quant, lib, assign_long=true )
    println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
    adjust!( multi, mod )

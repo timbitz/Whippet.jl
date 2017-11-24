@@ -504,7 +504,7 @@ function count_read_types( lib::GraphLib, graphq::GraphLibQuant )
       annocnt   += acnt
       junccnt   += tcnt
    end
-   Int(bodyreads),Int(juncreads),Int(annoreads),junccnt,annocnt
+   Int(round(bodyreads)),Int(round(juncreads)),Int(round(annoreads)),junccnt,annocnt
 end
 
 function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 

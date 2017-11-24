@@ -51,6 +51,17 @@ function Base.get( cnt::R ) where R <: ReadCounter
    end
 end
 
+function Base.push!( cnt::R, value::F ) where {R <: ReadCounter, F <: AbstractFloat}
+   if cnt.isadjusted
+      cnt.count += value
+   else
+      cnt.count += value
+      cnt.isadjusted = true
+      #error("Cannot push! a float value to PrimerBiasCounter unless isadjusted is true!")
+   end
+   cnt
+end
+
 Base.identity( cnt::R ) where R <: ReadCounter = get( cnt )
 Base.identity( cnt::IntervalValue{I,R} ) where R <: ReadCounter = get( cnt.value )
 
@@ -109,7 +120,7 @@ function count!( mod::PrimerBiasMod, seq::BioSequence{A} ) where A <: BioSequenc
    return hept
 end
 
-@fastmath value!( mod::PrimerBiasMod, hept::UInt16 ) = mod.back[hept] / mod.fore[hept]
+@fastmath value!( mod::PrimerBiasMod, hept::UInt16 ) = mod.back[hept+1] / mod.fore[hept+1]
 
 # hash by identity for speed
 Base.hash( v::UInt16 ) = v
@@ -121,6 +132,8 @@ mutable struct PrimerBiasCounter <: ReadCounter
 
    PrimerBiasCounter() = new( 0.0, Dict{UInt16,Int32}(), false )
 end
+
+Base.zero(::Type{PrimerBiasCounter}) = PrimerBiasCounter()
 
 @inline function adjust!( cnt::PrimerBiasCounter, mod::PrimerBiasMod )
    for (k,v) in cnt.map
@@ -135,8 +148,8 @@ function Base.push!( cnt::PrimerBiasCounter, hept::UInt16 )
    else
       cnt.map[hept] = 1
    end
+   cnt
 end
-
 
 # GC-Content Bias Correction
 

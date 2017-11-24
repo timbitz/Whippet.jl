@@ -4,8 +4,8 @@ const SCALING_FACTOR = 1_000_000
 # use specialty type for "read counts"
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
-const ReadCount = DefaultCounter
-const DEFAULT_ZERO  = zero(ReadCount)
+const ReadCount = PrimerBiasCounter #DefaultCounter
+const DEFAULT_ZERO  = (v = zero(ReadCount); v.isadjusted = true; v)
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
 
@@ -190,6 +190,28 @@ struct GraphLibQuant{C <: SGAlignContainer}
       end
       new( tpm, count, leng, geneoff, genetpm, quant, classes )
    end
+end
+
+# Adjust each MultiCompat raw value and assign its adjusted to .count
+function adjust!( sgquant::SpliceGraphQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel}
+   for node in sgquant.node 
+      adjust!( node, mod )
+   end
+   for edg in sgquant.edge
+      adjust!( edg.value, mod )
+   end
+   for lng in values(sgquant.long)
+      adjust!( lng, mod )
+   end
+   sgquant
+end
+
+# Adjust each sgquant storage value
+function adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel}
+   for sgq in gquant.quant
+      adjust!( sgq, mod )
+   end
+   gquant
 end
 
 @inbounds function set_gene_tpm!( quant::GraphLibQuant, lib::GraphLib )
