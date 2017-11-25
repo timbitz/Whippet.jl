@@ -193,32 +193,64 @@ end
 struct GCBiasMod <: BiasModel
    fore::ExpectedGC
    back::ExpectedGC
+   gcsize::Int64
+   gcwidth::Float64
+   gcoffset::Int64
+   gcincrement::Int64
+
+   temp::Vector{Float16}
+
+   function GCBiasMod( gcoffset::Int=5, gcincrement::Int=25; gc_param = GCBiasParams(50, 0.05) )
+      fore = zeros(Float16, Int(div(1.0, gc_param.width)+1))
+      back = zeros(Float16, Int(div(1.0, gc_param.width)+1))
+      temp = zeros(Float16, 11)
+      new( fore, back, gc_param.length, gc_param.width, gcoffset, gcincrement, temp ) 
+   end
 end
 
 mutable struct GCBiasCounter <: ReadCounter
    count::Float64
-   gc::ExpectedGC
+   gc::Vector{Int16}
    isadjusted::Bool
+
+   GCBiasCounter( gc_param = GCBiasParams(50, 0.05) ) = new(0.0, Vector{Int16}(Int(div(1.0, gc_param.width)+1)), false)
 end
+
+Base.zero(::Type{GCBiasCounter}) = GCBiasCounter()
 
 value!( mod::GCBiasMod, bin::Int ) = mod.back[bin] / mod.fore[bin]
 
-function adjust!( cnt::GCBiasCounter, mod::GCBiasMod )
-   for i in 1:length(cnt.gc)
-      cnt.count += value!( mod, i ) * cnt.gc[i]
+function count!( mod::GCBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
+   fill!(mod.temp, 0.0)
+   for i in mod.gcoffset:mod.gcincrement:(length(seq)-mod.gcsize)
+      gc = gc_content(seq[i:(i+mod.gcsize-1)])
+      bin = Int(div( gc, mod.gcwidth )+1)
+      mod.fore[bin] += 1.0
+      mod.temp[i] = gc
    end
+   mod.temp
+end
+
+function adjust!( cnt::GCBiasCounter, mod::GCBiasMod )
+   cnt.count = sum(cnt.gc)
+   weight    = 0.0
+   for i in 1:length(cnt.gc)
+      weight += value!( mod, i ) * cnt.gc[i]
+   end
+   weight /= sum(cnt.gc)
+   cnt.count *= weight
    cnt.isadjusted = true
 end
 
 function Base.push!( cnt::GCBiasCounter, gc::F ) where F <: AbstractFloat
-   const bin = div( gc, 1.0 / length(cnt.gc) )
-   gc[bin] += 1.0
+   bin = div( gc, 1.0 / length(cnt.gc) )
+   cnt.gc[bin] += 1
 end
 
 #=
 # Combined Bias Correction
 
-mutable struct WhippetBiasCounter <: ReadCounter
+mutable struct OmniBiasCounter <: ReadCounter
    count::Float64
    map::Dict{UInt16,Int32}
    gc::ExpectedGC

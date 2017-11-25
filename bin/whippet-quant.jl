@@ -145,6 +145,7 @@ function main()
    # TPM_EM
    println(STDERR, "Calculating expression values and MLE of equivalence classes with EM:")
    println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
+   normalize!( mod )
    adjust!( quant, mod )
    build_equivalence_classes!( quant, lib, assign_long=true )
    println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
