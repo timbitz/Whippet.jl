@@ -112,7 +112,7 @@ function normalize!( mod::PrimerBiasMod )
 end
 
 function count!( mod::PrimerBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
-   hept = kmer_index_trailing(UInt16, seq[1:mod.size])
+   hept = kmer_index_trailing(UInt16, seq[2:mod.size+1])
    mod.fore[hept+1] += 1.0
    for i in mod.offset:(mod.offset+mod.npos)
       mod.back[kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])+1] += 1.0
