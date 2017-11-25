@@ -92,13 +92,18 @@ struct PrimerBiasMod <: BiasModel
    fore::Vector{Float64}
    back::Vector{Float64}
    size::Int64
-   offset::Int64
-   npos::Int64
+   backoffset::Int64
+   backnpos::Int64
+   foreoffset::Int64
+   forenpos::Int64
 
-   function PrimerBiasMod( ksize::Int=7, npos::Int=6, offset::Int=24 )
+   temp::Vector{UInt16}
+
+   function PrimerBiasMod( ksize::Int=6, backoff::Int=24, backn::Int=6, foreoff::Int=1, foren::Int=3 )
       fore = zeros( 4^ksize )
       back = zeros( 4^ksize )
-      new( fore, back, ksize, offset, npos )
+      temp = zeros(UInt16, foren)
+      new( fore, back, ksize, backoff, backn, foreoff, foren, temp )
    end
 end
 
@@ -112,12 +117,15 @@ function normalize!( mod::PrimerBiasMod )
 end
 
 function count!( mod::PrimerBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
-   hept = kmer_index_trailing(UInt16, seq[2:mod.size+1])
-   mod.fore[hept+1] += 1.0
+   for i in 1:length(mod.temp)
+      hept = kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])
+      mod.fore[hept+1] += 1.0
+      mod.temp[i] = hept
+   end
    for i in mod.offset:(mod.offset+mod.npos)
       mod.back[kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])+1] += 1.0
    end
-   return hept
+   return mod.temp
 end
 
 @fastmath value!( mod::PrimerBiasMod, hept::UInt16 ) = mod.back[hept+1] / mod.fore[hept+1]
@@ -139,7 +147,14 @@ Base.zero(::Type{PrimerBiasCounter}) = PrimerBiasCounter()
    for (k,v) in cnt.map
       cnt.count += value!( mod, k ) * v
    end
+   cnt.count /= mod.forenpos
    cnt.isadjusted = true
+end
+
+function Base.push!( cnt::PrimerBiasCounter, vhept::Vector{UInt16} )
+   for j in 1:length(vhept)
+      push!( cnt, vhept[j] )
+   end
 end
 
 function Base.push!( cnt::PrimerBiasCounter, hept::UInt16 )
