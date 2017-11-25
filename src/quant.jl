@@ -4,7 +4,7 @@ const SCALING_FACTOR = 1_000_000
 # use specialty type for "read counts"
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
-const ReadCount = GCBiasCounter #DefaultCounter
+const ReadCount = PrimerBiasCounter #DefaultCounter
 const DEFAULT_ZERO  = (v = zero(ReadCount); v.isadjusted = true; v)
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
