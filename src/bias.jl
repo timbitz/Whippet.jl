@@ -99,7 +99,7 @@ struct PrimerBiasMod <: BiasModel
 
    temp::Vector{UInt16}
 
-   function PrimerBiasMod( ksize::Int=6, backoff::Int=24, backn::Int=6, foreoff::Int=1, foren::Int=3 )
+   function PrimerBiasMod( ksize::Int=6, backoff::Int=24, backn::Int=6, foreoff::Int=2, foren::Int=3 )
       fore = zeros( 4^ksize )
       back = zeros( 4^ksize )
       temp = zeros(UInt16, foren)
@@ -117,10 +117,12 @@ function normalize!( mod::PrimerBiasMod )
 end
 
 function count!( mod::PrimerBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
+   idx = 1
    for i in mod.foreoffset:(mod.foreoffset+mod.forenpos-1)
       hept = kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])
       mod.fore[hept+1] += 1.0
-      mod.temp[i] = hept
+      mod.temp[idx] = hept
+      idx += 1
    end
    for i in mod.backoffset:(mod.backoffset+mod.backnpos-1)
       mod.back[kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])+1] += 1.0
