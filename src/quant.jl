@@ -4,7 +4,7 @@ const SCALING_FACTOR = 1_000_000
 # use specialty type for "read counts"
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
-const ReadCount = GCBiasCounter #DefaultCounter
+const ReadCount = JointBiasCounter #DefaultCounter
 const DEFAULT_ZERO  = (v = zero(ReadCount); v.isadjusted = true; v)
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
@@ -193,43 +193,63 @@ struct GraphLibQuant{C <: SGAlignContainer}
 end
 
 # Adjust each MultiCompat raw value and assign its adjusted to .count
-function adjust!( sgquant::SpliceGraphQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel}
+function adjust!( sgquant::SpliceGraphQuant{C}, mod::B, func=adjust! ) where {C <: SGAlignContainer, B <: BiasModel}
    for node in sgquant.node 
-      adjust!( node, mod )
+      func( node, mod )
    end
    for edg in sgquant.edge
-      adjust!( edg.value, mod )
+      func( edg.value, mod )
    end
    for lng in values(sgquant.long)
-      adjust!( lng, mod )
+      func( lng, mod )
    end
    sgquant
 end
 
+primer_adjust!( sgquant::SpliceGraphQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( sgquant, mod, primer_adjust! )
+gc_adjust!( sgquant::SpliceGraphQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( sgquant, mod, gc_adjust! )
+
 # Adjust each sgquant storage value
-function adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel}
+function adjust!( gquant::GraphLibQuant{C}, mod::B, func=adjust! ) where {C <: SGAlignContainer, B <: BiasModel}
    for sgq in gquant.quant
-      adjust!( sgq, mod )
+      func( sgq, mod )
    end
    gquant
 end
+
+primer_adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( gquant, mod, primer_adjust! )
+gc_adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( gquant, mod, gc_adjust! )
 
 function Base.normalize!( mod::GCBiasMod, lib::GraphLib, quant::GraphLibQuant )
    for i in 1:length(lib.graphs)
       sg  = lib.graphs[i]
       idx = quant.geneidx[i]
       for j in 1:length(sg.annobias)
-         println( sg.annobias[j] )
          add_to_back!( mod.back, sg.annobias[j], quant.tpm[j+idx] )
       end
    end
    foresum = sum(mod.fore)
    backsum = sum(mod.back)
-   println("final add: $(mod.fore)")
-   println("final add: $(mod.back)")
    @inbounds for i in 1:length(mod.fore)
       @fastmath mod.fore[i] /= foresum
       @fastmath mod.back[i] /= backsum
+   end
+   mod
+end
+
+function gc_normalize!( mod::JointBiasMod, lib::GraphLib, quant::GraphLibQuant )
+   for i in 1:length(lib.graphs)
+      sg  = lib.graphs[i]
+      idx = quant.geneidx[i]
+      for j in 1:length(sg.annobias)
+         add_to_back!( mod.gcback, sg.annobias[j], quant.tpm[j+idx] )
+      end
+   end
+   foresum = sum(mod.gcfore)
+   backsum = sum(mod.gcback)
+   @inbounds for i in 1:length(mod.gcfore)
+      @fastmath mod.gcfore[i] /= foresum
+      @fastmath mod.gcback[i] /= backsum
    end
    mod
 end
@@ -465,13 +485,16 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
 end
 
 # Adjust each MultiCompat raw value and assign its adjusted to .count
-function adjust!( multi::MultiMapping{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel}
+function adjust!( multi::MultiMapping{C}, mod::B, func=adjust! ) where {C <: SGAlignContainer, B <: BiasModel}
    for mc in values(multi.map)
-      adjust!( mc.raw, mod )
+      func( mc.raw, mod )
       mc.count = get(mc.raw)
    end
    multi
 end
+
+primer_adjust!( multi::MultiMapping{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( multi, mod, primer_adjust! )
+gc_adjust!( multi::MultiMapping{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( multi, mod, gc_adjust! )
 
 # for a given alignment container, set the temp_iset in multi to the compatibility class
 @inbounds function set_equivalence_class!( multi::MultiMapping{C}, graphq::GraphLibQuant,

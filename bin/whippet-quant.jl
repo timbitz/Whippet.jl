@@ -113,7 +113,7 @@ function main()
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
    const quant = GraphLibQuant{ContainerType}( lib )
    const multi = MultiMapping{ContainerType}()
-   const mod   = GCBiasMod()
+   const mod   = JointBiasMod()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
@@ -144,15 +144,18 @@ function main()
 
    # TPM_EM
    println(STDERR, "Calculating expression values and MLE of equivalence classes with EM:")
+   primer_normalize!( mod )
+   primer_adjust!( quant, mod )
+   primer_adjust!( multi, mod )
    println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
    build_equivalence_classes!( quant, lib, assign_long=true )
    println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
    calculate_tpm!( quant, readlen=readlen )
    @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=10000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
-   normalize!( mod, lib, quant )
-   adjust!( quant, mod )
-   adjust!( multi, mod )
+   gc_normalize!( mod, lib, quant )
+   gc_adjust!( quant, mod )
+   gc_adjust!( multi, mod )
 
    output_tpm( args["out"], lib, quant )
    output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi.map), readlen, ver )
