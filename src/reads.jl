@@ -75,7 +75,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
          gc()
       end
    end # end while
-   normalize!( mod )
+   normalize!( mod, lib, quant )
    adjust!( quant, mod )
    adjust!( multi, mod )
    if sam
@@ -126,7 +126,7 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
          end
       end
    end # end while
-   normalize!( mod )
+   normalize!( mod, lib, quant )
    adjust!( quant, mod )
    adjust!( multi, mod )
    if sam

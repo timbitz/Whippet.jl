@@ -107,6 +107,8 @@ struct PrimerBiasMod <: BiasModel
    end
 end
 
+normalize!( mod::PrimerBiasMod, lib, quant ) = normalize!( mod )
+
 function normalize!( mod::PrimerBiasMod )
    foresum = sum(mod.fore)
    backsum = sum(mod.back)
@@ -210,6 +212,26 @@ struct GCBiasMod <: BiasModel
    end
 end
 
+function add_to_back!( mod::GCBiasMod, exp::ExpectedGC, weight::Float64 )
+   for i in 1:length(exp)
+      mod.back[i] += exp[i] * weight
+   end
+   mod
+end
+
+function normalize!( mod::GCBiasMod, lib::GraphLib, quant::GraphLibQuant )
+   for i in 1:length(lib.graphs)
+      sg  = lib.graphs[i]
+      idx = quant.geneidx[i]
+      for j in 1:length(sg.annobias)
+         add_to_back!( mod, sg.annobias[j], quant.tpm[j+idx] )
+      end
+   end
+   mod.fore /= sum(mod.fore)
+   mod.back /= sum(mod.back)
+   mod
+end
+
 mutable struct GCBiasCounter <: ReadCounter
    count::Float64
    gc::Vector{Int16}
@@ -244,9 +266,21 @@ function adjust!( cnt::GCBiasCounter, mod::GCBiasMod )
    cnt.isadjusted = true
 end
 
+function Base.push!( cnt::GCBiasCounter, vgc::Vector{F} ) where F <: AbstractFloat
+   for i in 1:length(vgc)
+      if vgc[i] > 0.0
+         push!( cnt, vgc[i] )
+      else
+         return cnt
+      end
+   end
+   cnt
+end
+
 function Base.push!( cnt::GCBiasCounter, gc::F ) where F <: AbstractFloat
    bin = div( gc, 1.0 / length(cnt.gc) )
    cnt.gc[bin] += 1
+   cnt
 end
 
 #=
@@ -255,7 +289,7 @@ end
 mutable struct OmniBiasCounter <: ReadCounter
    count::Float64
    map::Dict{UInt16,Int32}
-   gc::ExpectedGC
+   gc::Vector{Int16}
    isadjusted::Bool   
 end
 =#
