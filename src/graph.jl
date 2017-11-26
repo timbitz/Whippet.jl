@@ -70,6 +70,27 @@ function invert_edgetype( edge::EdgeType )
    end
 end
 
+struct GCBiasParams
+   length::Int64           # length offset
+   width::Float64          # gc bin size
+end
+
+const ExpectedGC = Vector{Float16}
+
+function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.05) ) where A <: BioSequences.Alphabet
+   const bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
+   for i in 1:length(seq)-gc_param.length+1
+      gc = Int(div(gc_content(seq[i:i+gc_param.length-1]), gc_param.width)+1)
+      @inbounds bins[gc] += 1.0
+   end
+   # normalize columns
+   binsum = sum(bins)
+   binsum == 0.0 && (return bins)
+   for i in 1:length(bins)
+      @fastmath bins[i] /= binsum
+   end
+   return bins
+end
 
 # This holds a representation of the splice graph
 # which is a directed multigraph

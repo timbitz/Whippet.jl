@@ -4,7 +4,7 @@ const SCALING_FACTOR = 1_000_000
 # use specialty type for "read counts"
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
-const ReadCount = PrimerBiasCounter #DefaultCounter
+const ReadCount = GCBiasCounter #DefaultCounter
 const DEFAULT_ZERO  = (v = zero(ReadCount); v.isadjusted = true; v)
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
@@ -212,6 +212,26 @@ function adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContaine
       adjust!( sgq, mod )
    end
    gquant
+end
+
+function Base.normalize!( mod::GCBiasMod, lib::GraphLib, quant::GraphLibQuant )
+   for i in 1:length(lib.graphs)
+      sg  = lib.graphs[i]
+      idx = quant.geneidx[i]
+      for j in 1:length(sg.annobias)
+         println( sg.annobias[j] )
+         add_to_back!( mod.back, sg.annobias[j], quant.tpm[j+idx] )
+      end
+   end
+   foresum = sum(mod.fore)
+   backsum = sum(mod.back)
+   println("final add: $(mod.fore)")
+   println("final add: $(mod.back)")
+   @inbounds for i in 1:length(mod.fore)
+      @fastmath mod.fore[i] /= foresum
+      @fastmath mod.back[i] /= backsum
+   end
+   mod
 end
 
 @inbounds function set_gene_tpm!( quant::GraphLibQuant, lib::GraphLib )

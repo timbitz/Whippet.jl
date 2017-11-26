@@ -107,9 +107,9 @@ struct PrimerBiasMod <: BiasModel
    end
 end
 
-normalize!( mod::PrimerBiasMod, lib, quant ) = normalize!( mod )
+Base.normalize!( mod::PrimerBiasMod, lib, quant ) = normalize!( mod )
 
-function normalize!( mod::PrimerBiasMod )
+function Base.normalize!( mod::PrimerBiasMod )
    foresum = sum(mod.fore)
    backsum = sum(mod.back)
    @inbounds for i in 1:length(mod.fore)
@@ -172,63 +172,29 @@ end
 
 # GC-Content Bias Correction
 
-struct GCBiasParams
-   length::Int64           # length offset
-   width::Float64          # gc bin size
-end
-
-const ExpectedGC = Vector{Float16}
-
-function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.05) ) where A <: BioSequences.Alphabet
-   const bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
-   for i in 1:length(seq)-gc_param.length+1
-      gc = Int(div(gc_content(seq[i:i+gc_param.length-1]), gc_param.width)+1)
-      @inbounds bins[gc] += 1.0
-   end
-   # normalize columns
-   binsum = sum(bins)
-   binsum == 0.0 && (return bins)
-   for i in 1:length(bins)
-      @fastmath bins[i] /= binsum
-   end
-   return bins
-end
 
 struct GCBiasMod <: BiasModel
-   fore::ExpectedGC
-   back::ExpectedGC
+   fore::Vector{Float64}
+   back::Vector{Float64}
    gcsize::Int64
    gcwidth::Float64
    gcoffset::Int64
    gcincrement::Int64
 
-   temp::Vector{Float16}
+   temp::Vector{Int16}
 
    function GCBiasMod( gcoffset::Int=5, gcincrement::Int=25; gc_param = GCBiasParams(50, 0.05) )
-      fore = zeros(Float16, Int(div(1.0, gc_param.width)+1))
-      back = zeros(Float16, Int(div(1.0, gc_param.width)+1))
-      temp = zeros(Float16, 11)
+      fore = zeros(Float64, Int(ceil(1.0 / gc_param.width)+1))
+      back = zeros(Float64, Int(ceil(1.0 / gc_param.width)+1))
+      temp = zeros(Int16, 11)
       new( fore, back, gc_param.length, gc_param.width, gcoffset, gcincrement, temp ) 
    end
 end
 
-function add_to_back!( mod::GCBiasMod, exp::ExpectedGC, weight::Float64 )
+function add_to_back!( back::Vector{Float64}, exp::ExpectedGC, weight::Float64 )
    for i in 1:length(exp)
-      mod.back[i] += exp[i] * weight
+      back[i] += exp[i] * weight
    end
-   mod
-end
-
-function normalize!( mod::GCBiasMod, lib::GraphLib, quant::GraphLibQuant )
-   for i in 1:length(lib.graphs)
-      sg  = lib.graphs[i]
-      idx = quant.geneidx[i]
-      for j in 1:length(sg.annobias)
-         add_to_back!( mod, sg.annobias[j], quant.tpm[j+idx] )
-      end
-   end
-   mod.fore /= sum(mod.fore)
-   mod.back /= sum(mod.back)
    mod
 end
 
@@ -237,39 +203,48 @@ mutable struct GCBiasCounter <: ReadCounter
    gc::Vector{Int16}
    isadjusted::Bool
 
-   GCBiasCounter( gc_param = GCBiasParams(50, 0.05) ) = new(0.0, Vector{Int16}(Int(div(1.0, gc_param.width)+1)), false)
+   function GCBiasCounter( gc_param = GCBiasParams(50, 0.05) )
+      gc = zeros(Int16, Int(ceil(1.0 / gc_param.width)+1))
+      new(0.0, gc, true)
+   end
 end
 
 Base.zero(::Type{GCBiasCounter}) = GCBiasCounter()
 
-value!( mod::GCBiasMod, bin::Int ) = mod.back[bin] / mod.fore[bin]
+value!( mod::GCBiasMod, bin::Int ) = mod.fore[bin] > 0.0 ? mod.back[bin] / mod.fore[bin] : 1.0
 
 function count!( mod::GCBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
-   fill!(mod.temp, 0.0)
+   fill!(mod.temp, zero(Int16))
+   idx = 1
    for i in mod.gcoffset:mod.gcincrement:(length(seq)-mod.gcsize)
       gc = gc_content(seq[i:(i+mod.gcsize-1)])
       bin = Int(div( gc, mod.gcwidth )+1)
       mod.fore[bin] += 1.0
-      mod.temp[i] = gc
+      mod.temp[idx] = bin
+      idx += 1
    end
    mod.temp
 end
 
 function adjust!( cnt::GCBiasCounter, mod::GCBiasMod )
-   cnt.count = sum(cnt.gc)
+   #cnt.count = sum(cnt.gc) # TODO FOR OMNI
    weight    = 0.0
    for i in 1:length(cnt.gc)
       weight += value!( mod, i ) * cnt.gc[i]
    end
-   weight /= sum(cnt.gc)
-   cnt.count *= weight
+   if sum(cnt.gc) > 0
+      weight /= sum(cnt.gc)
+      cnt.count *= weight
+   end
    cnt.isadjusted = true
+   cnt
 end
 
-function Base.push!( cnt::GCBiasCounter, vgc::Vector{F} ) where F <: AbstractFloat
-   for i in 1:length(vgc)
-      if vgc[i] > 0.0
-         push!( cnt, vgc[i] )
+function Base.push!( cnt::GCBiasCounter, bins::Vector{Int16} )
+   cnt.count += 1 # TODO FOR OMNI
+   for i in 1:length(bins)
+      if bins[i] > 0
+         push!( cnt, bins[i] )
       else
          return cnt
       end
@@ -277,9 +252,8 @@ function Base.push!( cnt::GCBiasCounter, vgc::Vector{F} ) where F <: AbstractFlo
    cnt
 end
 
-function Base.push!( cnt::GCBiasCounter, gc::F ) where F <: AbstractFloat
-   bin = div( gc, 1.0 / length(cnt.gc) )
-   cnt.gc[bin] += 1
+function Base.push!( cnt::GCBiasCounter, bin::Int16 )
+   cnt.gc[bin] += one(Int16)
    cnt
 end
 
