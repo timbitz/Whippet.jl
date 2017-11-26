@@ -299,7 +299,7 @@ struct JointBiasMod <: BiasModel
 
       gcfore = zeros(Float64, Int(ceil(1.0 / gc_param.width)+1))
       gcback = zeros(Float64, Int(ceil(1.0 / gc_param.width)+1))
-      gctemp = zeros(Int32, 11)
+      gctemp = zeros(Int32, 22)
 
       temp = JointBiasTemp( primer_temp, gctemp )
 
@@ -318,7 +318,7 @@ function primer_normalize!( mod::JointBiasMod )
    end
 end
 
-function count!( mod::JointBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
+function primer_count!( mod::JointBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
    # 5 prime bias
    idx = 1
    for i in mod.foreoffset:(mod.foreoffset+mod.forenpos-1)
@@ -331,7 +331,11 @@ function count!( mod::JointBiasMod, seq::BioSequence{A} ) where A <: BioSequence
       mod.back[kmer_index_trailing(UInt16, seq[i:(i+mod.size-1)])+1] += 1.0
    end
 
-   fill!(mod.temp.gc, zero(Int32))
+   return mod.temp
+end
+
+function gc_count!( mod::JointBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
+   # GC fragment bias
    idx = 1
    for i in mod.gcoffset:mod.gcincrement:(length(seq)-mod.gcsize)
       gc = gc_content(seq[i:(i+mod.gcsize-1)])
@@ -340,6 +344,27 @@ function count!( mod::JointBiasMod, seq::BioSequence{A} ) where A <: BioSequence
       mod.temp.gc[idx] = bin
       idx += 1
    end
+
+   return mod.temp
+end
+
+function count!( mod::JointBiasMod, seq::BioSequence{A} ) where A <: BioSequences.Alphabet
+   # 5 prime bias
+   primer_count!( mod, seq )
+   # GC fragment bias
+   fill!(mod.temp.gc, zero(Int32))
+   gc_count!( mod, seq )
+
+   return mod.temp
+end
+
+function count!( mod::JointBiasMod, fwd::BioSequence{A}, rev::BioSequence{A} ) where A <: BioSequences.Alphabet
+   # 5 prime bias
+   primer_count!( mod, fwd )
+   # GC fragment bias
+   fill!(mod.temp.gc, zero(Int32))
+   gc_count!( mod, fwd )
+   gc_count!( mod, rev )
 
    return mod.temp
 end

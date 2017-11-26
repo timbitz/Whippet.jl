@@ -104,7 +104,7 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
          fill!( rev_reads[i], qualoffset )
          fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
          if !isnull( fwd_aln ) && !isnull( rev_aln )
-            biasval = count!( mod, fwd_reads[i].sequence )
+            biasval = count!( mod, fwd_reads[i].sequence, rev_reads[i].sequence )
             if length( fwd_aln.value ) > 1
                push!( multi, fwd_aln.value, rev_aln.value, biasval, quant, lib )
                sam && write_sam( stdbuf, fwd_reads[i], rev_reads[i], fwd_aln.value, rev_aln.value, lib,
