@@ -77,7 +77,7 @@ end
 
 const ExpectedGC = Vector{Float16}
 
-function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.025) ) where A <: BioSequences.Alphabet
+function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.05) ) where A <: BioSequences.Alphabet
    const bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
    for i in 1:length(seq)-gc_param.length+1
       gc = Int(div(gc_content(seq[i:i+gc_param.length-1]), gc_param.width)+1)
