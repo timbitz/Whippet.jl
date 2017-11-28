@@ -183,7 +183,7 @@ struct GCBiasMod <: BiasModel
 
    temp::Vector{Int16}
 
-   function GCBiasMod( gcoffset::Int=5, gcincrement::Int=25; gc_param = GCBiasParams(50, 0.025) )
+   function GCBiasMod( gcoffset::Int=5, gcincrement::Int=25; gc_param = GCBiasParams(50, 0.05) )
       fore = zeros(Float64, Int(ceil(1.0 / gc_param.width)+1))
       back = zeros(Float64, Int(ceil(1.0 / gc_param.width)+1))
       temp = zeros(Int16, 11)
@@ -203,7 +203,7 @@ mutable struct GCBiasCounter <: ReadCounter
    gc::Vector{Int16}
    isadjusted::Bool
 
-   function GCBiasCounter( gc_param = GCBiasParams(50, 0.025) )
+   function GCBiasCounter( gc_param = GCBiasParams(50, 0.05) )
       gc = zeros(Int16, Int(ceil(1.0 / gc_param.width)+1))
       new(0.0, gc, true)
    end
@@ -291,8 +291,8 @@ struct JointBiasMod <: BiasModel
 
    temp::JointBiasTemp
 
-   function JointBiasMod( ksize::Int=5, backoff::Int=23, backn::Int=10, foreoff::Int=1, foren::Int=3,
-                          gcoffset::Int=5, gcincrement::Int=10; gc_param = GCBiasParams(50, 0.025) )
+   function JointBiasMod( ksize::Int=6, backoff::Int=23, backn::Int=10, foreoff::Int=1, foren::Int=2,
+                          gcoffset::Int=5, gcincrement::Int=10; gc_param = GCBiasParams(50, 0.05) )
       fore = zeros( 4^ksize )
       back = zeros( 4^ksize )
       primer_temp = zeros(UInt16, foren)
@@ -379,7 +379,7 @@ mutable struct JointBiasCounter <: ReadCounter
    gc::Vector{Int32}
    isadjusted::Bool
 
-   function JointBiasCounter( gc_param = GCBiasParams(50, 0.025) )
+   function JointBiasCounter( gc_param = GCBiasParams(50, 0.05) )
       gc = zeros(Int32, Int(ceil(1.0 / gc_param.width)+1))
       new(0.0, Dict{UInt16,Int32}(), gc, false)
    end
