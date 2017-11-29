@@ -22,7 +22,7 @@ function parse_cmd()
     "--index", "-x"
       help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph[.jls])"
       arg_type = String
-      default  = fixpath( "$dir/../index/graph" )
+      default  = fixpath( "$dir/../../index/graph" )
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
