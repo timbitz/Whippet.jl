@@ -2,7 +2,7 @@
 # Tim Sterne-Weiler 2015
 
 const dir = abspath( splitdir(@__FILE__)[1] )
-const ver = chomp(readline(open(dir * "../VERSION")))
+const ver = chomp(readline(open(dir * "/../VERSION")))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
