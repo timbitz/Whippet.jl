@@ -194,8 +194,8 @@ end
 @inbounds function set_gene_tpm!( quant::GraphLibQuant, lib::GraphLib )
    for i in 1:length(lib.graphs)
       tpm = 0.0
-      curidx = quant.geneidx[gene]
-      for j in 1:length( lib.graphs[gene].annoname )
+      curidx = quant.geneidx[i]
+      for j in 1:length( lib.graphs[i].annoname )
          tpm += quant.tpm[ curidx + j ]
       end
       quant.genetpm[i] = tpm
