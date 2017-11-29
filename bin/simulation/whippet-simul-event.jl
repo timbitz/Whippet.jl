@@ -12,7 +12,7 @@ using ArgParse
 using StatsBase
 using BioSequences
 
-push!( LOAD_PATH, dir * "/../src" )
+push!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()

@@ -10,7 +10,7 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using ArgParse
 using Libz
 
-unshift!( LOAD_PATH, dir * "/../src" )
+unshift!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()

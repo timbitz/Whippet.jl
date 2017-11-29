@@ -13,7 +13,7 @@ using StatsBase
 using BioSequences
 using Combinatorics
 
-push!( LOAD_PATH, dir * "/../src" )
+push!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()
