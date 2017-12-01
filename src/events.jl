@@ -582,8 +582,8 @@ function build_utr_graph( nodes::IntSet, motif::EdgeMotif, sgquant::SpliceGraphQ
    utr_graph
 end
 
-function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
-                              node::NodeInt, motif::EdgeMotif )
+function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant{C,R},
+                              node::NodeInt, motif::EdgeMotif ) where {C <: SGAlignContainer, R <: ReadCounter}
    
    utr_graph  = Nullable{PsiGraph}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
@@ -604,7 +604,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       total_cnt += get(sgquant.node[i])
       if i > 1
          interv = Interval{ExonInt}( i-1, i )
-         total_cnt += get(get( sgquant.edge, interv, IntervalValue(0,0,DEFAULT_ZERO) ).value)
+         total_cnt += get(get( sgquant.edge, interv, IntervalValue(0,0,default(R)) ).value)
       end
       i += 1
       if i < length(sg.edgetype)
@@ -619,7 +619,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant,
       push!( used_node, i )
       total_cnt += get(sgquant.node[i])
       interv = Interval{ExonInt}( i-1, i )
-      total_cnt += get(get( sgquant.edge, interv, IntervalValue(0,0,DEFAULT_ZERO) ).value)
+      total_cnt += get(get( sgquant.edge, interv, IntervalValue(0,0,default(R)) ).value)
    end
 
    psi = Nullable{Float64}()

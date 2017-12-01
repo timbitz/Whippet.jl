@@ -33,6 +33,9 @@ function parse_cmd()
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
+    "--biascorrect", "-b"
+      help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
+      action   = :store_true
     "--seed-len", "-L"
       help     = "Seed length"
       arg_type = Int
@@ -109,11 +112,19 @@ function main()
 
    const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
    const ContainerType = ispaired ? SGAlignPaired : SGAlignSingle
+   
+   if args["biascorrect"]
+      const CounterType   = JointBiasCounter
+      const BiasModelType = JointBiasMod
+   else
+      const CounterType   = DefaultCounter
+      const BiasModelType = DefaultBiasMod
+   end
 
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
-   const quant = GraphLibQuant{ContainerType}( lib )
-   const multi = MultiMapping{ContainerType}()
-   const mod   = JointBiasMod()
+   const quant = GraphLibQuant{ContainerType,CounterType}( lib )
+   const multi = MultiMapping{ContainerType,CounterType}()
+   const mod   = BiasModelType()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 

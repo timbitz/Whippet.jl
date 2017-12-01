@@ -31,14 +31,14 @@ end
 
 function pushzero!( collection::Dict{K,V}, key, value ) where {K, V <: ReadCounter}
    if !haskey( collection, key )
-      collection[key] = zero(ReadCount)
+      collection[key] = zero(V)
    end
    push!( collection[key], value )
 end
 
 function pushzero!( collection::IntervalMap{K,V}, key, value ) where {K <: Integer, V <: ReadCounter}
    if !haskey( collection, (key.first,key.last) )
-      collection[key] = zero(ReadCount)
+      collection[key] = zero(V)
    end
    pushto!( collection, key, value )
 end
@@ -82,7 +82,9 @@ Base.zero( ::Type{DefaultCounter} ) = DefaultCounter(0.0) #DEFAULTCOUNTER_ZERO
 Base.one( ::Type{DefaultCounter} )  = DefaultCounter(1.0) #DEFAULTCOUNTER_ONE
 Base.push!( cnt::DefaultCounter, value::Float64 ) = (cnt.count += value)
 
-adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
+primer_adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
+gc_adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
+
 count!( mod::DefaultBiasMod, anything ) = 1.0
 
 # 5' Sequence bias model
@@ -256,6 +258,9 @@ function Base.push!( cnt::GCBiasCounter, bin::Int16 )
    cnt.gc[bin] += one(Int16)
    cnt
 end
+
+primer_normalize!( mod::M ) where M <: Union{DefaultBiasMod,GCBiasMod} = 1.0
+gc_normalize!( mod::M, x, y ) where M <: Union{DefaultBiasMod,PrimerBiasMod} = 1.0
 
 #=
 # Combined Bias Correction

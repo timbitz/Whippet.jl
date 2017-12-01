@@ -4,10 +4,19 @@ const SCALING_FACTOR = 1_000_000
 # use specialty type for "read counts"
 # with basic function: 'sum' that can be
 # overridden for more complex count bias models
-const ReadCount = JointBiasCounter #DefaultCounter
-const DEFAULT_ZERO  = (v = zero(ReadCount); v.isadjusted = true; v)
+#const ReadCount = JointBiasCounter #DefaultCounter
+const DEFAULT_DEF   = (v = zero(DefaultCounter); v.isadjusted = true; v)
+const DEFAULT_PRIME = (v = zero(PrimerBiasCounter); v.isadjusted = true; v)
+const DEFAULT_GC    = (v = zero(GCBiasCounter); v.isadjusted = true; v)
+const DEFAULT_JOINT = (v = zero(JointBiasCounter); v.isadjusted = true; v)
+
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
+
+default(::Type{DefaultCounter}) = DEFAULT_DEF
+default(::Type{PrimerBiasCounter}) = DEFAULT_PRIME
+default(::Type{GCBiasCounter}) = DEFAULT_GC
+default(::Type{JointBiasCounter}) = DEFAULT_JOINT
 
 # Use this abstraction to store SGAlignPaths before
 # quantification or assignment
@@ -121,19 +130,19 @@ Base.in( aln::SGAlignPaired, is::IntSet ) = in( aln.fwd, is ) && in( aln.rev, is
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
 # as junction counts, which should always be at a lower level
-mutable struct SpliceGraphQuant{C <: SGAlignContainer}
-   node::Vector{ReadCount}
-   edge::IntervalMap{ExonInt,ReadCount}
-   long::Dict{C,ReadCount}
-   circ::Dict{Tuple{ExonInt,ExonInt},ReadCount}
+mutable struct SpliceGraphQuant{C <: SGAlignContainer, R <: ReadCounter}
+   node::Vector{R}
+   edge::IntervalMap{ExonInt,R}
+   long::Dict{C,R}
+   circ::Dict{Tuple{ExonInt,ExonInt},R}
    leng::Vector{Float64}
    bias::Float64
 
-   function SpliceGraphQuant{C}( sg::SpliceGraph ) where C <: SGAlignContainer
-      return new( ReadCount[zero(ReadCount) for x in 1:length(sg.nodelen)],
-             IntervalMap{ExonInt,ReadCount}(),
-             Dict{C,ReadCount}(),
-             Dict{Tuple{ExonInt,ExonInt},ReadCount}(),
+   function SpliceGraphQuant{C,R}( sg::SpliceGraph ) where {C <: SGAlignContainer, R <: ReadCounter}
+      return new( R[zero(R) for x in 1:length(sg.nodelen)],
+             IntervalMap{ExonInt,R}(),
+             Dict{C,R}(),
+             Dict{Tuple{ExonInt,ExonInt},R}(),
              zeros( length(sg.nodelen) ), 1.0 )
    end
 end
@@ -157,16 +166,16 @@ mutable struct IsoCompat <: EquivalenceClass
 end
 
 # Here we store whole graphome quantification
-struct GraphLibQuant{C <: SGAlignContainer}
-   tpm::Vector{Float64}                # isoform tpm
-   count::Vector{Float64}              # isoform counts
-   length::Vector{Int64}               # isoform lengths
-   geneidx::Vector{Int64}              # 0-based offset of isoforms for gene
-   genetpm::Vector{Float64}            # sum of isoform tpms for each gene
-   quant::Vector{SpliceGraphQuant{C}}  # splice graph quant structs for gene
-   classes::Vector{IsoCompat}          # isoform compatibility classes
+struct GraphLibQuant{C <: SGAlignContainer, R <: ReadCounter}
+   tpm::Vector{Float64}                 # isoform tpm
+   count::Vector{Float64}               # isoform counts
+   length::Vector{Int64}                # isoform lengths
+   geneidx::Vector{Int64}               # 0-based offset of isoforms for gene
+   genetpm::Vector{Float64}             # sum of isoform tpms for each gene
+   quant::Vector{SpliceGraphQuant{C,R}} # splice graph quant structs for gene
+   classes::Vector{IsoCompat}           # isoform compatibility classes
 
-   function GraphLibQuant{C}( lib::GraphLib ) where C <: SGAlignContainer
+   function GraphLibQuant{C,R}( lib::GraphLib ) where {C <: SGAlignContainer, R <: ReadCounter}
       isonum = zeros(Int, length(lib.graphs))
       for i in 1:length(lib.graphs)
          isonum[i] = length(lib.graphs[i].annoname)
@@ -186,14 +195,14 @@ struct GraphLibQuant{C <: SGAlignContainer}
             leng[cumul_i+j] = sum(map( y->lib.graphs[i].nodelen[y], collect(lib.graphs[i].annopath[j]) ))
          end
          cumul_i += isonum[i]
-         quant[i] = SpliceGraphQuant{C}( lib.graphs[i] )
+         quant[i] = SpliceGraphQuant{C,R}( lib.graphs[i] )
       end
       new( tpm, count, leng, geneoff, genetpm, quant, classes )
    end
 end
 
 # Adjust each MultiCompat raw value and assign its adjusted to .count
-function adjust!( sgquant::SpliceGraphQuant{C}, mod::B, func=adjust! ) where {C <: SGAlignContainer, B <: BiasModel}
+function adjust!( sgquant::SpliceGraphQuant{C,R}, mod::B, func=adjust! ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel}
    for node in sgquant.node 
       func( node, mod )
    end
@@ -206,19 +215,19 @@ function adjust!( sgquant::SpliceGraphQuant{C}, mod::B, func=adjust! ) where {C 
    sgquant
 end
 
-primer_adjust!( sgquant::SpliceGraphQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( sgquant, mod, primer_adjust! )
-gc_adjust!( sgquant::SpliceGraphQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( sgquant, mod, gc_adjust! )
+primer_adjust!( sgquant::SpliceGraphQuant{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( sgquant, mod, primer_adjust! )
+gc_adjust!( sgquant::SpliceGraphQuant{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( sgquant, mod, gc_adjust! )
 
 # Adjust each sgquant storage value
-function adjust!( gquant::GraphLibQuant{C}, mod::B, func=adjust! ) where {C <: SGAlignContainer, B <: BiasModel}
+function adjust!( gquant::GraphLibQuant{C,R}, mod::B, func=adjust! ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel}
    for sgq in gquant.quant
       func( sgq, mod )
    end
    gquant
 end
 
-primer_adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( gquant, mod, primer_adjust! )
-gc_adjust!( gquant::GraphLibQuant{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( gquant, mod, gc_adjust! )
+primer_adjust!( gquant::GraphLibQuant{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( gquant, mod, primer_adjust! )
+gc_adjust!( gquant::GraphLibQuant{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( gquant, mod, gc_adjust! )
 
 function Base.normalize!( mod::GCBiasMod, lib::GraphLib, quant::GraphLibQuant )
    for i in 1:length(lib.graphs)
@@ -428,34 +437,34 @@ end
 
 ## MultiAlignment containers & Equivalence classes
 
-mutable struct MultiCompat <: EquivalenceClass
+mutable struct MultiCompat{R} <: EquivalenceClass
    class::ClassType
    prop::Vector{Float64}
    prop_sum::Float64
    count::Float64
    isdone::Bool
    postassign::Bool
-   raw::ReadCount
+   raw::R
 
-   function MultiCompat( graphq::GraphLibQuant, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where C <: SGAlignContainer
+   function MultiCompat{R}( graphq::GraphLibQuant{C,R}, lib::GraphLib, cont::Vector{C}, temp_iset::IntSet=IntSet() ) where {C <: SGAlignContainer, R <: ReadCounter}
       class,matches = equivalence_class( graphq, lib, cont, temp_iset )
-      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, !matches, zero(ReadCount) )
+      new( class, ones(length(class)) / length(class), 1.0, 1.0, !matches, !matches, zero(R) )
    end
 end
 
 # This hash structure stores multi-mapping
 # equivalence classes
-struct MultiMapping{C <: SGAlignContainer}
-   map::Dict{Vector{C},MultiCompat}
+struct MultiMapping{C <: SGAlignContainer, R <: ReadCounter}
+   map::Dict{Vector{C},MultiCompat{R}}
    iset::IntSet
     
-   function MultiMapping{C}() where C <: SGAlignContainer
-      new( Dict{Vector{C},MultiCompat}(), IntSet() )
+   function MultiMapping{C,R}() where {C <: SGAlignContainer, R <: ReadCounter}
+      new( Dict{Vector{C},MultiCompat{R}}(), IntSet() )
    end
 end
 
-function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignment}, value, 
-                     graphq::GraphLibQuant, lib::GraphLib )
+function Base.push!( ambig::MultiMapping{SGAlignSingle,R}, alns::Vector{SGAlignment}, value, 
+                     graphq::GraphLibQuant, lib::GraphLib ) where R <: ReadCounter
    cont = Vector{SGAlignSingle}( length(alns) )
    for i in 1:length(alns)
       cont[i] = SGAlignSingle( alns[i].path )
@@ -463,14 +472,14 @@ function Base.push!( ambig::MultiMapping{SGAlignSingle}, alns::Vector{SGAlignmen
    if haskey( ambig.map, cont )
       push!( ambig.map[cont].raw, value )
    else
-      mc = MultiCompat( graphq, lib, cont, ambig.iset )
+      mc = MultiCompat{R}( graphq, lib, cont, ambig.iset )
       push!( mc.raw, value )
       ambig.map[cont] = mc
    end
 end
 
-function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment}, rev::Vector{SGAlignment}, value, 
-                     graphq::GraphLibQuant, lib::GraphLib )
+function Base.push!( ambig::MultiMapping{SGAlignPaired,R}, fwd::Vector{SGAlignment}, rev::Vector{SGAlignment}, value, 
+                     graphq::GraphLibQuant, lib::GraphLib ) where R <: ReadCounter
    cont = Vector{SGAlignPaired}( length(fwd) )
    for i in 1:length(fwd)
       cont[i] = SGAlignPaired( fwd[i].path, rev[i].path )
@@ -478,14 +487,14 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired}, fwd::Vector{SGAlignment
    if haskey( ambig.map, cont )
       push!( ambig.map[cont].raw, value )
    else
-      mc = MultiCompat( graphq, lib, cont, ambig.iset )
+      mc = MultiCompat{R}( graphq, lib, cont, ambig.iset )
       push!( mc.raw, value )
       ambig.map[cont] = mc
    end
 end
 
 # Adjust each MultiCompat raw value and assign its adjusted to .count
-function adjust!( multi::MultiMapping{C}, mod::B, func=adjust! ) where {C <: SGAlignContainer, B <: BiasModel}
+function adjust!( multi::MultiMapping{C,R}, mod::B, func=adjust! ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel}
    for mc in values(multi.map)
       func( mc.raw, mod )
       mc.count = get(mc.raw)
@@ -493,12 +502,12 @@ function adjust!( multi::MultiMapping{C}, mod::B, func=adjust! ) where {C <: SGA
    multi
 end
 
-primer_adjust!( multi::MultiMapping{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( multi, mod, primer_adjust! )
-gc_adjust!( multi::MultiMapping{C}, mod::B ) where {C <: SGAlignContainer, B <: BiasModel} = adjust!( multi, mod, gc_adjust! )
+primer_adjust!( multi::MultiMapping{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( multi, mod, primer_adjust! )
+gc_adjust!( multi::MultiMapping{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( multi, mod, gc_adjust! )
 
 # for a given alignment container, set the temp_iset in multi to the compatibility class
-@inbounds function set_equivalence_class!( multi::MultiMapping{C}, graphq::GraphLibQuant,
-                                           lib::GraphLib, aln::C ) where C <: SGAlignContainer
+@inbounds function set_equivalence_class!( multi::MultiMapping{C,R}, graphq::GraphLibQuant,
+                                           lib::GraphLib, aln::C ) where {C <: SGAlignContainer, R <: ReadCounter}
    empty!(multi.iset)
    const g = aln.fwd[1].gene
    for p in 1:length(lib.graphs[g].annopath)
@@ -518,7 +527,7 @@ function get_class_value( iset::IntSet, compat::MultiCompat )
    value
 end
 
-function assign_ambig!( graphq::GraphLibQuant{C}, lib::GraphLib, ambig::MultiMapping{C} ) where C <: SGAlignContainer
+function assign_ambig!( graphq::GraphLibQuant{C,R}, lib::GraphLib, ambig::MultiMapping{C,R} ) where {C <: SGAlignContainer, R <: ReadCounter}
    @inbounds for (vp,mc) in ambig.map
       # store relative weight of each alignment path
       vals = zeros(length(vp))
@@ -554,7 +563,7 @@ function assign_ambig!( graphq::GraphLibQuant{C}, lib::GraphLib, ambig::MultiMap
 end
 
 # Count a single alignment in quant
-function count!( graphq::GraphLibQuant, align::SGAlignment, value )
+function count!( graphq::GraphLibQuant{C,R}, align::SGAlignment, value ) where {C <: SGAlignContainer, R <: ReadCounter}
    align.isvalid == true || return
    init_gene = align.path[1].gene
    sgquant   = graphq.quant[ init_gene ]
@@ -586,7 +595,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment, value )
          if haskey(sgquant.long, curkey)
             push!( sgquant.long[curkey], value )
          else
-            entry = zero(ReadCount)
+            entry = zero(R)
             push!( entry, value )
             sgquant.long[curkey] = entry
          end
@@ -595,7 +604,7 @@ function count!( graphq::GraphLibQuant, align::SGAlignment, value )
 end
 
 ## Extension of count! for paired end counting
-function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment, value )
+function count!( graphq::GraphLibQuant{C,R}, fwd::SGAlignment, rev::SGAlignment, value ) where {C <: SGAlignContainer, R <: ReadCounter}
    (fwd.isvalid == true && rev.isvalid == true) || return
    const init_gene = fwd.path[1].gene
    const rev_gene  = rev.path[1].gene
@@ -646,7 +655,7 @@ function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment, valu
        if haskey(sgquant.long, curkey)
           push!( sgquant.long[curkey], value )
        else
-          entry = zero(ReadCount)
+          entry = zero(R)
           push!( entry, value )
           sgquant.long[curkey] = entry
        end
@@ -750,9 +759,9 @@ end
 # at each iteration.   It also requires that calculate_tpm! be 
 # run initially once prior to gene_em!() call.
 
-function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C};
+function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
                    it::Int64=1, maxit::Int64=1000, 
-                   sig::Int64=4, readlen::Int64=50 ) where C <: SGAlignContainer
+                   sig::Int64=4, readlen::Int64=50 ) where {C <: SGAlignContainer, R <: ReadCounter}
 
    const count_temp = ones(length(quant.count))
    const tpm_temp   = ones(length(quant.count))
