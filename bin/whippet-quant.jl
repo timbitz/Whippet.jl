@@ -56,7 +56,7 @@ function parse_cmd()
     "--pair-range", "-P"
       help     = "Seeds for paired end reads must match within _ bases of one another"
       arg_type = Int
-      default  = 2500
+      default  = 5000
     "--mismatches", "-X"
       help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
       arg_type = Int
@@ -153,6 +153,7 @@ function main()
    calculate_tpm!( quant, readlen=readlen )
    @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=10000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
+   set_gene_tpm!( quant, lib )
    gc_normalize!( mod, lib, quant )
    gc_adjust!( quant, mod )
    gc_adjust!( multi, mod )

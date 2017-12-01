@@ -2,7 +2,7 @@
 # Tim Sterne-Weiler 2015
 
 const dir = abspath( splitdir(@__FILE__)[1] )
-const ver = chomp(readline(open(dir * "/VERSION")))
+const ver = chomp(readline(open(dir * "/../VERSION")))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
@@ -13,7 +13,7 @@ using StatsBase
 using BioSequences
 using Combinatorics
 
-push!( LOAD_PATH, dir * "/../src" )
+push!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()
@@ -21,13 +21,13 @@ function parse_cmd()
   # TODO finish options...
   @add_arg_table s begin
     "--index", "-x"
-      help = "Prefix for index 'dir/prefix' (default Whippet/index/graph)"
+      help = "Prefix or full-name of index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
-      default  = fixpath( "$(dir)/../index/graph" )
+      default  = fixpath( "$(dir)/../../index/graph" )
     "--out", "-o"
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
-      default  = fixpath( "$(dir)/../simul" )
+      default  = fixpath( "$(dir)/../../simul" )
     "--num-nodes", "-n"
       help = "Maximum number of consecutive nodes to output sliding combinatorial paths through"
       arg_type = Int64

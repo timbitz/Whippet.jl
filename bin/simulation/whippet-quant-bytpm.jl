@@ -2,7 +2,7 @@
 # Tim Sterne-Weiler 2015
 
 const dir = abspath( splitdir(@__FILE__)[1] )
-const ver = readline(open(dir * "/VERSION"))
+const ver = readline(open(dir * "/../VERSION"))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
@@ -10,7 +10,7 @@ println( STDERR, "Whippet $ver loading and compiling... " )
 using ArgParse
 using Libz
 
-unshift!( LOAD_PATH, dir * "/../src" )
+unshift!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()
@@ -22,7 +22,7 @@ function parse_cmd()
     "--index", "-x"
       help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph[.jls])"
       arg_type = String
-      default  = fixpath( "$dir/../index/graph" )
+      default  = fixpath( "$dir/../../index/graph" )
     "--out", "-o"
       help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String

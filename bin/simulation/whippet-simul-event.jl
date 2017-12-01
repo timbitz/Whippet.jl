@@ -2,7 +2,7 @@
 # Tim Sterne-Weiler 2015
 
 const dir = abspath( splitdir(@__FILE__)[1] )
-const ver = chomp(readline(open(dir * "/VERSION")))
+const ver = chomp(readline(open(dir * "/../VERSION")))
 
 tic()
 println( STDERR, "Whippet $ver loading and compiling... " )
@@ -12,7 +12,7 @@ using ArgParse
 using StatsBase
 using BioSequences
 
-push!( LOAD_PATH, dir * "/../src" )
+push!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()
@@ -22,11 +22,11 @@ function parse_cmd()
     "--index", "-x"
       help = "Prefix for index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
-      default  = fixpath( "$(dir)/../index/graph" )
+      default  = fixpath( "$(dir)/../../index/graph" )
     "--out", "-o"
       help = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
-      default  = fixpath( "$(dir)/../simul" )
+      default  = fixpath( "$(dir)/../../simul" )
     "--gtf"
       help = "Gene anotation file in GTF format"
       arg_type = String 

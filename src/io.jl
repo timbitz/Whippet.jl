@@ -444,8 +444,9 @@ function output_psi_header( io::BufOut )
    write( io, "Total_Reads\tComplexity\tEntropy\tInc_Paths\tExc_Paths\tEdges\n" )
 end
 
-function output_tpm_header( io::BufOut )
-   write( io, "Gene\tTpM\tRead_Counts\n" )
+function output_tpm_header( io::BufOut, idstr::String="Gene" )
+   write( io, idstr )
+   write( io, "\tTpM\tRead_Counts\n" )
 end
 
 function output_diff_header( io::BufOut )

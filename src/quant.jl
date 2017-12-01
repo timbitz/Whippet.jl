@@ -257,8 +257,8 @@ end
 @inbounds function set_gene_tpm!( quant::GraphLibQuant, lib::GraphLib )
    for i in 1:length(lib.graphs)
       tpm = 0.0
-      curidx = quant.geneidx[gene]
-      for j in 1:length( lib.graphs[gene].annoname )
+      curidx = quant.geneidx[i]
+      for j in 1:length( lib.graphs[i].annoname )
          tpm += quant.tpm[ curidx + j ]
       end
       quant.genetpm[i] = tpm
@@ -809,8 +809,8 @@ function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
    genestream = ZlibDeflateOutputStream( geneio )
    isoio = open( file * ".isoform.tpm.gz", "w" )
    isostream = ZlibDeflateOutputStream( isoio )
-   output_tpm_header( genestream )
-   output_tpm_header( isostream )
+   output_tpm_header( genestream, "GENE" )
+   output_tpm_header( isostream, "ISOFORM" )
    for i in 1:length(lib.names)
       idx = gquant.geneidx[i]
       genetpm = 0.0
