@@ -19,8 +19,8 @@ include("../src/timer.jl")
 include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
-include("../src/bias.jl")
 include("../src/graph.jl")
+include("../src/bias.jl")
 include("../src/edges.jl")
 include("../src/index.jl")
 include("../src/record.jl")
@@ -55,7 +55,8 @@ end
    @test get(def) == 1.0
    push!( def, 1.0 )
    @test get(def) == 2.0
-   adjust!( def, DefaultBiasMod() )
+   gc_adjust!( def, DefaultBiasMod() )
+   primer_adjust!( def, DefaultBiasMod() )
 
    function randdna(n)
       return BioSequence{DNAAlphabet{2}}(rand([DNA_A, DNA_C, DNA_G, DNA_T], n))
@@ -77,6 +78,7 @@ end
    cnt = PrimerBiasCounter()
    @test cnt.count == 0.0
    hept = kmer_index_trailing(UInt16, dna"ATGAC")
+   push!( cnt, hept )
    push!( cnt, hept )
    adjust!( cnt, mod )
    @test get(cnt) == value!( mod, hept )
@@ -268,7 +270,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                           false, false, true, false, true )
    println(map( x->length(x.annoname), lib.graphs ))
-   gquant = GraphLibQuant{SGAlignSingle}( lib )
+   gquant = GraphLibQuant{SGAlignSingle,DefaultCounter}( lib )
 
    @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
@@ -456,7 +458,7 @@ IIIIIIIIIIII
 
       @testset "MultiMapping Equivalence Classes" begin
 
-         multi  = MultiMapping{SGAlignSingle}() 
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}() 
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true), 
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000004, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
 
@@ -466,7 +468,7 @@ IIIIIIIIIIII
          @test compats[1].isdone == true
          @test sum(multi.iset) == 0
 
-         multi  = MultiMapping{SGAlignSingle}()
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}()
 
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
@@ -483,7 +485,7 @@ IIIIIIIIIIII
          prev_node = get(gquant.quant[2].node[1])
          println(STDERR, "prev_quant = $(gquant.quant[2])")
          interv = Interval{ExonInt}( 1, 2 )
-         prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(ReadCount)) ).value)
+         prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
 
          println(gquant.quant[2].edge)
 
@@ -492,7 +494,7 @@ IIIIIIIIIIII
          
          println(STDERR, "cur_quant = $(gquant.quant[2])")
          @test get(gquant.quant[2].node[1]) == prev_node + 7.5
-         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value) == prev_edge + 2.5
+         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,default(DefaultCounter)) ).value) == prev_edge + 2.5
       end
 
       function parse_edge{S <: AbstractString}( str::S )

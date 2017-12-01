@@ -101,7 +101,7 @@ struct PrimerBiasMod <: BiasModel
 
    temp::Vector{UInt16}
 
-   function PrimerBiasMod( ksize::Int=6, backoff::Int=24, backn::Int=6, foreoff::Int=2, foren::Int=3 )
+   function PrimerBiasMod( ksize::Int=6, backoff::Int=24, backn::Int=6, foreoff::Int=1, foren::Int=2 )
       fore = zeros( 4^ksize )
       back = zeros( 4^ksize )
       temp = zeros(UInt16, foren)
