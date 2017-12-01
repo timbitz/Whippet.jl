@@ -21,7 +21,7 @@ function parse_cmd()
   # TODO finish options...
   @add_arg_table s begin
     "--index", "-x"
-      help = "Prefix for index 'dir/prefix' (default Whippet/index/graph)"
+      help = "Prefix or full-name of index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
       default  = fixpath( "$(dir)/../../index/graph" )
     "--out", "-o"

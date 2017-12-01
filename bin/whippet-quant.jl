@@ -56,7 +56,7 @@ function parse_cmd()
     "--pair-range", "-P"
       help     = "Seeds for paired end reads must match within _ bases of one another"
       arg_type = Int
-      default  = 2500
+      default  = 5000
     "--mismatches", "-X"
       help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
       arg_type = Int
