@@ -23,6 +23,20 @@ end
    parser
 end
 
+function make_http_fqparser( url::String; forcegzip=false )
+   response = HTTP.get(url, stream=true)
+   if !(200 <= response.status < 300)
+      error("HTTP Code $(response.status)! Download failed!")
+   end
+   if isgzipped( url ) || forcegzip
+      zlibstr  = ZlibInflateInputStream( response.body, reset_on_end=true )
+      fqparser = FASTQ.Reader( zlibstr, fill_ambiguous=DNA_A )
+   else
+      fqparser = FASTQ.Reader( BufferedInputStream(response.body), fill_ambiguous=DNA_A )
+   end
+   fqparser #, response
+end
+
 
 function allocate_chunk( parser; size=10000 )
   chunk = Vector{eltype(parser)}( size )

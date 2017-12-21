@@ -83,12 +83,12 @@ function parse_cmd()
     "--phred-64"
       help     = "Qual string is encoded in Phred+64 integers"
       action   = :store_true
-#=    "--url"
-      help     = "FASTQ files are URLs to download/process on the fly"
+    "--url"
+      help     = "When this flag is enabled, filename.fastq[.gz] and paired_mate.fastq[.gz] are considered URLs to download/process on the fly"
       action   = :store_true
     "--ebi"
-      help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --url=true)"
-      action   = :store_true =#
+      help     = "Retrieve FASTQ file(s) from ebi.ac.uk using a single seq run id (ie. SRR1199003). This will automatically work for both single and paired-end SRR ids. (sets --url=true)"
+      action   = :store_true
     "--circ"
       help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
       action   = :store_true
@@ -128,11 +128,27 @@ function main()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
-                                 forcegzip=args["force-gz"] )
+   if args["ebi"]
+      ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
+      ispaired = ebi_res.paired
+      args["url"] = true
+      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
+      if ispaired
+         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
+      end
+      ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
+   end
+
+   const parser = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"], 
+                                forcegzip=args["force-gz"] ) :
+                                make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
+                                forcegzip=args["force-gz"] )
+
    if ispaired
-    const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
-                                       forcegzip=args["force-gz"] )
+      const mate_parser = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+                                        forcegzip=args["force-gz"] ) : 
+                                        make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
+                                        forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
