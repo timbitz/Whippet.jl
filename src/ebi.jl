@@ -9,9 +9,9 @@ end
 
 function ident_to_fastq_url( ebi_id::String )
    request_url = "http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt"
-   res = HTTP.get(request_url)
+   res = Requests.get(request_url)
    res.status == 200 || error("Couldn't retrieve information for $ebi_id from ebi.ac.uk!")
-   buf = res.body
+   buf = IOBuffer(res.data)
    header = chomp(readline(buf))
    if eof(buf)
       error("No fastq data is associated with $ebi_id according to ebi.ac.uk!")

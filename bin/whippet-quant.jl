@@ -145,16 +145,16 @@ function main()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
-   const parser = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"], 
-                                forcegzip=args["force-gz"] ) :
-                                make_fqparser( args["filename.fastq[.gz]"], 
-                                forcegzip=args["force-gz"] )
+   const parser,response = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"], 
+                                         forcegzip=args["force-gz"] ) :
+                                         make_fqparser( args["filename.fastq[.gz]"], 
+                                         forcegzip=args["force-gz"] )
 
    if ispaired
-      const mate_parser = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
-                                        forcegzip=args["force-gz"] ) : 
-                                        make_fqparser( args["paired_mate.fastq[.gz]"], 
-                                        forcegzip=args["force-gz"] )
+      const mate_parser,mate_response = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+                                                      forcegzip=args["force-gz"] ) : 
+                                                      make_fqparser( args["paired_mate.fastq[.gz]"], 
+                                                      forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -166,13 +166,16 @@ function main()
          println(STDERR, "FASTQ_1: " * args["filename.fastq[.gz]"])
          println(STDERR, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod, 
-                                                             sam=args["sam"], qualoffset=enc_offset ) 
+                                                             sam=args["sam"], qualoffset=enc_offset,
+                                                             response=response, mate_response=mate_response, 
+                                                             http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
          println(STDERR, "FASTQ: " * args["filename.fastq[.gz]"])
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
-                                                       sam=args["sam"], qualoffset=enc_offset )
+                                                       sam=args["sam"], qualoffset=enc_offset,
+                                                       response=response, http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
