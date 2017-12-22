@@ -89,7 +89,8 @@ end
    @test length(egc) == 20
    @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
    
-
+   # joint bias model
+   
 
 end
 

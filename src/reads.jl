@@ -110,6 +110,7 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
       write_sam_header( stdbuf, lib )
    end
    while length(fwd_reads) > 0 && length(rev_reads) > 0
+      total % 10000 == 0 && (println(STDERR, "$total, $(fwd_parser)"))
       read_chunk!( fwd_reads, fwd_parser )
       read_chunk!( rev_reads, rev_parser )
       total += length(fwd_reads)

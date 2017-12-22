@@ -110,7 +110,24 @@ function main()
    println(STDERR, "Loading splice graph index... $indexname")
    @timer const lib = open(deserialize, indexname)
 
-   const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
+   ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
+
+   if args["ebi"]
+      ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
+      ispaired = ebi_res.paired
+      args["url"] = true
+      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
+      if ispaired
+         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
+      end
+      ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
+   else
+      args["filename.fastq[.gz]"] = fixpath(args["filename.fastq[.gz]"])
+      if paired
+         args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
+      end
+   end
+
    const ContainerType = ispaired ? SGAlignPaired : SGAlignSingle
    
    if args["biascorrect"]
@@ -128,26 +145,15 @@ function main()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
-   if args["ebi"]
-      ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
-      ispaired = ebi_res.paired
-      args["url"] = true
-      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
-      if ispaired
-         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
-      end
-      ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
-   end
-
    const parser = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"], 
                                 forcegzip=args["force-gz"] ) :
-                                make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
+                                make_fqparser( args["filename.fastq[.gz]"], 
                                 forcegzip=args["force-gz"] )
 
    if ispaired
       const mate_parser = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
                                         forcegzip=args["force-gz"] ) : 
-                                        make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
+                                        make_fqparser( args["paired_mate.fastq[.gz]"], 
                                         forcegzip=args["force-gz"] )
    end
 
@@ -157,13 +163,16 @@ function main()
    else
       println(STDERR, "Processing reads...")
       if ispaired
+         println(STDERR, "FASTQ_1: " * args["filename.fastq[.gz]"])
+         println(STDERR, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
          @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod, 
                                                              sam=args["sam"], qualoffset=enc_offset ) 
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
+         println(STDERR, "FASTQ: " * args["filename.fastq[.gz]"])
          @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
-                                                      sam=args["sam"], qualoffset=enc_offset )
+                                                       sam=args["sam"], qualoffset=enc_offset )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
