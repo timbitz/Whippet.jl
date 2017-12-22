@@ -7,6 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Gitter Chat](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/Whippet-jl/Lobby)
 
+## Graphical Overview
 ![Whippet Schematic](https://timbitz.github.io/images/Whippet-Fig1.gif)
 
 ## Features
