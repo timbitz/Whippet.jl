@@ -13,6 +13,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -27,6 +28,7 @@ include("../src/record.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
+include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
@@ -89,7 +91,8 @@ end
    @test length(egc) == 20
    @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
    
-
+   # joint bias model
+   
 
 end
 
@@ -568,7 +571,7 @@ IIIIIIIIIIII
          end
       end
 
-#=      @testset "EBI Accessions & HTTP Streaming" begin
+      @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
@@ -586,6 +589,6 @@ IIIIIIIIIIII
          end
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
-      end =#
+      end
    end
 end

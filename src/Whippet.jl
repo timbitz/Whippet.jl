@@ -14,6 +14,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using Requests
 
 include("types.jl")
 include("timer.jl")
@@ -28,6 +29,7 @@ include("record.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
+include("ebi.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
@@ -73,6 +75,8 @@ export SpliceGraph,
        AlignParam,
        ungapped_align,
        make_fqparser,
+       make_http_fqparser,
+       ident_to_fastq_url,
        hasextension,
        isgzipped,
        load_refflat,

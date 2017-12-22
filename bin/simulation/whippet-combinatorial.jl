@@ -100,12 +100,20 @@ function collect_txstops( sg::SpliceGraph )
    stops
 end
 
-function combinatorial_paths( sg::SpliceGraph; max_nodes=10, verbose=false )
+function combinatorial_paths( sg::SpliceGraph; max_nodes=10, verbose=false, theoretical=false )
    verbose && println("collecting starts & stops")
    starts = collect_txstarts( sg )
    stops  = collect_txstops( sg )
    paths  = Vector{Vector{Int16}}()
    verbose && println("going through $(length(starts)) starts and $(length(stops)) stops")
+   isocnt = 0
+   junc = Dict{Tuple{Int,Int},Int}()
+
+   function add_juncs!( dict, path )
+      for i in 1:length(path)-1
+         dict[(path[i],path[i+1])] = 1
+      end
+   end
 
    function add_combinations!( paths, i, j, sub_range, val )
        for m in combinations( sub_range, val )
@@ -116,7 +124,12 @@ function combinatorial_paths( sg::SpliceGraph; max_nodes=10, verbose=false )
              push!( m, jv )
           end
           if isvalid_path( m, sg )
-             push!( paths, map(x->convert(Int16,x), m) )
+             isocnt += 1
+             if theoretical
+                add_juncs!( junc, m )
+             else
+                push!( paths, map(x->convert(Int16,x), m) )
+             end
           end
        end
    end
@@ -142,7 +155,7 @@ function combinatorial_paths( sg::SpliceGraph; max_nodes=10, verbose=false )
          end
       end
    end
-   paths
+   paths, isocnt, length(values(junc))
 end
 
 function isvalid_path( path::Vector{Int}, sg::SpliceGraph )
@@ -169,12 +182,19 @@ function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs),
    fastastr = ZlibDeflateOutputStream( fastaout )
    gtfstr = ZlibDeflateOutputStream( gtfout )
    
+   isocnt  = 0
+   junccnt = 0
+
    for g in offset:min(offset+gene_num-1, length(lib.graphs)) #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g] )
-      simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g], 
-                            node_num=node_num, verbose=verbose, theoretical=theoretical )
+      iso,junc = simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g], 
+                                             node_num=node_num, verbose=verbose, theoretical=theoretical )
       #output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
+      isocnt  += iso
+      junccnt += junc
    end
+   println(STDERR, "$isocnt Unique Isoforms Simulated...")
+   println(STDERR, "$junccnt Unique Exon-exon Junctions..")
    close( fastastr )
    close( fastaout )
    close( gtfstr )
@@ -184,13 +204,15 @@ end
 function simulate_transcripts( fastream, gtfstream, simul::SimulGene, sg::SpliceGraph, info::GeneInfo;
                                node_num=10, verbose=false, theoretical=false )
    verbose && println("simulating paths for length $(length(sg.nodelen))")
-   paths = combinatorial_paths( sg, max_nodes=node_num, verbose=verbose )
+   paths,isocnt,junccnt = combinatorial_paths( sg, max_nodes=node_num, verbose=verbose, theoretical=theoretical )
    verbose && println("length $(length(paths))")
+   theoretical && return isocnt,junccnt
    for s in paths
       txid = simul.gene * "_" * join( s, "-" )
       output_transcript( fastream, s, sg, header=txid )
       output_gtf( gtfstream, s, sg, info, gene_id=simul.gene, transcript_id=txid )
    end
+   isocnt, junccnt
 end
 
 function output_transcript( stream, path, sg::SpliceGraph; header::String="PREFIX" )

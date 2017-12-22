@@ -86,6 +86,7 @@ primer_adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjust
 gc_adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
 
 count!( mod::DefaultBiasMod, anything ) = 1.0
+count!( mod::DefaultBiasMod, anything, _ ) = 1.0
 
 # 5' Sequence bias model
 # Implementation of Hansen et al, NAR 2010 
