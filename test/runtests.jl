@@ -85,13 +85,11 @@ end
    adjust!( cnt, mod )
    @test get(cnt) == value!( mod, hept )
 
-   #= gc content bias
+   # gc content bias
    seq = dna"AAAAAGCGCG" ^ 5
    egc = ExpectedGC( seq )
    @test length(egc) == 20
    @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
-   =#
-   # joint bias model
    
 
 end
@@ -498,6 +496,12 @@ IIIIIIIIIIII
          println(STDERR, "cur_quant = $(gquant.quant[2])")
          @test get(gquant.quant[2].node[1]) == prev_node + 7.5
          @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,default(DefaultCounter)) ).value) == prev_edge + 2.5
+      end
+
+      @testset "TPM" begin
+         calculate_tpm!( gquant, readlen=20 )
+         set_gene_tpm!( gquant, lib )
+         println(STDERR, "QUANT: $(gquant.tpm)")
       end
 
       function parse_edge{S <: AbstractString}( str::S )
