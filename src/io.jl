@@ -48,7 +48,7 @@ function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, si
    tab && write( io, '\t' )
 end
 
-function edges_write( io::BufOut, edges::IntervalMap{ExonInt,Float64}, range::UnitRange )
+function edges_write( io::BufOut, edges::IntervalMap{ExonInt,C}, range::UnitRange ) where C <: ReadCounter
    first = true
    for i in edges
       if i.first in range && i.last in range
@@ -57,7 +57,7 @@ function edges_write( io::BufOut, edges::IntervalMap{ExonInt,Float64}, range::Un
          write( io, '-' )
          write( io, string(i.last) )
          write( io, ':' )
-         write( io, string(round(i.value, 1)) )
+         write( io, string(round(get(i.value), 1)) )
          first = false
       end
    end
@@ -320,8 +320,8 @@ end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
                      total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, 
-                     sg::SpliceGraph, edges::IntervalMap{ExonInt,Float64}, 
-                     node::Int, info::GeneMeta, bias )
+                     sg::SpliceGraph, edges::IntervalMap{ExonInt,C}, 
+                     node::Int, info::GeneMeta, bias ) where C <: ReadCounter
 
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene
@@ -369,7 +369,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       for edg in intersect( sgquant.edge, (st, st) )
          if edg.first == st
             back_len += 1
-            back_cnt += edg.value
+            back_cnt += get(edg.value)
          end
       end
       total_reads = (fore_cnt + back_cnt)
@@ -444,8 +444,9 @@ function output_psi_header( io::BufOut )
    write( io, "Total_Reads\tComplexity\tEntropy\tInc_Paths\tExc_Paths\tEdges\n" )
 end
 
-function output_tpm_header( io::BufOut )
-   write( io, "Gene\tTpM\tRead_Counts\n" )
+function output_tpm_header( io::BufOut, idstr::String="Gene" )
+   write( io, idstr )
+   write( io, "\tTpM\tRead_Counts\n" )
 end
 
 function output_diff_header( io::BufOut )
@@ -480,10 +481,10 @@ function count_annotated_edges( sg::SpliceGraph, sgquant::SpliceGraphQuant )
    totalreads = 0.0
    totalcnt   = 0
    for edg in sgquant.edge
-      totalreads += edg.value
+      totalreads += get(edg.value)
       totalcnt   += 1
       if edg in sg.annopath
-         annoreads += edg.value
+         annoreads += get(edg.value)
          annocnt   += 1
       end
    end
@@ -497,14 +498,14 @@ function count_read_types( lib::GraphLib, graphq::GraphLibQuant )
    junccnt   = 0
    annocnt   = 0
    for i in 1:length(lib.graphs)
-      bodyreads += sum(graphq.quant[i].node)
+      bodyreads += sum(map(get, graphq.quant[i].node))
       areads,acnt,treads,tcnt = count_annotated_edges( lib.graphs[i], graphq.quant[i] )
       annoreads += areads
       juncreads += treads
       annocnt   += acnt
       junccnt   += tcnt
    end
-   Int(bodyreads),Int(juncreads),Int(annoreads),junccnt,annocnt
+   Int(round(bodyreads)),Int(round(juncreads)),Int(round(annoreads)),junccnt,annocnt
 end
 
 function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 
@@ -588,7 +589,7 @@ function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
       plug_write( io, string(edg.first), plug='-' )
       plug_write( io, string(edg.last), plug=':' )
       tab_write( io, str )
-      tab_write( io, string(edg.value) )
+      tab_write( io, string(get(edg.value)) )
       end_write( io, lib.info[i].strand ? '+' : '-' )
    end
 

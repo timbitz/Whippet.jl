@@ -14,6 +14,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using Requests
 
 include("types.jl")
 include("timer.jl")
@@ -21,12 +22,14 @@ include("sgkmer.jl")
 include("fmindex_patch.jl")
 include("refset.jl")
 include("graph.jl")
+include("bias.jl")
 include("edges.jl") 
 include("index.jl")
 include("record.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
+include("ebi.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
@@ -61,9 +64,19 @@ export SpliceGraph,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
        MultiMapping,
+       DefaultBiasMod,
+       DefaultCounter,
+       PrimerBiasMod,
+       PrimerBiasCounter,
+       GCBiasMod,
+       GCBiasCounter,
+       JointBiasMod,
+       JointBiasCounter,
        AlignParam,
        ungapped_align,
        make_fqparser,
+       make_http_fqparser,
+       ident_to_fastq_url,
        hasextension,
        isgzipped,
        load_refflat,
@@ -72,6 +85,11 @@ export SpliceGraph,
        process_reads!,
        process_paired_reads!,
        build_equivalence_classes!,
+       set_global_readcount,
+       primer_adjust!,
+       gc_adjust!,
+       primer_normalize!,
+       gc_normalize!,
        calculate_tpm!,
        gene_em!,
        set_gene_tpm!,

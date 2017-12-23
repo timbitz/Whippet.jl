@@ -2,6 +2,7 @@ using Base.Test
 
 importall BioSymbols
 importall BioSequences
+importall IntervalTrees
 
 using DataStructures
 using BufferedStreams
@@ -12,6 +13,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -19,12 +21,14 @@ include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
+include("../src/bias.jl")
 include("../src/edges.jl")
 include("../src/index.jl")
 include("../src/record.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
+include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
@@ -44,6 +48,54 @@ include("../src/diff.jl")
       @test isa( curkmer, SGKmer{i} )
    end
 end
+
+@testset "Bias Models" begin
+   # default 'empty' model
+   def = zero(DefaultCounter)
+   @test get(def) == 0.0
+   def = one(DefaultCounter)
+   @test get(def) == 1.0
+   push!( def, 1.0 )
+   @test get(def) == 2.0
+   gc_adjust!( def, DefaultBiasMod() )
+   primer_adjust!( def, DefaultBiasMod() )
+
+   function randdna(n)
+      return BioSequence{DNAAlphabet{2}}(rand([DNA_A, DNA_C, DNA_G, DNA_T], n))
+   end
+
+   function test_uniform_bias!( mod::B ) where B <: BiasModel
+      for i in 1:5000000
+         primer_count!( mod, randdna(36) )
+      end
+      primer_normalize!( mod )
+      for i in 1:length(mod.fore)
+         @test 0.85 < mod.back[i] / mod.fore[i] < 1.15
+      end
+   end
+
+   # primer count model
+   mod = JointBiasMod( 5 )
+   test_uniform_bias!( mod )
+   cnt = JointBiasCounter()
+   @test cnt.count == 0.0
+   hept = kmer_index_trailing(UInt16, dna"ATGAC")
+   push!( cnt, hept )
+   push!( cnt, hept )
+   adjust!( cnt, mod )
+   @test get(cnt) == value!( mod, hept )
+
+   #= gc content bias
+   seq = dna"AAAAAGCGCG" ^ 5
+   egc = ExpectedGC( seq )
+   @test length(egc) == 20
+   @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
+   =#
+   # joint bias model
+   
+
+end
+
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
@@ -221,7 +273,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
                           false, false, true, false, true )
    println(map( x->length(x.annoname), lib.graphs ))
-   gquant = GraphLibQuant{SGAlignSingle}( lib )
+   gquant = GraphLibQuant{SGAlignSingle,DefaultCounter}( lib )
 
    @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
@@ -299,7 +351,7 @@ IIIIIIIIIIII
          ex_num = length(split(readname, '-', keep=false))
          @test length(align.value[best_ind].path) == ex_num
 
-         count!( gquant, align.value[best_ind] )
+         count!( gquant, align.value[best_ind], 1.0 )
 
          const curgene   = align.value[best_ind].path[1].gene
          const firstnode = align.value[best_ind].path[1].node
@@ -409,7 +461,7 @@ IIIIIIIIIIII
 
       @testset "MultiMapping Equivalence Classes" begin
 
-         multi  = MultiMapping{SGAlignSingle}() 
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}() 
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true), 
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000004, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
 
@@ -419,7 +471,7 @@ IIIIIIIIIIII
          @test compats[1].isdone == true
          @test sum(multi.iset) == 0
 
-         multi  = MultiMapping{SGAlignSingle}()
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}()
 
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
@@ -432,16 +484,20 @@ IIIIIIIIIIII
          @test sum(multi.iset) == 0
 
          # Assignment
-         compats[1].count = 10
-         prev_node = gquant.quant[2].node[1]
+         compats[1].count = 10.0
+         prev_node = get(gquant.quant[2].node[1])
          println(STDERR, "prev_quant = $(gquant.quant[2])")
          interv = Interval{ExonInt}( 1, 2 )
-         prev_edge = get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value
+         prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
+
+         println(gquant.quant[2].edge)
 
          assign_ambig!( gquant, lib, multi )
+         println(gquant.quant[2].edge)
+         
          println(STDERR, "cur_quant = $(gquant.quant[2])")
-         @test gquant.quant[2].node[1] == prev_node + 7.5
-         @test get( gquant.quant[2].edge, interv, IntervalValue(0,0,DEF_READCOUNT) ).value == prev_edge + 2.5
+         @test get(gquant.quant[2].node[1]) == prev_node + 7.5
+         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,default(DefaultCounter)) ).value) == prev_edge + 2.5
       end
 
       function parse_edge{S <: AbstractString}( str::S )
@@ -515,7 +571,7 @@ IIIIIIIIIIII
          end
       end
 
-#=      @testset "EBI Accessions & HTTP Streaming" begin
+      @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
@@ -533,6 +589,6 @@ IIIIIIIIIIII
          end
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
-      end =#
+      end
    end
 end

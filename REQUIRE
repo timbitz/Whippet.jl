@@ -2,7 +2,7 @@ julia 0.6
 DataStructures
 ArgParse
 BioSymbols
-BioSequences
+BioSequences 0.8.0+
 FMIndexes
 IntArrays
 IntervalTrees
@@ -12,3 +12,4 @@ StatsBase
 Distributions
 Glob
 SuffixArrays
+Requests

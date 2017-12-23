@@ -33,6 +33,9 @@ function parse_cmd()
     "--sam", "-s"
       help     = "Should SAM format be sent to stdout?"
       action   = :store_true
+    "--biascorrect", "-b"
+      help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
+      action   = :store_true
     "--seed-len", "-L"
       help     = "Seed length"
       arg_type = Int
@@ -56,7 +59,7 @@ function parse_cmd()
     "--pair-range", "-P"
       help     = "Seeds for paired end reads must match within _ bases of one another"
       arg_type = Int
-      default  = 2500
+      default  = 5000
     "--mismatches", "-X"
       help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
       arg_type = Int
@@ -80,12 +83,12 @@ function parse_cmd()
     "--phred-64"
       help     = "Qual string is encoded in Phred+64 integers"
       action   = :store_true
-#=    "--url"
-      help     = "FASTQ files are URLs to download/process on the fly"
+    "--url"
+      help     = "When this flag is enabled, filename.fastq[.gz] and paired_mate.fastq[.gz] are considered URLs to download/process on the fly"
       action   = :store_true
     "--ebi"
-      help     = "Retrieve FASTQ files from ebi.ac.uk using seq run id (ie. SRR1199003). (sets --url=true)"
-      action   = :store_true =#
+      help     = "Retrieve FASTQ file(s) from ebi.ac.uk using a single seq run id (ie. SRR1199003). This will automatically work for both single and paired-end SRR ids. (sets --url=true)"
+      action   = :store_true
     "--circ"
       help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
       action   = :store_true
@@ -107,20 +110,51 @@ function main()
    println(STDERR, "Loading splice graph index... $indexname")
    @timer const lib = open(deserialize, indexname)
 
-   const ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
+   ispaired = args["paired_mate.fastq[.gz]"] != nothing ? true : false
+
+   if args["ebi"]
+      ebi_res = ident_to_fastq_url( args["filename.fastq[.gz]"] )
+      ispaired = ebi_res.paired
+      args["url"] = true
+      args["filename.fastq[.gz]"] = "http://" * ebi_res.fastq_1_url
+      if ispaired
+         args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
+      end
+      ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
+   else
+      args["filename.fastq[.gz]"] = fixpath(args["filename.fastq[.gz]"])
+      if paired
+         args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
+      end
+   end
+
    const ContainerType = ispaired ? SGAlignPaired : SGAlignSingle
+   
+   if args["biascorrect"]
+      const CounterType   = JointBiasCounter
+      const BiasModelType = JointBiasMod
+   else
+      const CounterType   = DefaultCounter
+      const BiasModelType = DefaultBiasMod
+   end
 
    const param = AlignParam( args, ispaired, kmer=lib.kmer ) 
-   const quant = GraphLibQuant{ContainerType}( lib )
-   const multi = MultiMapping{ContainerType}()
+   const quant = GraphLibQuant{ContainerType,CounterType}( lib )
+   const multi = MultiMapping{ContainerType,CounterType}()
+   const mod   = BiasModelType()
 
    const enc_offset = args["phred-64"] ? 64 : 33
 
-   const parser = make_fqparser( fixpath(args["filename.fastq[.gz]"]), 
-                                 forcegzip=args["force-gz"] )
+   const parser,response = args["url"] ? make_http_fqparser( args["filename.fastq[.gz]"], 
+                                         forcegzip=args["force-gz"] ) :
+                                         make_fqparser( args["filename.fastq[.gz]"], 
+                                         forcegzip=args["force-gz"] )
+
    if ispaired
-    const mate_parser = make_fqparser( fixpath(args["paired_mate.fastq[.gz]"]), 
-                                       forcegzip=args["force-gz"] )
+      const mate_parser,mate_response = args["url"] ? make_http_fqparser( args["paired_mate.fastq[.gz]"],
+                                                      forcegzip=args["force-gz"] ) : 
+                                                      make_fqparser( args["paired_mate.fastq[.gz]"], 
+                                                      forcegzip=args["force-gz"] )
    end
 
    if nprocs() > 1
@@ -129,13 +163,19 @@ function main()
    else
       println(STDERR, "Processing reads...")
       if ispaired
-         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, 
-                                                             sam=args["sam"], qualoffset=enc_offset ) 
+         println(STDERR, "FASTQ_1: " * args["filename.fastq[.gz]"])
+         println(STDERR, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
+         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod, 
+                                                             sam=args["sam"], qualoffset=enc_offset,
+                                                             response=response, mate_response=mate_response, 
+                                                             http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
       else
-         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, 
-                                                      sam=args["sam"], qualoffset=enc_offset )
+         println(STDERR, "FASTQ: " * args["filename.fastq[.gz]"])
+         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
+                                                       sam=args["sam"], qualoffset=enc_offset,
+                                                       response=response, http=args["url"] )
          readlen = round(Int, readlen)
          println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
       end
@@ -143,6 +183,9 @@ function main()
 
    # TPM_EM
    println(STDERR, "Calculating expression values and MLE of equivalence classes with EM:")
+   primer_normalize!( mod )
+   primer_adjust!( quant, mod )
+   primer_adjust!( multi, mod )
    println(STDERR, "- $( length(multi.map) ) multi-gene mapping read equivalence classes...")
    build_equivalence_classes!( quant, lib, assign_long=true )
    println(STDERR, "- $( length(quant.classes) ) multi-isoform equivalence classes...")
@@ -150,6 +193,9 @@ function main()
    @timer iter = gene_em!( quant, multi, sig=1, readlen=readlen, maxit=10000 ) 
    println(STDERR, "Finished calculating transcripts per million (TpM) after $iter iterations of EM...")
    set_gene_tpm!( quant, lib )
+   gc_normalize!( mod, lib, quant )
+   gc_adjust!( quant, mod )
+   gc_adjust!( multi, mod )
 
    output_tpm( args["out"], lib, quant )
    output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi.map), readlen, ver )
