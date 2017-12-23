@@ -1,8 +1,14 @@
 # Whippet
 
+[![Latest Release](https://img.shields.io/github/release/timbitz/Whippet.jl.svg)](https://github.com/timbitz/Whippet.jl/releases/latest)
+[![Whippet](http://pkg.julialang.org/badges/Whippet_0.6.svg)](http://pkg.julialang.org/detail/Whippet)
 [![Build Status](https://travis-ci.com/timbitz/Whippet.jl.svg?token=R7mZheNGhsReQ7hn2gdf&branch=master)](https://travis-ci.com/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet.jl/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet.jl)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Gitter Chat](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/Whippet-jl/Lobby)
+
+## Graphical Overview
+![Whippet Schematic](https://timbitz.github.io/images/Whippet-Fig1.gif)
 
 ## Features
 - Splice graph representations of transcriptome structure
@@ -51,7 +57,7 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1
 ```
 
 _Notes_: 
-* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes (which should not be the same as one another!).  This GTF file should be consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification.
+* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes (which should not be the same as one another!).  This GTF file should be consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification, and should have all entries for a transcript in a continuous block. 
 * You can specify the output name and location of the index to build using the `-x / --index` parameter. The default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `~/.julia/v0.6/Whippet/index/graph.jls`, so you must have write-access to this location to use the default.
 
 
