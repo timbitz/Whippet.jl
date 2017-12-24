@@ -66,19 +66,42 @@ _Notes_:
 $ julia bin/whippet-quant.jl file.fastq.gz
 ```
 
-Or if you have paired-end RNA-seq data...
+Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id (SRR id) using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
+```bash
+$ julia bin/whippet-quant.jl --ebi SRR1199010
+```
+is equivalent to
+```bash
+$ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
+```
+
+For paired-end RNA-seq data...
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
-You can output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
+To stream reads from ebi.ac.uk, just provide a paired-end SRR id to to the `--ebi` flag:
+```bash
+$ julia bin/whippet-quant.jl --ebi SRR1658024
+```
+which is equivalent to
+```bash
+$ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR165/004/SRR1658024/SRR1658024_1.fastq.gz http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR165/004/SRR1658024/SRR1658024_2.fastq.gz
+```
+
+To specify output location or a specific index:
+```bash
+$ julia bin/whippet-quant.jl fwd_file.fastq.gz -o outputname -x customindex.jls
+```
+
+You can also output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
 ```
 
 It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
-$ julia bin/whippet-quant.jl <( cat SRR208080{1,2,3,4,5,6,7,8,9}.fastq.gz ) --force-gz -o SRR208080_1-9
+$ julia bin/whippet-quant.jl <( cat time-series_{1,2,3,4,5}.fastq.gz ) --force-gz -o interval_1-5
 ```
 
 ### 4) Compare multiple psi files
@@ -96,28 +119,16 @@ Note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -
 
 ## Output Formats
 
-The output format for `whippet-quant.jl` is saved into two core quant files a `.psi.gz` and a `.tpm.gz`.
+The output format for `whippet-quant.jl` is saved into two core quant filetypes, `.psi.gz` and `.tpm.gz` files.
 
-The `.tpm.gz` file contains a simple format compatible with many downstream tools:
+Each `.tpm.gz` file contains a simple format compatible with many downstream tools (one for the TPM of each annotated isoform, and another at the gene-level):
 
-Gene | TpM | Read Counts
+Gene/Isoform | TpM | Read Counts
 ---- | --- | -----------
 NFIA | 2897.11 | 24657.0
 
 ---
-
-Meanwhile the `.psi.gz` file is a bit more complex and requires more explanation:
-
-Gene | Node | Coord | Strand | Type | Psi | CI Width | CI Lo,Hi | Total Reads | Complexity | Entropy | Inc Paths | Exc Paths
----- | ---- | ----- | ------ | ---- | --- | -------- | -------- | ----------- | ---------- | ------- | --------- | ---------
-NFIA | 2 | chr1:61547534-61547719 | + | AF | 0.782 | 0.191 | 0.669,0.86 | 49.0 | K1 | 0.756 | 2-4-5:0.782 | 1-5:0.218
-NFIA | 4 | chr1:61548433-61548490 | + | CE | 0.8329 | 0.069 | 0.795,0.864 | 318.0 | K2 | 1.25 | 2-4-5:0.3342,3-4-5:0.4987 | 1-5:0.1671
-NFIA | 5 | chr1:61553821-61554352 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
-NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
-
-In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns.  Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification is a SpliceGraph `node`.  It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with alternative 5' and 3' splice sites, and core exon nodes whose neighboring alt 5' or 3' splice sites are used.  Therefore this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined).
-
-Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the relative expression of the paths through the LSE. 
+Meanwhile the `.psi.gz` file is a bit more complex and requires more explanation. Quantified nodes can fall into a number of "node-type" categories:
 
 Type | Interpretation
 ---- | --------------
@@ -130,8 +141,30 @@ Type | Interpretation
  AF  | Alternative First exon
  AL  | Alternative Last exon
  BS  | Circular back-splicing (output only when `--circ` flag is given)
- 
-Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (both the width as well as lower and higher boundaries).
+
+Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (based only on read depth for the event, output is both the width as well as lower and higher boundaries).
+
+The `.psi.gz` file itself is outputted in the form:
+
+Gene | Node | Coord | Strand | Type | Psi | CI Width | CI Lo,Hi | Total Reads | Complexity | Entropy | Inc Paths | Exc Paths
+---- | ---- | ----- | ------ | ---- | --- | -------- | -------- | ----------- | ---------- | ------- | --------- | ---------
+NFIA | 2 | chr1:61547534-61547719 | + | AF | 0.782 | 0.191 | 0.669,0.86 | 49.0 | K1 | 0.756 | 2-4-5:0.782 | 1-5:0.218
+NFIA | 4 | chr1:61548433-61548490 | + | CE | 0.8329 | 0.069 | 0.795,0.864 | 318.0 | K2 | 1.25 | 2-4-5:0.3342,3-4-5:0.4987 | 1-5:0.1671
+NFIA | 5 | chr1:61553821-61554352 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
+NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
+
+Whippet outputs quantification at the node-level (one PSI value for each node, not exon). For example, Whippet CE ('core exon') nodes may be bounded by one or more AA or AD nodes. So when those AA or AD nodes are spliced in, the full exon consists of the nodes combined (AA+CE). 
+
+We believe that output at the node-level is (and should be) the correct generalization of event-level splicing quantification for the following reasons:
+
+1. In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`. 
+2. It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with the example exon AA+CE above.  Since it is possible for the entire exon (both with or without the AA) to be excluded from the mature message, the PSI of each node should be given independently. If this were not the case (and since Whippet can handle highly complex events) AS event output could become combinatorial in number, and quickly approach uselessness.
+3. The general definition of Percent-spliced-in for an exon (or node) should be the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, the output of PSI values should not change based on upstream or downstream splice-sites (as they do with some other programs).
+
+In conclusion, this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined). 
+
+Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the re
+lative expression of the paths through the LSE.
 
 ---
 The output format of `.diff.gz` files from `whippet-delta.jl` is:
@@ -148,7 +181,8 @@ Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean P
 ## Index Building Strategies
 
 If you are building an index for another organism, there are some general guidelines that can help to ensure that the index you build is as effective as it can be. In general you should seek to:
-  * Use only the highest quality annotations you can find (for human we use TSL1-level). 
+  * Use only the highest quality annotations you can find.
+  * If a high-quality annotation set like GENCODE, contains both high and low quality transcripts, filter it! For human, we only use TSL-1 annotations.
   * Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering out invalid splice sites first.
   * If you plan to align very short reads (~36nt), decrease the Kmer size (we have used 6nt before), otherwise the default Kmer size (9nt) should be used.
 

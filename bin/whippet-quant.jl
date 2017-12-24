@@ -161,7 +161,11 @@ function main()
       println(STDERR, "Whippet does not currrently support nprocs() > 1")
       return #TODO: first implementation was too slow, ie too much communication overhead
    else
-      println(STDERR, "Processing reads...")
+      if args["url"]
+         println(STDERR, "Streaming reads from...")
+      else
+         println(STDERR, "Processing reads from file...")
+      end
       if ispaired
          println(STDERR, "FASTQ_1: " * args["filename.fastq[.gz]"])
          println(STDERR, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
