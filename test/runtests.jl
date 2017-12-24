@@ -499,9 +499,14 @@ IIIIIIIIIIII
       end
 
       @testset "TPM" begin
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}()
          calculate_tpm!( gquant, readlen=20 )
          set_gene_tpm!( gquant, lib )
-         println(STDERR, "QUANT: $(gquant.tpm)")
+         orig = deepcopy(gquant.tpm)
+         iter = gene_em!( gquant, multi, sig=1, readlen=20, maxit=10000 )
+         @test orig != gquant.tpm
+         @test iter < 5000
+         @test sum(gquant.tpm) == 1000000
       end
 
       function parse_edge{S <: AbstractString}( str::S )
