@@ -62,10 +62,11 @@ _Notes_:
 
 
 ### 3) Quantify FASTQ files.
+
+#### a) Single-end reads
 ```bash
 $ julia bin/whippet-quant.jl file.fastq.gz
 ```
-
 Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id (SRR id) using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
 ```bash
 $ julia bin/whippet-quant.jl --ebi SRR1199010
@@ -75,20 +76,20 @@ is equivalent to
 $ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
-For paired-end RNA-seq data...
+#### b) Paired-end reads
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
-
 To stream reads from ebi.ac.uk, just provide a paired-end SRR id to to the `--ebi` flag:
 ```bash
 $ julia bin/whippet-quant.jl --ebi SRR1658024
 ```
-which is equivalent to
+is equivalent to
 ```bash
 $ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR165/004/SRR1658024/SRR1658024_1.fastq.gz http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR165/004/SRR1658024/SRR1658024_2.fastq.gz
 ```
 
+#### c) Non-default input/output
 To specify output location or a specific index:
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz -o outputname -x customindex.jls
@@ -142,7 +143,7 @@ Type | Interpretation
  AL  | Alternative Last exon
  BS  | Circular back-splicing (output only when `--circ` flag is given)
 
-Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In followed by the 90% confidence interval (based only on read depth for the event, output is both the width as well as lower and higher boundaries).
+Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In.
 
 The `.psi.gz` file itself is outputted in the form:
 
@@ -157,14 +158,13 @@ Whippet outputs quantification at the node-level (one PSI value for each node, n
 
 We believe that output at the node-level is (and should be) the correct generalization of event-level splicing quantification for the following reasons:
 
-1. In contrast to many other splicing quantification tools, Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`. 
-2. It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with the example exon AA+CE above.  Since it is possible for the entire exon (both with or without the AA) to be excluded from the mature message, the PSI of each node should be given independently. If this were not the case (and since Whippet can handle highly complex events) AS event output could become combinatorial in number, and quickly approach uselessness.
-3. The general definition of Percent-spliced-in for an exon (or node) should be the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, the output of PSI values should not change based on upstream or downstream splice-sites (as they do with some other programs).
+1. Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`. 
+2. It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with the example exon AA+CE above.  Since it is possible for the entire exon (both with or without the AA) to be excluded from the mature message, the PSI of each node should be given independently. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. If Whippet complex AS event output was enumerated, it could easily become exponential and quickly approach uselessness.
+3. The general definition of Percent-spliced-in for an exon (or node) should be the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites (as they do with some other programs).
 
 In conclusion, this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined). 
 
-Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the re
-lative expression of the paths through the LSE.
+Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the relative expression of the paths through the LSE.
 
 ---
 The output format of `.diff.gz` files from `whippet-delta.jl` is:
