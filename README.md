@@ -16,6 +16,7 @@
   - _de novo_ event discovery (splicing from/to any combination of annotated donor/acceptor splice sites)
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
+  - Bias correction methods for 5' sequence and GC-content
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
   - Event-specific Percent-spliced-in (PSI)
