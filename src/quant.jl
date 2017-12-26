@@ -229,23 +229,6 @@ end
 primer_adjust!( gquant::GraphLibQuant{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( gquant, mod, primer_adjust! )
 gc_adjust!( gquant::GraphLibQuant{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( gquant, mod, gc_adjust! )
 
-#=function Base.normalize!( mod::GCBiasMod, lib::GraphLib, quant::GraphLibQuant )
-   for i in 1:length(lib.graphs)
-      sg  = lib.graphs[i]
-      idx = quant.geneidx[i]
-      for j in 1:length(sg.annobias)
-         add_to_back!( mod.back, sg.annobias[j], quant.tpm[j+idx] )
-      end
-   end
-   foresum = sum(mod.fore)
-   backsum = sum(mod.back)
-   @inbounds for i in 1:length(mod.fore)
-      @fastmath mod.fore[i] /= foresum
-      @fastmath mod.back[i] /= backsum
-   end
-   mod
-end=#
-
 function gc_normalize!( mod::JointBiasMod, lib::GraphLib, quant::GraphLibQuant )
    for i in 1:length(lib.graphs)
       sg  = lib.graphs[i]
@@ -463,6 +446,14 @@ struct MultiMapping{C <: SGAlignContainer, R <: ReadCounter}
    end
 end
 
+function total_multi( mm::MultiMapping )
+   total = 0.0
+   for v in values(mm.map)
+      total += v.count
+   end
+   total
+end
+
 function Base.push!( ambig::MultiMapping{SGAlignSingle,R}, alns::Vector{SGAlignment}, value, 
                      graphq::GraphLibQuant, lib::GraphLib ) where R <: ReadCounter
    cont = Vector{SGAlignSingle}( length(alns) )
@@ -543,7 +534,7 @@ function assign_ambig!( graphq::GraphLibQuant{C,R}, lib::GraphLib, ambig::MultiM
          # since two alignments for a read can match the same transcript
          # lets sum the prop values of the MultiCompat for each alignment
          # then we normalize by the total sum of those, and assign reads accordingly.
-         # Example: imagine a single read matches the same transcript in to positions
+         # Example: imagine a single read matches the same transcript in two positions
          # that creates a single MultiCompat object that has two alignments hitting the same
          # transcript class.  This method would assign that prop to both, and then re-normalize
          # so that the total count of the MultiCompat is assigned for the sum of the alignments

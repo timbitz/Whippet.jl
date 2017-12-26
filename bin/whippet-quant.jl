@@ -169,19 +169,19 @@ function main()
       if ispaired
          println(STDERR, "FASTQ_1: " * args["filename.fastq[.gz]"])
          println(STDERR, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
-         @timer mapped,total,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod, 
+         @timer mapped,totreads,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod, 
                                                              sam=args["sam"], qualoffset=enc_offset,
                                                              response=response, mate_response=mate_response, 
                                                              http=args["url"] )
          readlen = round(Int, readlen)
-         println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total $total mate-pairs...")
+         println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a totreads $totreads mate-pairs...")
       else
          println(STDERR, "FASTQ: " * args["filename.fastq[.gz]"])
-         @timer mapped,total,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
+         @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
                                                        sam=args["sam"], qualoffset=enc_offset,
                                                        response=response, http=args["url"] )
          readlen = round(Int, readlen)
-         println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total $total reads...")
+         println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a totreads $totreads reads...")
       end
    end
 
@@ -202,7 +202,7 @@ function main()
    gc_adjust!( multi, mod )
 
    output_tpm( args["out"], lib, quant )
-   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, total, mapped, length(multi.map), readlen, ver )
+   output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, totreads, mapped, Int(round(total_multi(multi))), readlen, ver )
    output_junctions( args["out"] * ".jnc.gz", lib, quant )
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
@@ -211,8 +211,8 @@ function main()
 
    println(STDERR, "Calculating effective lengths...")
    @timer effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
-   @timer bias_ave,_ = global_bias( quant )
-   println(STDERR, "Global bias is $(round( abs(bias_ave - 1.0), 4))")
+#   @timer bias_ave,_ = global_bias( quant )
+#   println(STDERR, "Global bias is $(round( abs(bias_ave - 1.0), 4))")
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
    @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"], iscircok=args["circ"] )
    println(STDERR, "Whippet $ver done." )
