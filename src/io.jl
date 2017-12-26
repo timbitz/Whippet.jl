@@ -593,6 +593,7 @@ function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
       end_write( io, lib.info[i].strand ? '+' : '-' )
    end
 
+   write( io, "CHROM\tDONOR_COORD\tACCEPTOR_COORD\tGENEID:NODES:TYPE\tREADCOUNT\tSTRAND\n")
    for i in 1:length(lib.graphs)
       write_junctions( lib.graphs[i], graphq.quant[i], i )
    end

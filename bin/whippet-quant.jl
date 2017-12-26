@@ -209,10 +209,8 @@ function main()
    # Now assign multi to edges.
    @timer assign_ambig!( quant, lib, multi )
 
-   println(STDERR, "Calculating effective lengths...")
-   @timer effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
-#   @timer bias_ave,_ = global_bias( quant )
-#   println(STDERR, "Global bias is $(round( abs(bias_ave - 1.0), 4))")
+   effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
+   #bias_ave,_ = global_bias( quant )
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
    @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"], iscircok=args["circ"] )
    println(STDERR, "Whippet $ver done." )
