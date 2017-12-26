@@ -156,10 +156,10 @@ NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA 
 
 Whippet outputs quantification at the node-level (one PSI value for each node, not exon). For example, Whippet CE ('core exon') nodes may be bounded by one or more AA or AD nodes. So when those AA or AD nodes are spliced in, the full exon consists of the nodes combined (AA+CE). 
 
-We believe that output at the node-level is (and should be) the correct generalization of event-level splicing quantification for the following reasons:
+We believe that this is (and should be) the correct generalization of event-level splicing quantification for the following reasons:
 
 1. Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`. 
-2. It is possible (and even likely) that many nodes are never spliced entirely on their own as is the case with the example exon AA+CE above.  Since it is possible for the entire exon (both with or without the AA) to be excluded from the mature message, the PSI of each node should be given independently. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. If Whippet complex AS event output was enumerated, it could easily become exponential and quickly approach uselessness.
+2. Since it is possible for the entire exon (CE+AA both with or without the AA) to be excluded from the mature message, the PSI of each node should be given independently. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. If Whippet output was enumerated for all such combinations, the output for complex events would quickly become exponential and approach uselessness.
 3. The general definition of Percent-spliced-in for an exon (or node) should be the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites (as they do with some other programs).
 
 In conclusion, this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined). 
