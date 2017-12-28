@@ -17,6 +17,7 @@
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
   - Bias correction methods for 5' sequence and GC-content
+  - On-the-fly alignment/re-analysis of SRR accession ids using ebi.ac.uk
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
   - Event-specific Percent-spliced-in (PSI)
@@ -160,12 +161,12 @@ Whippet outputs quantification at the node-level (one PSI value for each node, n
 We believe that this is (and should be) the correct generalization of event-level splicing quantification for the following reasons:
 
 1. Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`. 
-2. Since it is possible for the entire exon (CE+AA both with or without the AA) to be excluded from the mature message, the PSI of each node should be given independently. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. If Whippet output was enumerated for all such combinations, the output for complex events would quickly become exponential and approach uselessness.
-3. The general definition of Percent-spliced-in for an exon (or node) should be the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites (as they do with some other programs).
+2. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. Since, for example, it is possible for both (CE+AA) and CE exons to be excluded from the mature message, complex events may involve a number of overlapping full exons. If Whippet output was enumerated for all such combinations, the output for complex events would quickly become exponential and approach uselessness.
+3. The general definition of Percent-spliced-in for an exon (or node) is be the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites as they do with certain other programs.
 
-In conclusion, this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that represent full exons (which can be one or more adjacent nodes combined). 
+In conclusion, this must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined). 
 
-Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the relative expression of the paths through the LSE.
+Note: Complexity refers to the discrete categories based-on the log2(number of paths) through each local splicing event (LSE). Entropy refers to the shannon-entropy of the relative expression of the paths through the LSE.
 
 ---
 The output format of `.diff.gz` files from `whippet-delta.jl` is:
