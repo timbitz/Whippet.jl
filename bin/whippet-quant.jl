@@ -174,14 +174,14 @@ function main()
                                                              response=response, mate_response=mate_response, 
                                                              http=args["url"] )
          readlen = round(Int, readlen)
-         println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a totreads $totreads mate-pairs...")
+         println(STDERR, "Finished mapping $mapped paired-end reads of length $readlen each out of a total of $totreads mate-pairs...")
       else
          println(STDERR, "FASTQ: " * args["filename.fastq[.gz]"])
          @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod, 
                                                        sam=args["sam"], qualoffset=enc_offset,
                                                        response=response, http=args["url"] )
          readlen = round(Int, readlen)
-         println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a totreads $totreads reads...")
+         println(STDERR, "Finished mapping $mapped single-end reads of length $readlen out of a total of $totreads reads...")
       end
    end
 
