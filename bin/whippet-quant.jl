@@ -123,7 +123,7 @@ function main()
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
    else
       args["filename.fastq[.gz]"] = fixpath(args["filename.fastq[.gz]"])
-      if paired
+      if ispaired
          args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
       end
    end
