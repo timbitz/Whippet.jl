@@ -14,7 +14,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
-#using Requests
+using Requests
 
 include("types.jl")
 include("timer.jl")
@@ -22,13 +22,14 @@ include("sgkmer.jl")
 include("fmindex_patch.jl")
 include("refset.jl")
 include("graph.jl")
+include("bias.jl")
 include("edges.jl") 
 include("index.jl")
 include("record.jl")
 include("align.jl")
 include("quant.jl")
 include("reads.jl")
-#include("ebi.jl")
+include("ebi.jl")
 include("paired.jl")
 include("events.jl")
 include("io.jl")
@@ -55,28 +56,44 @@ export SpliceGraph,
        SGNucleotide,
        SGNucleotideSequence,
        SGSequence,
+       SGAlignSingle,
+       SGAlignPaired,
        @sg_str,
        reverse_complement,
        kmer,
        NucleotideSequence,
        RefSet, RefTx, RefGene,
-       Multimap,
+       MultiMapping,
+       DefaultBiasMod,
+       DefaultCounter,
+       PrimerBiasMod,
+       PrimerBiasCounter,
+       GCBiasMod,
+       GCBiasCounter,
+       JointBiasMod,
+       JointBiasCounter,
        AlignParam,
        ungapped_align,
        make_fqparser,
-#       make_http_fqparser,
+       make_http_fqparser,
+       ident_to_fastq_url,
        hasextension,
        isgzipped,
-       EBIResponse,
-       ident_to_fastq_url,
        load_refflat,
        load_gtf,
        fasta_to_index,
        process_reads!,
        process_paired_reads!,
+       build_equivalence_classes!,
+       set_global_readcount,
+       total_multi,
+       primer_adjust!,
+       gc_adjust!,
+       primer_normalize!,
+       gc_normalize!,
        calculate_tpm!,
-       rec_gene_em!,
        gene_em!,
+       set_gene_tpm!,
        output_tpm,
        output_stats,
        output_junctions,

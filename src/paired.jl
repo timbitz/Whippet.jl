@@ -121,77 +121,7 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FA
       end
    end #end while
 
-   # if !stranded and no valid alignments, run reverse complement
-#=   if ispos && !p.is_stranded && (isnull( fwd_res ) && isnull( rev_res ))
-      reverse_complement!( fwd.sequence )
-      reverse_complement!( rev.sequence )
-      reverse!( fwd.quality )
-      reverse!( rev.quality )
-      fwd_res,rev_res = ungapped_align( p, lib, fwd, rev, ispos=false, anchor_left=!anchor_left )
-   end=#
-
    fwd_res,rev_res
 end
 
 
-## Extension of count! for paired end counting from quant.jl
-function count!( graphq::GraphLibQuant, fwd::SGAlignment, rev::SGAlignment; val=1.0, used=IntSet() )
-   (fwd.isvalid == true && rev.isvalid == true) || return
-   const init_gene = fwd.path[1].gene
-   const rev_gene = rev.path[1].gene
-
-   (init_gene == rev_gene) || return
-
-   sgquant   = graphq.quant[ init_gene ]
-
-   graphq.count[ init_gene ] += 1
-
-   if length(fwd.path) == 1
-      # access node -> [ SGNode( gene, *node* ) ]
-      sgquant.node[ fwd.path[1].node ] += val
-      push!( used, fwd.path[1].node )
-   else
-      # Otherwise, lets step through pairs of nodes and add val to those edges
-      for n in 1:(length(fwd.path)-1)
-         # trans-spicing off->
-         fwd.path[n].gene != init_gene && continue
-         fwd.path[n+1].gene != init_gene && continue
-         const lnode = fwd.path[n].node
-         const rnode = fwd.path[n+1].node
-         push!( used, lnode )
-         push!( used, rnode )
-         if lnode < rnode
-            interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
-         elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
-         end
-      end
-   end
-
-   # now conditionally add rev if not already used.
-   if length(rev.path) == 1
-      # access node -> [ SGNode( gene, *node* ) ]
-      if !(rev.path[1].node in used)
-         sgquant.node[ rev.path[1].node ] += val
-      end
-   else
-      # Otherwise, lets step through pairs of nodes and add val to those edges
-      for n in 1:(length(rev.path)-1)
-         # trans-spicing off->
-         rev.path[n].gene != init_gene && continue
-         rev.path[n+1].gene != init_gene && continue
-         const lnode = rev.path[n].node
-         const rnode = rev.path[n+1].node
-         (lnode in used && rnode in used) && continue
-         if lnode < rnode
-            interv = Interval{ExonInt}( lnode, rnode )
-            sgquant.edge[ interv ] = get( sgquant.edge, interv, IntervalValue(0,0,0.0) ).value + val
-         elseif lnode >= rnode
-            sgquant.circ[ (lnode, rnode) ] = get( sgquant.circ, (lnode,rnode), 0.0) + val
-         end
-      end
-   end
-   #empty!( used )
-
-end

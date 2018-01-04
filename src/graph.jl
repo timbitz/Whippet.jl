@@ -70,6 +70,27 @@ function invert_edgetype( edge::EdgeType )
    end
 end
 
+struct GCBiasParams
+   length::Int64           # length offset
+   width::Float64          # gc bin size
+end
+
+const ExpectedGC = Vector{Float16}
+
+function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.05) ) where A <: BioSequences.Alphabet
+   const bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
+   for i in 1:length(seq)-gc_param.length+1
+      gc = Int(div(gc_content(seq[i:i+gc_param.length-1]), gc_param.width)+1)
+      @inbounds bins[gc] += 1.0
+   end
+   # normalize columns
+   binsum = sum(bins)
+   binsum == 0.0 && (return bins)
+   for i in 1:length(bins)
+      @fastmath bins[i] /= binsum
+   end
+   return bins
+end
 
 # This holds a representation of the splice graph
 # which is a directed multigraph
@@ -82,6 +103,7 @@ struct SpliceGraph{K}
    edgeright::Vector{SGKmer{K}}
    annopath::Vector{IntSet}
    annoname::Vector{String}
+   annobias::Vector{ExpectedGC}
    seq::SGSequence
 end
 # All positive strand oriented sequences---> 
@@ -89,10 +111,11 @@ end
 # Edge array:        1   2       3   4         5 6   7
 # Node coord:  chr   100 200     300 400      500 600 700
 
-# empty constructor
+#= empty constructor
 SpliceGraph(k::Int) = SpliceGraph( Vector{CoordInt}(), Vector{CoordInt}(),
                                    Vector{CoordInt}(), Vector{EdgeType}(),
                                    Vector{SGKmer{k}}(),Vector{SGKmer{k}}(), dna"" )
+=#
 
 # Main constructor
 # Build splice graph here.
@@ -182,8 +205,9 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
 
    paths = build_paths_edges( nodecoord, nodelen, gene )
    names = map( x->x.info.name, gene.reftx )
+   expgc = map( x->ExpectedGC(path_to_seq(x, nodeoffset, nodelen, seq)), paths )
 
-   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, names, seq )
+   return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, names, expgc, seq )
 end
 
 # re-orient - strand by using unshift! instead of push!
@@ -245,12 +269,17 @@ function build_annotated_path( nodecoord::Vector{CoordInt},
 end
 
 function build_paths_edges( nodecoord::Vector{CoordInt},
-                           nodelen::Vector{CoordInt},
-                           gene::RefGene )
+                            nodelen::Vector{CoordInt},
+                            gene::RefGene )
    const paths = Vector{IntSet}()
    for tx in gene.reftx
       const curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
       push!( paths, curpath )
    end
    paths
+end
+
+function path_to_seq( path::IntSet, nodeoffset::Vector{CoordInt}, 
+                      nodelen::Vector{CoordInt}, seq::SGSequence )
+   SGSequence(join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], collect(path) ) ))
 end

@@ -7,7 +7,7 @@ function make_fqparser( filename; forcegzip=false )
    else
       to_open = BufferedInputStream( fopen )
    end 
-   FASTQ.Reader( to_open, fill_ambiguous=DNA_A ) #,Requests.ResponseStream{TCPSocket}()
+   FASTQ.Reader( to_open, fill_ambiguous=DNA_A ), Requests.ResponseStream{TCPSocket}()
 end
 
 # modified for Bio v0.2 with tryread_bool!
@@ -23,9 +23,6 @@ end
    parser
 end
 
-# This function specifically tries to download a fastq file from a url string and returns
-# the BioSequences parser, the IOBuffer, and the RemoteChannel to the HTTPC.get
-#=
 function make_http_fqparser( url::String; forcegzip=false )
    response = Requests.get_streaming(url)
    if isgzipped( url ) || forcegzip
@@ -64,7 +61,6 @@ function read_http_chunk!( chunk, parser, resp; maxtime=24 )
    end
    parser
 end
-=#
 
 function allocate_chunk( parser; size=10000 )
   chunk = Vector{eltype(parser)}( size )
@@ -83,10 +79,11 @@ function allocate_fastq_records( size::Int=10000 )
 end
 
 function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant, 
-                        multi::Vector{Multimap}; bufsize=150, sam=false, qualoffset=33 )
-#                         response=Requests.ResponseStream{TCPSocket}(), http=false )
+                         multi::MultiMapping{SGAlignSingle}, mod::B; 
+                         bufsize=150, sam=false, qualoffset=33,
+                         response=Requests.ResponseStream{TCPSocket}(), 
+                         http=false ) where B <: BiasModel
   
-   #const reads  = allocate_chunk( parser, size=bufsize )
    const reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
    total        = 0
@@ -96,21 +93,22 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
       write_sam_header( stdbuf, lib )
    end
    while length(reads) > 0
-      #if http
-      #   read_http_chunk!( reads, parser, response )
-      #else
+      if http
+         read_http_chunk!( reads, parser, response )
+      else
          read_chunk!( reads, parser )
-      #end
+      end
       total += length(reads)
       @inbounds for i in 1:length(reads)
          fill!( reads[i], qualoffset )
          align = ungapped_align( param, lib, reads[i] )
          if !isnull( align )
+            biasval = count!( mod, reads[i].sequence )
             if length( align.value ) > 1
-               push!( multi, Multimap( align.value ) )
+               push!( multi, align.value, biasval, quant, lib )
                sam && write_sam( stdbuf, reads[i], align.value, lib, qualoffset=qualoffset )
             else
-               count!( quant, align.value[1] )
+               count!( quant, align.value[1], biasval )
                sam && write_sam( stdbuf, reads[i], align.value[1], lib, qualoffset=qualoffset )
             end
             mapped += 1
@@ -128,11 +126,13 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
 end
 
 
-function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                               multi::Vector{Multimap}; bufsize=50, sam=false, qualoffset=33 )
-#                                     response=Requests.ResponseStream{TCPSocket}(), 
-#                                mate_response=Requests.ResponseStream{TCPSocket}(), 
-#                                http=false )
+function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, 
+                                lib::GraphLib, quant::GraphLibQuant,
+                                multi::MultiMapping{SGAlignPaired}, mod::B; 
+                                bufsize=50, sam=false, qualoffset=33,
+                                     response=Requests.ResponseStream{TCPSocket}(), 
+                                mate_response=Requests.ResponseStream{TCPSocket}(), 
+                                http=false ) where B <: BiasModel
 
    const fwd_reads  = allocate_fastq_records( bufsize )
    const rev_reads  = allocate_fastq_records( bufsize )
@@ -144,26 +144,26 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam, lib::
       write_sam_header( stdbuf, lib )
    end
    while length(fwd_reads) > 0 && length(rev_reads) > 0
-      #if http
-      #   read_http_chunk!( fwd_reads, fwd_parser, response )
-      #   read_http_chunk!( rev_reads, rev_parser, mate_response )
-      #else
+      if http
+         read_http_chunk!( fwd_reads, fwd_parser, response )
+         read_http_chunk!( rev_reads, rev_parser, mate_response )
+      else
          read_chunk!( fwd_reads, fwd_parser )
          read_chunk!( rev_reads, rev_parser )
-      #end
+      end
       total += length(fwd_reads)
       @inbounds for i in 1:length(fwd_reads)
          fill!( fwd_reads[i], qualoffset )
          fill!( rev_reads[i], qualoffset )
          fwd_aln,rev_aln = ungapped_align( param, lib, fwd_reads[i], rev_reads[i] )
          if !isnull( fwd_aln ) && !isnull( rev_aln )
+            biasval = count!( mod, fwd_reads[i].sequence, rev_reads[i].sequence )
             if length( fwd_aln.value ) > 1
-               push!( multi, Multimap( fwd_aln.value ) )
-               push!( multi, Multimap( rev_aln.value ) )
+               push!( multi, fwd_aln.value, rev_aln.value, biasval, quant, lib )
                sam && write_sam( stdbuf, fwd_reads[i], rev_reads[i], fwd_aln.value, rev_aln.value, lib,
                                  paired=true, is_pair_rc=param.is_pair_rc, qualoffset=qualoffset )
             else
-               count!( quant, fwd_aln.value[1], rev_aln.value[1] )
+               count!( quant, fwd_aln.value[1], rev_aln.value[1], biasval )
                sam && write_sam( stdbuf, fwd_reads[i], fwd_aln.value[1], lib, 
                                  paired=true, fwd_mate=true, is_pair_rc=param.is_pair_rc, 
                                  qualoffset=qualoffset )

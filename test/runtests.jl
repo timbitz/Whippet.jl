@@ -2,6 +2,7 @@ using Base.Test
 
 importall BioSymbols
 importall BioSequences
+importall IntervalTrees
 
 using DataStructures
 using BufferedStreams
@@ -12,6 +13,7 @@ using IntArrays
 using IntervalTrees
 using Libz
 using Distributions
+using Requests
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -19,12 +21,14 @@ include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
+include("../src/bias.jl")
 include("../src/edges.jl")
 include("../src/index.jl")
 include("../src/record.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
+include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
@@ -44,6 +48,52 @@ include("../src/diff.jl")
       @test isa( curkmer, SGKmer{i} )
    end
 end
+
+@testset "Bias Models" begin
+   # default 'empty' model
+   def = zero(DefaultCounter)
+   @test get(def) == 0.0
+   def = one(DefaultCounter)
+   @test get(def) == 1.0
+   push!( def, 1.0 )
+   @test get(def) == 2.0
+   gc_adjust!( def, DefaultBiasMod() )
+   primer_adjust!( def, DefaultBiasMod() )
+
+   function randdna(n)
+      return BioSequence{DNAAlphabet{2}}(rand([DNA_A, DNA_C, DNA_G, DNA_T], n))
+   end
+
+   function test_uniform_bias!( mod::B ) where B <: BiasModel
+      for i in 1:5000000
+         primer_count!( mod, randdna(36) )
+      end
+      primer_normalize!( mod )
+      for i in 1:length(mod.fore)
+         @test 0.85 < mod.back[i] / mod.fore[i] < 1.15
+      end
+   end
+
+   # primer count model
+   mod = JointBiasMod( 5 )
+   test_uniform_bias!( mod )
+   cnt = JointBiasCounter()
+   @test cnt.count == 0.0
+   hept = kmer_index_trailing(UInt16, dna"ATGAC")
+   push!( cnt, hept )
+   push!( cnt, hept )
+   adjust!( cnt, mod )
+   @test get(cnt) == value!( mod, hept )
+
+   # gc content bias
+   seq = dna"AAAAAGCGCG" ^ 5
+   egc = ExpectedGC( seq )
+   @test length(egc) == 20
+   @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
+   
+
+end
+
 @testset "Splice Graphs" begin
    gtf = IOBuffer("# gtf file test
 chr0\tTEST\texon\t6\t20\t.\t+\t.\tgene_id \"one\"; transcript_id \"def\";
@@ -216,7 +266,14 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(STDERR, lib)
    end
 
-   @testset "Alignment and SAM Format" begin
+   # store general data structures outside of testset
+   score_range = 0.05
+   param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
+                          false, false, true, false, true )
+   println(map( x->length(x.annoname), lib.graphs ))
+   gquant = GraphLibQuant{SGAlignSingle,DefaultCounter}( lib )
+
+   @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
       fastq = IOBuffer("@1S10M%11,20%exon1
 NGCGGATTACA
@@ -260,12 +317,6 @@ TCTTGTCTAATG
 IIIIIIIIIIII
 ")
 
-      score_range = 0.05
-      param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
-                          false, false, true, false, true )
-      quant = GraphLibQuant( lib )
-      multi = Vector{Multimap}()
-
       const DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
       fqparse = FASTQ.Reader( BufferedInputStream(fastq), fill_ambiguous=DNA_C )
       reads  = allocate_fastq_records( 10 )
@@ -298,7 +349,7 @@ IIIIIIIIIIII
          ex_num = length(split(readname, '-', keep=false))
          @test length(align.value[best_ind].path) == ex_num
 
-         count!( quant, align.value[best_ind] )
+         count!( gquant, align.value[best_ind], 1.0 )
 
          const curgene   = align.value[best_ind].path[1].gene
          const firstnode = align.value[best_ind].path[1].node
@@ -318,10 +369,144 @@ IIIIIIIIIIII
          # test that cigar reversal works for '-' strand genes.
       end 
 
-      @testset "TPM" begin
-         calculate_tpm!( quant, readlen=20 )
+      @testset "SGAlignContainer Hashing" begin
 
-         #println(quant)
+         @test SGAlignNode(1,1,zero(SGAlignScore)) == SGAlignNode(1,1,one(SGAlignScore))
+         @test hash( SGAlignNode(1,1,zero(SGAlignScore)) ) == hash( SGAlignNode(1,1,one(SGAlignScore)) )
+
+         @test SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))] == SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]
+         @test hash( SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))] ) == hash( SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))] )
+
+         @test SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) == SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))])
+         @test hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) ) == hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]) )
+
+         a = map( x->SGAlignSingle(SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))]), collect(1:5))
+         ab = map( x->SGAlignSingle(SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))]), collect(1:5))
+         b = map( x->SGAlignPaired(SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))], SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))]), collect(1:5))
+         bb = map( x->SGAlignPaired(SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))], SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))]), collect(1:5))
+
+         da = Dict{SGAlignSingle,Int}()
+         db = Dict{SGAlignPaired,Int}()
+
+         function settwice!( d, a, ab )
+            for i in a
+               d[i] = 1
+            end
+            for i in ab
+               d[i] = 2
+            end
+            for k in keys(d)
+               @test d[k] == 2
+            end
+         end
+         settwice!( da, a, ab )
+         settwice!( db, b, bb )
+         @test length(keys(da)) == length(a)
+         @test length(keys(db)) == length(b)
+
+      end
+
+      @testset "SGAlignPath Overlap" begin
+          
+         single     = SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]
+         single_two = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore))]
+         two_three  = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))] 
+         larger     = SGAlignNode[SGAlignNode(1,1,one(SGAlignScore)), SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))]
+
+         println(STDERR, @which single in single)
+
+         @test single in single
+         @test !(single in single_two)
+         @test single_two in two_three
+         @test !(single in two_three)
+         @test single in larger
+         @test single_two in larger
+         @test two_three in larger
+
+      end
+
+      @testset "Isoform Equivalence Classes" begin
+
+         is = IntSet([1, 2, 5, 6])
+         @test in( 1, 2, is ) == true
+         @test in( 1, 3, is ) == false
+         @test in( 2, 3, is ) == false
+         @test in( 2, 4, is ) == false
+         @test in( 2, 5, is ) == true
+         @test in( 5, 6, is ) == true
+         @test in( 1, 6, is ) == false
+         for i in [1,2,5,6]
+            @test (i in is) == true
+         end
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == false
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == true
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000003, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == false
+         path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000005, SGAlignScore(0x0a, 0x00, 0.0))]
+         @test (path in is) == true
+
+         @test length(gquant.tpm) == 7
+         @test length(gquant.count) == 7
+         @test length(gquant.length) == 7
+         @test gquant.geneidx == [0, 2, 5, 6]
+         build_equivalence_classes!( gquant, lib, assign_long=true )
+         println(STDERR, gquant)
+         println(STDERR, gquant.classes)
+         
+      end
+
+      @testset "MultiMapping Equivalence Classes" begin
+
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}() 
+         aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true), 
+                              SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000004, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
+
+         push!( multi, aligns, 1.0, gquant, lib )
+         println(STDERR, multi.map)
+         compats = collect(values(multi.map))
+         @test compats[1].isdone == true
+         @test sum(multi.iset) == 0
+
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}()
+
+         aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
+                              SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
+ 
+         push!( multi, aligns, 1.0, gquant, lib )
+         println(STDERR, multi.map)
+         compats = collect(values(multi.map))
+         @test compats[1].isdone == false
+         @test [3,4,5] == compats[1].class 
+         @test sum(multi.iset) == 0
+
+         # Assignment
+         compats[1].count = 10.0
+         prev_node = get(gquant.quant[2].node[1])
+         println(STDERR, "prev_quant = $(gquant.quant[2])")
+         interv = Interval{ExonInt}( 1, 2 )
+         prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
+
+         println(gquant.quant[2].edge)
+
+         assign_ambig!( gquant, lib, multi )
+         println(gquant.quant[2].edge)
+         
+         println(STDERR, "cur_quant = $(gquant.quant[2])")
+         @test get(gquant.quant[2].node[1]) == prev_node + 7.5
+         @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,default(DefaultCounter)) ).value) == prev_edge + 2.5
+      end
+
+      @testset "TPM" begin
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}()
+         calculate_tpm!( gquant, readlen=20 )
+         set_gene_tpm!( gquant, lib )
+         orig = deepcopy(gquant.tpm)
+         iter = gene_em!( gquant, multi, sig=1, readlen=20, maxit=10000 )
+         @test orig != gquant.tpm
+         @test iter < 5000
+         @test sum(gquant.tpm) == 1000000
       end
 
       function parse_edge{S <: AbstractString}( str::S )
@@ -329,7 +514,7 @@ IIIIIIIIIIII
          (parse(Int, String(s[1])), parse(Int, String(s[2])), parse(Float64, String(s[3])))
       end
 
-      @testset "Graph Reduction" begin
+      @testset "Graph Enumeration" begin
          #= Real Test based on node 23 (here annotated as 1) in ENSMUSG00000038685
          inclusion edges:
          1-2, 2-3, 3-4, 4-5, 5-6, 6-7, 7-8, 8-9, 9-10
@@ -384,7 +569,7 @@ IIIIIIIIIIII
             name = lib.names[g]
             chr  = lib.info[g].name
             strand = lib.info[g].strand ? '+' : '-'
-            _process_events( bs, lib.graphs[g], quant.quant[g], (name,chr,strand), isnodeok=false )
+            _process_events( bs, lib.graphs[g], gquant.quant[g], (name,chr,strand), isnodeok=false )
          end
          flush(bs)
          seek(out,0)
@@ -395,7 +580,7 @@ IIIIIIIIIIII
          end
       end
 
-#=      @testset "EBI Accessions & HTTP Streaming" begin
+      @testset "EBI Accessions & HTTP Streaming" begin
          ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
          @test ebi_res.success
          @test !ebi_res.paired
@@ -413,6 +598,6 @@ IIIIIIIIIIII
          end
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
-      end =#
+      end
    end
 end
