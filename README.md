@@ -75,7 +75,7 @@ $ julia bin/whippet-quant.jl --ebi SRR1199010
 ```
 is equivalent to
 ```bash
-$ julia bin/whippet-quant.jl --url ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
+$ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 #### b) Paired-end reads
