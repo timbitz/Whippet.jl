@@ -121,7 +121,7 @@ function main()
          args["paired_mate.fastq[.gz]"] = "http://" * ebi_res.fastq_2_url
       end
       ebi_res.success || error("Could not fetch data from ebi.ac.uk!!")
-   else
+   elseif !args["url"]
       args["filename.fastq[.gz]"] = fixpath(args["filename.fastq[.gz]"])
       if ispaired
          args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
