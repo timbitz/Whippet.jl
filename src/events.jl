@@ -218,7 +218,7 @@ end
 # works.. these graph paths are then assigned unambiguous counts, while
 # ambiguous counts are then assigned to each graph path using the EM algorithm
 
-function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::Int=2000 )
+function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::Int=100 )
    newgraph = PsiGraph( Vector{IntSet}(),  Vector{Float64}(),
                         Vector{Float64}(), Vector{Float64}(),
                         graph.min, graph.max )
