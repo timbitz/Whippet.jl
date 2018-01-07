@@ -585,8 +585,9 @@ IIIIIIIIIIII
          @test ebi_res.success
          @test !ebi_res.paired
 
-         println(STDERR, "Streaming fastq file from $(ebi_res.fastq_1_url)")
-         parser, response = make_http_fqparser( "http://" * ebi_res.fastq_1_url )
+         println(STDERR, "Streaming fastq file from http://timbitz.github.io/data/SRR1199010.fastq.gz...")
+         parser, response = make_http_fqparser( "http://timbitz.github.io/data/SRR1199010.fastq.gz" )
+         println(STDERR, "HTTP Response: $response")
          reads  = allocate_fastq_records( 50 )
          cnt    = 0
          while length(reads) > 0
