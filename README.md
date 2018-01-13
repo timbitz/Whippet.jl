@@ -166,7 +166,7 @@ We believe that this is (and should be) the correct generalization of event-leve
 
 This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined). 
 
-Note: **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS splicing event. **Entropy** refers to the shannon-entropy of the relative expression of the paths through the AS event.
+Note: **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS event. **Entropy** refers to the shannon-entropy of the relative expression of the paths through the AS event.
 
 ---
 The output format of `.diff.gz` files from `whippet-delta.jl` is:
