@@ -84,11 +84,11 @@ $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 To stream reads from ebi.ac.uk, just provide a paired-end SRR id to to the `--ebi` flag:
 ```bash
-$ julia bin/whippet-quant.jl --ebi SRR1658024
+$ julia bin/whippet-quant.jl --ebi ERR1994736
 ```
 is equivalent to
 ```bash
-$ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR165/004/SRR1658024/SRR1658024_1.fastq.gz http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR165/004/SRR1658024/SRR1658024_2.fastq.gz
+$ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_1.fastq.gz http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_2.fastq.gz
 ```
 
 #### c) Non-default input/output
