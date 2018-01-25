@@ -169,6 +169,25 @@ This must be taken into account when intersecting `.psi.gz` coordinate output wi
 Note: **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS event. **Entropy** refers to the shannon-entropy of the relative expression of the paths through the AS event.
 
 ---
+The raw junctions are output in the format of `.jnc.gz` files, which look like:
+
+Chrom | Donor_Coord | Acceptor_Coord | GeneID:Nodes:Type | ReadCount | Strand
+----- | ----------- | -------------- | ----------------- | --------- | ------
+chr1 | 150600068 | 150601890 | ENSG00000143420.17_1:2-3:CON_ANNO | 113.04 | -
+chr1 | 150598284 | 150599943 | ENSG00000143420.17_1:3-6:ALT_ANNO | 110.12 | -
+chr1 | 150595335 | 150598118 | ENSG00000143420.17_1:6-9:CON_ANNO | 35.74 | -
+chr1 | 161185160 | 161187776 | ENSG00000158869.10_1:1-2:CON_ANNO | 20.47 | +
+chr1 | 161185160 | 161188031 | ENSG00000158869.10_1:1-3:ALT_UNIQ | 3.11 | +
+
+The `Type` can be one of three:
+
+Type | Meaning
+---- | -------
+CON_ANNO | Annotated constitutive junction
+ALT_ANNO | Annotated alternative junction
+ALT_UNIQ | Unannotated alternative junction
+
+---
 The output format of `.diff.gz` files from `whippet-delta.jl` is:
 
 Gene | Node | Coord | Strand | Type | Psi_A | Psi_B | DeltaPsi | Probability | Complexity | Entropy
