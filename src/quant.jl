@@ -212,6 +212,9 @@ function adjust!( sgquant::SpliceGraphQuant{C,R}, mod::B, func=adjust! ) where {
    for lng in values(sgquant.long)
       func( lng, mod )
    end
+   for cir in values(sgquant.circ)
+      func( cir, mod )
+   end
    sgquant
 end
 
