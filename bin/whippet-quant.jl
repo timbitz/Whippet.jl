@@ -87,7 +87,7 @@ function parse_cmd()
       help     = "When this flag is enabled, filename.fastq[.gz] and paired_mate.fastq[.gz] are considered URLs to download/process on the fly"
       action   = :store_true
     "--ebi"
-      help     = "Retrieve FASTQ file(s) from ebi.ac.uk using a single seq run id (ie. SRR1199003). This will automatically work for both single and paired-end SRR ids. (sets --url=true)"
+      help     = "Retrieve FASTQ file(s) from ebi.ac.uk using a single seq run id (ie. ERR1994736). This will automatically work for both single and paired-end SRR ids. (sets --url=true)"
       action   = :store_true
     "--circ"
       help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
