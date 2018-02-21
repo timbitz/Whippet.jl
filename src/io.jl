@@ -365,7 +365,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    for (st,en) in keys(sgquant.circ)
       back_len = 0.0
       back_cnt = 0.0
-      fore_cnt = sgquant.circ[(st,en)]
+      fore_cnt = get(sgquant.circ[(st,en)])
       for edg in intersect( sgquant.edge, (st, st) )
          if edg.first == st
             back_len += 1
