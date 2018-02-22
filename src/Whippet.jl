@@ -7,6 +7,7 @@ importall BioSequences
 
 import DataStructures: SortedSet
 
+using Base: midpoints
 using BioSequences
 using BufferedStreams
 using FMIndexes
