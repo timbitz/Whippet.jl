@@ -224,10 +224,10 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
                         graph.min, graph.max )
    it = 1
    jointset = IntSet()
-   function union_joint!( a::IntSet, b::IntSet )
-      empty!(jointset)
-      union!(jointset, a)
-      union!(jointset, b)
+   function union_joint!( js::IntSet, a::IntSet, b::IntSet )
+      empty!(js)
+      union!(js, a)
+      union!(js, b)
    end
    while (newgraph.nodes != graph.nodes || it == 1) && it <= maxit
       if it > 1
@@ -240,7 +240,7 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
          push_i = false
          for j in 1:length(edges.nodes)
             if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
-               union_joint!( graph.nodes[i], edges.nodes[j] )
+               union_joint!( jointset, graph.nodes[i], edges.nodes[j] )
                (jointset in newgraph.nodes) && continue
                push_i = true
                push!( newgraph.nodes,  jointset )
