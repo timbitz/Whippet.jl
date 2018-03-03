@@ -225,7 +225,6 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
    it = 1
    while (newgraph.nodes != graph.nodes || it == 1) && it <= maxit
       if it > 1
-         #println("$it\ngraph: $(length(graph.nodes))")
          graph,newgraph = newgraph,graph
          empty!( newgraph.nodes  )
          empty!( newgraph.length )
@@ -241,9 +240,9 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
          push_i = false
          for j in 1:length(edges.nodes)
             if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
+               push_i = true
                const jointset = union( graph.nodes[i], edges.nodes[j] )
                (jointset in newgraph.nodes) && continue
-               push_i = true
                push!( newgraph.nodes,  jointset )
                push!( newgraph.length, graph.length[i] + edges.length[j] )
                push!( newgraph.count,  graph.count[i] + edges.count[j] )
