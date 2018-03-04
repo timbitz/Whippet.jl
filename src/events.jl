@@ -218,7 +218,7 @@ end
 # works.. these graph paths are then assigned unambiguous counts, while
 # ambiguous counts are then assigned to each graph path using the EM algorithm
 
-function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::Int=100 )
+function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::Int=100, maxiso::Int=1024 )
    newgraph = PsiGraph( Vector{IntSet}(),  Vector{Float64}(),
                         Vector{Float64}(), Vector{Float64}(),
                         graph.min, graph.max )
@@ -229,13 +229,19 @@ function reduce_graph( edges::PsiGraph, graph::PsiGraph=deepcopy(edges), maxit::
          empty!( newgraph.nodes  )
          empty!( newgraph.length )
          empty!( newgraph.count  )
+         if length(graph.nodes) > maxiso
+            ord = shuffle(1:length(graph.nodes))
+            graph.nodes  = graph.nodes[ord[1:maxiso]]
+            graph.length = graph.length[ord[1:maxiso]]
+            graph.count  = graph.count[ord[1:maxiso]]
+         end
       end
       @inbounds for i in 1:length(graph.nodes)
          push_i = false
          for j in 1:length(edges.nodes)
             if hasintersect_terminal( graph.nodes[i], edges.nodes[j] )
-               const jointset = union( graph.nodes[i], edges.nodes[j] )
                push_i = true
+               const jointset = union( graph.nodes[i], edges.nodes[j] )
                (jointset in newgraph.nodes) && continue
                push!( newgraph.nodes,  jointset )
                push!( newgraph.length, graph.length[i] + edges.length[j] )
@@ -638,7 +644,7 @@ end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
                            node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool,
-                           minedgeweight::Float64=0.01 )
+                           minedgeweight::Float64=0.025 )
 
    inc_graph  = Nullable{PsiGraph}()
    exc_graph  = Nullable{PsiGraph}()
