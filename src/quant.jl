@@ -6,16 +6,12 @@ const SCALING_FACTOR = 1_000_000
 # overridden for more complex count bias models
 #const ReadCount = JointBiasCounter #DefaultCounter
 const DEFAULT_DEF   = (v = zero(DefaultCounter); v.isadjusted = true; v)
-#const DEFAULT_PRIME = (v = zero(PrimerBiasCounter); v.isadjusted = true; v)
-#const DEFAULT_GC    = (v = zero(GCBiasCounter); v.isadjusted = true; v)
 const DEFAULT_JOINT = (v = zero(JointBiasCounter); v.isadjusted = true; v)
 
 const DEF_READCOUNT = 0.0
 const DEF_READVALUE = 1.0
 
 default(::Type{DefaultCounter}) = DEFAULT_DEF
-#default(::Type{PrimerBiasCounter}) = DEFAULT_PRIME
-#default(::Type{GCBiasCounter}) = DEFAULT_GC
 default(::Type{JointBiasCounter}) = DEFAULT_JOINT
 
 # Use this abstraction to store SGAlignPaths before
