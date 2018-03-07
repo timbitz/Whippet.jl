@@ -14,8 +14,6 @@ struct RefGene
    acc::CoordTuple 
    txst::CoordTuple
    txen::CoordTuple
-#   orfst::CoordTuple
-#   orfen::CoordTuple
    exons::CoordTree
    length::Float64
    reftx::Vector{RefTx}
@@ -55,8 +53,6 @@ function load_refflat( fh; txbool=true )
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
    gntxen   = Dict{GeneName,CoordTuple}()
-#   gnorfst  = Dict{GeneName,CoordTuple}()
-#   gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
    gnreftx  = Dict{GeneName,Vector{RefTx}}()
@@ -163,8 +159,6 @@ function load_gtf( fh; txbool=true, suppress=false )
    gnacc    = Dict{GeneName,CoordTuple}()
    gntxst   = Dict{GeneName,CoordTuple}()
    gntxen   = Dict{GeneName,CoordTuple}()
- #  gnorfst  = Dict{GeneName,CoordTuple}()
- #  gnorfen  = Dict{GeneName,CoordTuple}()
    gnlens   = Dict{GeneName,CoordTuple}()
    gnexons  = Dict{GeneName,CoordTree}()
    gnreftx  = Dict{GeneName,Vector{RefTx}}()
@@ -240,13 +234,13 @@ function load_gtf( fh; txbool=true, suppress=false )
       support,val = fetch_meta( "transcript_support_level", metaspl )
 
       # if we observe low transcript support levels, we will warn the user
-      if (support != "_" && support != "1" &&  support != "NA")
+      if (support != "_" && support != "1" && support != "2" &&  support != "NA")
 
          if suppress
             continue
          elseif !warning
             println(STDERR, "")
-            warn("Using low quality Transcript Support Levels (TSL 2-5) in your GTF file is not recommended!\nFor more information on TSL, see: http://www.ensembl.org/Help/Glossary?id=492\n\nIf you would like Whippet to ignore these when building its index, use `--suppress-low-tsl` option!\n\n")
+            warn("Using low quality Transcript Support Levels (TSL 3+) in your GTF file is not recommended!\nFor more information on TSL, see: http://www.ensembl.org/Help/Glossary?id=492\n\nIf you would like Whippet to ignore these when building its index, use `--suppress-low-tsl` option!\n\n")
          
             warning=true
          end
