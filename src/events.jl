@@ -644,7 +644,7 @@ end
 
 function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant, 
                            node::NodeInt, motif::EdgeMotif, bias::Float64, isnodeok::Bool,
-                           minedgeweight::Float64=0.025 )
+                           minedgeweight::Float64=0.02 )
 
    inc_graph  = Nullable{PsiGraph}()
    exc_graph  = Nullable{PsiGraph}()
