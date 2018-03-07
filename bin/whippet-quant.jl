@@ -67,7 +67,7 @@ function parse_cmd()
     "--score-min", "-S"
       help     = "Minimum percent matching (matches - mismatches) / read_length"
       arg_type = Float64
-      default  = 0.6
+      default  = 0.7
     "--psi-body-read"
       help     = "Allow exon-body reads in quantification of PSI values"
       action   = :store_true
