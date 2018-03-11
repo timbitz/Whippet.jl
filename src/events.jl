@@ -400,7 +400,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
       for i in 1:length(pgraph.nodes)
          if n in pgraph.nodes[i]
             push!( iset, i )
-            pgraph.length[i] += 1 # sgquant.leng[n]
+            pgraph.length[i] += sgquant.leng[n]
          end
       end
 
@@ -409,7 +409,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
       if length( iset ) == 1 # non-ambiguous node
          if first( iset ) <= length(pgraph.nodes) # belongs to inclusion
             idx = first( iset )
-            @fastmath pgraph.count[idx] += get(sgquant.node[n]) * bias / sgquant.leng[n]
+            @fastmath pgraph.count[idx] += get(sgquant.node[n]) #* bias / sgquant.leng[n]
          end
       else
          #check if there is already an entry for this set of paths
@@ -417,7 +417,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
          exists = false
          for am in ambig
             if iset == am
-               @fastmath am.multiplier += get(sgquant.node[n]) * bias / sgquant.leng[n]
+               @fastmath am.multiplier += get(sgquant.node[n]) #* bias / sgquant.leng[n]
                exists = true
                break
             end
@@ -425,7 +425,7 @@ function add_node_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
          if !exists && get(sgquant.node[n]) > 0
             push!( ambig, AmbigCounts( collect(iset),
                                        ones( length(iset) ) / length(iset),
-                                       1.0, get(sgquant.node[n]) * bias / sgquant.leng[n] ) )
+                                       1.0, get(sgquant.node[n]) ) ) #* bias / sgquant.leng[n] ) )
          end
       end
       empty!( iset ) # clean up
@@ -492,7 +492,7 @@ function add_edge_counts!( ambig::Vector{AmbigCounts}, pgraph::PsiGraph,
       for i in 1:length(pgraph.nodes)
          if edg in pgraph.nodes[i]
             push!(iset, i)
-            pgraph.length[i] += 1
+            #pgraph.length[i] += 1
          end
       end
       #=                                             =#
@@ -589,7 +589,7 @@ function build_utr_graph( nodes::IntSet, motif::EdgeMotif, sgquant::SpliceGraphQ
 end
 
 function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant{C,R},
-                              node::NodeInt, motif::EdgeMotif ) where {C <: SGAlignContainer, R <: ReadCounter}
+                              node::NodeInt, motif::EdgeMotif, readlen::Int ) where {C <: SGAlignContainer, R <: ReadCounter}
    
    utr_graph  = Nullable{PsiGraph}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
@@ -635,7 +635,7 @@ function _process_tandem_utr( sg::SpliceGraph, sgquant::SpliceGraphQuant{C,R},
       utr_graph = build_utr_graph( used_node, motif, sgquant )
       add_node_counts!( ambig_cnt.value, utr_graph.value, sgquant, 1.0 )
       add_edge_counts!( ambig_cnt.value, utr_graph.value, sgquant )
-      it = rec_tandem_em!( utr_graph.value, ambig_cnt.value, sig=4 )
+      it = rec_tandem_em!( utr_graph.value, ambig_cnt.value, sig=4, readlen=readlen )
       psi = Nullable( get(utr_graph).psi )
    end
 
@@ -739,7 +739,8 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    psi,inc_graph,exc_graph,ambig_cnt,total_reads
 end
 
-function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok=false, iscircok=false )
+function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; 
+                         isnodeok=false, iscircok=false, readlen::Int=50 )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream( io )
    output_psi_header( stream )
@@ -747,30 +748,31 @@ function process_events( outfile, lib::GraphLib, graphq::GraphLibQuant; isnodeok
       name = lib.names[g]
       chr  = lib.info[g].name
       strand = lib.info[g].strand ? '+' : '-'
-      #println(STDERR, "$g, $name, $chr, $strand" )
       _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand), 
-                       isnodeok=isnodeok, iscircok=iscircok )
+                       isnodeok=isnodeok, iscircok=iscircok, readlen=readlen )
    end
    close(stream)
    close(io)
 end
 
 function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant, info::GeneMeta; 
-                          isnodeok=false, iscircok=false )
+                          isnodeok=false, iscircok=false, readlen::Int=50.0 )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
-   # Then calculate bias of the event 
    if length( sg.edgetype ) <= 2
       return 0
    end
    i = 1
    while i < length(sg.edgetype)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
+      next_istandem = i+1 < length(sg.edgetype) ? isobligate( convert(EdgeMotif, sg.edgetype[i+1], sg.edgetype[i+2]) ) : false
       if motif == NONE_MOTIF
-         output_empty( io, motif, sg, i, info )
+         if !next_istandem
+            output_empty( io, motif, sg, i, info )
+         end
       elseif isobligate( motif ) # is utr event
-         psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif ) 
+         psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif, readlen ) 
          if !isnull( psi ) && !any( map( isnan, psi.value ) )
             total_cnt = sum(utr) + sum(ambig)
             i = output_utr( io, round.(get(psi),4), utr, total_cnt, motif, sg, i , info )   
@@ -837,9 +839,9 @@ function calculate_psi!( igraph::PsiGraph, egraph::PsiGraph, counts::Vector{Floa
    divsignif!( egraph.psi, cnt_sum, sig )
 end
 
-function calculate_psi!( pgraph::PsiGraph, counts::Vector{Float64}; sig=0 )
+function calculate_psi!( pgraph::PsiGraph, counts::Vector{Float64}; sig=0, readlen::Int=50)
    for i in 1:length(pgraph.psi)
-      pgraph.psi[i] = counts[i] / pgraph.length[i]
+      pgraph.psi[i] = counts[i] / max( pgraph.length[i] - readlen, 1 )
    end
    const cnt_sum = sum( pgraph.psi )
    divsignif!( pgraph.psi, cnt_sum, sig )
@@ -892,7 +894,7 @@ end
 function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
                           utr_temp::Vector{Float64}=zeros(length(pgraph.count)),
                           count_temp::Vector{Float64}=ones(length(pgraph.count)),
-                          it=1, maxit=1500, sig=0 )
+                          it=1, maxit=1500, sig=0, readlen::Int=50 )
 
    unsafe_copy!( count_temp, pgraph.count, indx_shift=0 )
    unsafe_copy!( utr_temp, pgraph.psi )
@@ -902,7 +904,7 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
       if it > 1 # maximization
          ac.prop_sum = 0.0
          for p in ac.paths
-            prev_psi = pgraph.psi[p] * pgraph.length[p]
+            prev_psi = pgraph.psi[p] * max( pgraph.length[p] - readlen, 1 )
             ac.prop[idx] = prev_psi
             ac.prop_sum += prev_psi
             idx += 1
@@ -918,12 +920,12 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
       end
    end
 
-   calculate_psi!( pgraph, count_temp, sig=sig ) # expectation
+   calculate_psi!( pgraph, count_temp, sig=sig, readlen=readlen ) # expectation
 
    if utr_temp != pgraph.psi && it < maxit
       it = rec_tandem_em!( pgraph, ambig,
                            utr_temp=utr_temp, count_temp=count_temp,
-                           it=it+1, maxit=maxit, sig=sig )
+                           it=it+1, maxit=maxit, sig=sig, readlen=readlen )
    end
    it
 end

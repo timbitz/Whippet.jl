@@ -667,7 +667,7 @@ end
 end
 
 function calculate_bias!( sgquant::SpliceGraphQuant )
-   edgecnt = 0.0
+#=   edgecnt = 0.0
    for edgev in sgquant.edge
       edgecnt += get(edgev.value)
    end
@@ -680,11 +680,12 @@ function calculate_bias!( sgquant::SpliceGraphQuant )
    # never down-weight junction reads, only exon-body reads
    bias = @fastmath min( edgelevel / nodelevel, 1.0 )
    sgquant.bias = bias
-   bias
+   bias =#
+   1.0
 end
 
 function global_bias( graphq::GraphLibQuant )
-   bias_ave = 0.0
+#=   bias_ave = 0.0
    bias_var = 0.0
    n = 1
    for sgq in graphq.quant
@@ -699,7 +700,8 @@ function global_bias( graphq::GraphLibQuant )
       end
       n += 1
    end
-   bias_ave,bias_var
+   bias_ave,bias_var =#
+   1.0,0.0
 end
 
 # Every exon-exon junction has an effective mappable space of readlength - K*2.
@@ -716,7 +718,7 @@ end
 
 function eff_lengths!( sg::SpliceGraph, sgquant::SpliceGraphQuant, eff_len::Int, kadj::Int )
    for i in 1:length( sg.nodelen )
-      sgquant.leng[i] = eff_length( i, sg, eff_len, kadj )
+      sgquant.leng[i] = sg.nodelen[i] #eff_length( i, sg, eff_len, kadj )
    end
 end
 
