@@ -8,7 +8,7 @@ IntArrays
 IntervalTrees 0.4.1
 BufferedStreams 0.3.3
 Libz 0.2.4
-StatsBase 0.18.0 0.20.0
+StatsBase 0.18.0
 Distributions
 Glob
 SuffixArrays 0.1.0
