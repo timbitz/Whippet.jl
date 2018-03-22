@@ -569,7 +569,7 @@ IIIIIIIIIIII
             name = lib.names[g]
             chr  = lib.info[g].name
             strand = lib.info[g].strand ? '+' : '-'
-            _process_events( bs, lib.graphs[g], gquant.quant[g], (name,chr,strand), isnodeok=false )
+            _process_events( bs, lib.graphs[g], gquant.quant[g], (name,chr,strand), readlen=20, isnodeok=false )
          end
          flush(bs)
          seek(out,0)
