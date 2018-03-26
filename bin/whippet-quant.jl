@@ -68,9 +68,6 @@ function parse_cmd()
       help     = "Minimum percent matching (matches - mismatches) / read_length"
       arg_type = Float64
       default  = 0.7
-    "--psi-body-read"
-      help     = "Allow exon-body reads in quantification of PSI values"
-      action   = :store_true
     "--stranded"
       help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag"
       action   = :store_true
@@ -209,10 +206,9 @@ function main()
    # Now assign multi to edges.
    @timer assign_ambig!( quant, lib, multi )
 
-   effective_lengths!( lib, quant, readlen - 19, 9-1) #min(readlen - param.score_min, 9-1) )
-   #bias_ave,_ = global_bias( quant )
+   effective_lengths!( lib, quant, 1, 0)
    println(STDERR, "Calculating maximum likelihood estimate of events..." )
-   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=args["psi-body-read"], iscircok=args["circ"] )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=false, iscircok=args["circ"], readlen=readlen )
    println(STDERR, "Whippet $ver done." )
 end
 

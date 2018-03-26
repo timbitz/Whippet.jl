@@ -70,7 +70,7 @@ end
 =#
 
 function seq_write( io::BufOut, read::FASTQRecord; tab=false )
-   for c in read.seq
+   for c in read.sequence
       write( io, convert(Char, c) )
    end
    tab && write( io, '\t' )
@@ -160,7 +160,7 @@ function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::Grap
    const nodeind = strand ? align.path[1].node : align.path[end].node
    (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
    const sg = lib.graphs[geneind] 
-   const cigar,endpos = cigar_string( align, sg, strand, length(read.seq) )
+   const cigar,endpos = cigar_string( align, sg, strand, length(read.sequence) )
    const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
    if !strand && !supplemental
       reverse_complement!(read)
