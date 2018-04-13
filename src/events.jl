@@ -864,11 +864,10 @@ function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCou
 
       for ac in ambig
          idx = 1
-         if it > 1 # maximization
+         if it > 1 # expectation
             ac.prop_sum = 0.0
             for p in ac.paths
-               prev_psi = p <= length(igraph.psi) ? igraph.psi[p] * igraph.length[p] :
-                                                    egraph.psi[p-length(igraph.psi)] * egraph.length[p-length(igraph.psi)]
+               prev_psi = p <= length(igraph.psi) ? igraph.psi[p] : egraph.psi[p-length(igraph.psi)]
                ac.prop[idx] = prev_psi
                ac.prop_sum += prev_psi
                idx += 1
@@ -884,7 +883,7 @@ function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCou
          end
       end
 
-      calculate_psi!( igraph, egraph, count_temp, sig=sig ) # expectation
+      calculate_psi!( igraph, egraph, count_temp, sig=sig ) # maximization
 
       it += 1
    end
@@ -901,10 +900,10 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
 
    for ac in ambig
       idx = 1
-      if it > 1 # maximization
+      if it > 1 # expectation
          ac.prop_sum = 0.0
          for p in ac.paths
-            prev_psi = pgraph.psi[p] * max( pgraph.length[p] - readlen, 1 )
+            prev_psi = pgraph.psi[p]
             ac.prop[idx] = prev_psi
             ac.prop_sum += prev_psi
             idx += 1
@@ -920,7 +919,7 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
       end
    end
 
-   calculate_psi!( pgraph, count_temp, sig=sig, readlen=readlen ) # expectation
+   calculate_psi!( pgraph, count_temp, sig=sig, readlen=readlen ) # maximization
 
    if utr_temp != pgraph.psi && it < maxit
       it = rec_tandem_em!( pgraph, ambig,
