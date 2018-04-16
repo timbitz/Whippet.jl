@@ -864,7 +864,7 @@ function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCou
 
       for ac in ambig
          idx = 1
-         if it > 1 # expectation
+         if it > 1 
             ac.prop_sum = 0.0
             for p in ac.paths
                prev_psi = p <= length(igraph.psi) ? igraph.psi[p] : egraph.psi[p-length(igraph.psi)]
@@ -883,7 +883,7 @@ function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCou
          end
       end
 
-      calculate_psi!( igraph, egraph, count_temp, sig=sig ) # maximization
+      calculate_psi!( igraph, egraph, count_temp, sig=sig )
 
       it += 1
    end
@@ -900,7 +900,7 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
 
    for ac in ambig
       idx = 1
-      if it > 1 # expectation
+      if it > 1 
          ac.prop_sum = 0.0
          for p in ac.paths
             prev_psi = pgraph.psi[p]
@@ -919,7 +919,7 @@ function rec_tandem_em!( pgraph::PsiGraph, ambig::Vector{AmbigCounts};
       end
    end
 
-   calculate_psi!( pgraph, count_temp, sig=sig, readlen=readlen ) # maximization
+   calculate_psi!( pgraph, count_temp, sig=sig, readlen=readlen ) 
 
    if utr_temp != pgraph.psi && it < maxit
       it = rec_tandem_em!( pgraph, ambig,

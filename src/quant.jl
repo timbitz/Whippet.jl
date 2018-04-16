@@ -754,7 +754,6 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
       unsafe_copy!( count_temp, quant.count )
       unsafe_copy!( tpm_temp, quant.tpm )
 
-      # Maximization
       for eq in values(ambig.map)
          maximize_and_assign!( eq, (it > 1) )
       end
@@ -762,7 +761,7 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
          maximize_and_assign!( eq, (it > 1) )
       end
 
-      calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
+      calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) 
  
       it += 1
    end
