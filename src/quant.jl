@@ -666,43 +666,8 @@ end
    end
 end
 
-function calculate_bias!( sgquant::SpliceGraphQuant )
-#=   edgecnt = 0.0
-   for edgev in sgquant.edge
-      edgecnt += get(edgev.value)
-   end
-   @fastmath edgelevel = edgecnt / length(sgquant.edge)
-   nodecnt = 0.0
-   for nodev in sgquant.node
-      nodecnt += get(nodev)
-   end
-   @fastmath nodelevel = nodecnt / sum( sgquant.leng )
-   # never down-weight junction reads, only exon-body reads
-   bias = @fastmath min( edgelevel / nodelevel, 1.0 )
-   sgquant.bias = bias
-   bias =#
-   1.0
-end
-
-function global_bias( graphq::GraphLibQuant )
-#=   bias_ave = 0.0
-   bias_var = 0.0
-   n = 1
-   for sgq in graphq.quant
-      curbias = calculate_bias!( sgq )
-      if curbias > 10
-         println( sgq )
-      end
-      old = bias_ave
-      @fastmath bias_ave += (curbias - bias_ave) / n
-      if n > 1
-        @fastmath bias_var += (curbias - old)*(curbias - bias_ave)
-      end
-      n += 1
-   end
-   bias_ave,bias_var =#
-   1.0,0.0
-end
+calculate_bias!( sgquant::SpliceGraphQuant ) = 1.0
+global_bias( graphq::GraphLibQuant ) = 1.0,0.0
 
 # Every exon-exon junction has an effective mappable space of readlength - K*2.
 # Since we only count nodes that don't map over edges, we can give
@@ -767,7 +732,7 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
          eq.prop_sum = 0.0
          c = 1
          for i in eq.class
-            const cur_tpm = quant.tpm[i] * max( quant.length[i] - readlen, 1.0 )
+            const cur_tpm = quant.tpm[i]
             prop_temp[c] = cur_tpm
             eq.prop_sum += cur_tpm
             c += 1
@@ -789,7 +754,6 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
       unsafe_copy!( count_temp, quant.count )
       unsafe_copy!( tpm_temp, quant.tpm )
 
-      # Maximization
       for eq in values(ambig.map)
          maximize_and_assign!( eq, (it > 1) )
       end
@@ -797,7 +761,7 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
          maximize_and_assign!( eq, (it > 1) )
       end
 
-      calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) # Expectation
+      calculate_tpm!( quant, count_temp, sig=sig, readlen=readlen ) 
  
       it += 1
    end
