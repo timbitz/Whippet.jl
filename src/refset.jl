@@ -253,7 +253,7 @@ function load_gtf( fh; txbool=true, suppress=false )
          if warning_num < 25
             warn("Generally 'transcript_id' should not equal 'gene_id' but does at $tranid == $geneid;")
          elseif warning_num == 25
-            warn("... similar warnings will be suppressed; disregard if 'transcript_id' == 'gene_id' is intentional\n\nNOTE: 'transcript_id' == 'gene_id' will work OK for single isoform genes, but will not produce expected behavior for multi-isoform genes!")
+            warn("... NOTE: 'transcript_id' == 'gene_id' will work OK for single isoform genes, but will not produce expected behavior for multi-isoform genes!\n... similar warnings will be suppressed; disregard if 'transcript_id' == 'gene_id' is intentional\n")
          end
          warning_num += 1
       end
