@@ -168,7 +168,9 @@ function load_gtf( fh; txbool=true, suppress=false )
    # RefSet variables
    geneset  = Dict{GeneName,RefGene}()
 
+   used_txn = Dict{GeneName,Bool}()
    warning  = false
+   warning_num = 0
 
    txnum = 75000
    sizehint!(geneset, txnum >> 1)
@@ -245,11 +247,22 @@ function load_gtf( fh; txbool=true, suppress=false )
             warning=true
          end
 
+      elseif haskey(used_txn, tranid)
+         error("GTF file is not in valid GTF2.2 format!\n\nAnnotation entries for 'transcript_id' $tranid has already been fully processed and closed.\nHint: All GTF lines with the same 'transcript_id' must be adjacent in the GTF file and referring to the same transcript and gene!")
+      elseif tranid == geneid && tranid != curtran
+         if warning_num < 25
+            warn("Generally 'transcript_id' should not equal 'gene_id' but does at $tranid == $geneid;")
+         elseif warning_num == 25
+            warn("... NOTE: 'transcript_id' == 'gene_id' will work OK for single isoform genes, but will not produce expected behavior for multi-isoform genes!\n... similar warnings will be suppressed; disregard if 'transcript_id' == 'gene_id' is intentional\n")
+         end
+         warning_num += 1
       end
 
       if tranid != curtran
          # add transcript and clean up
          curtran != "" && private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
+
+         used_txn[curtran] = true
 
          curtran = tranid
          curgene = geneid
@@ -259,6 +272,7 @@ function load_gtf( fh; txbool=true, suppress=false )
          empty!(trandon)
          empty!(tranacc)
          txlen = 0
+
       end 
 
       sval = parse_coordint(st)
