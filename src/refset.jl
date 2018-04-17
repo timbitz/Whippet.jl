@@ -248,8 +248,8 @@ function load_gtf( fh; txbool=true, suppress=false )
 
       elseif haskey(used_txn, tranid)
          error("GTF file is not in valid GTF2.2 format!\n\nAnnotation entries for 'transcript_id' $tranid has already been fully processed and closed.\nHint: All GTF lines with the same 'transcript_id' must be adjacent in the GTF file and referring to the same transcript and gene!")
-      elseif tranid == geneid
-         error("GTF file is not in valid GTF2.2 format!\n\n'transcript_id' cannot equal 'gene_id' at $tranid == $geneid")
+      elseif tranid == geneid && tranid != curtran
+         warn("'transcript_id' should not equal 'gene_id' at $tranid == $geneid")
       end
 
       if tranid != curtran
