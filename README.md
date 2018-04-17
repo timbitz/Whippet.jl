@@ -32,7 +32,7 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ### 1) Install 
 Get latest version of [Julia](https://julialang.org/downloads) if you don't have it.  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
-Install Whippet through the Julia REPL:
+Install Whippet through the Julia REPL (for the most recent version try Pkg.update() first):
 ```julia
 julia> Pkg.add("Whippet")
 julia> using Whippet
