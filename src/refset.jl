@@ -168,6 +168,7 @@ function load_gtf( fh; txbool=true, suppress=false )
    # RefSet variables
    geneset  = Dict{GeneName,RefGene}()
 
+   used_txn = Dict{GeneName,Bool}()
    warning  = false
 
    txnum = 75000
@@ -245,11 +246,17 @@ function load_gtf( fh; txbool=true, suppress=false )
             warning=true
          end
 
+      elseif haskey(used_txn, tranid)
+         error("GTF file is not in valid GTF2.2 format!\n\nAnnotation entries for 'transcript_id' $tranid has already been fully processed and closed.\nHint: All GTF lines with the same 'transcript_id' must be adjacent in the GTF file and referring to the same transcript and gene!")
+      elseif tranid == geneid
+         error("GTF file is not in valid GTF2.2 format!\n\n'transcript_id' cannot equal 'gene_id' at $tranid == $geneid")
       end
 
       if tranid != curtran
          # add transcript and clean up
          curtran != "" && private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
+
+         used_txn[curtran] = true
 
          curtran = tranid
          curgene = geneid
@@ -259,6 +266,7 @@ function load_gtf( fh; txbool=true, suppress=false )
          empty!(trandon)
          empty!(tranacc)
          txlen = 0
+
       end 
 
       sval = parse_coordint(st)
