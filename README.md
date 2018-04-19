@@ -35,6 +35,7 @@ Get latest version of [Julia](https://julialang.org/downloads) if you don't have
 Install Whippet through the Julia REPL:
 ```julia
 julia> Pkg.update()
+
 julia> Pkg.add("Whippet")
 julia> using Whippet
 ```
