@@ -52,14 +52,14 @@ _Notes_:
  
 ### 2) Build an index.
 
-You need your genome sequence in fasta, and a gene annotation file in GTF or Refflat format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome in `Whippet/anno`. 
+You need your genome sequence in fasta, and a gene annotation file in Ensembl-style GTF format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome in `Whippet/anno`. Other Ensembl GTF files can be downloaded [here](https://uswest.ensembl.org/info/data/ftp/index.html).
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
 _Notes_: 
-* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes (which should not be the same as one another!).  This GTF file should be consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification, and should have all entries for a transcript in a continuous block. 
+* Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes (which should not be the same as one another!).  This GTF file should be consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification, and should have all entries for a transcript in a continuous block. Warning: The UCSC table browser will not produce valid GTF2.2 files. Similarly, GTF files obtained from iGenomes or the Refseq websites do not satisfy these constraints.
 * You can specify the output name and location of the index to build using the `-x / --index` parameter. The default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `~/.julia/v0.6/Whippet/index/graph.jls`, so you must have write-access to this location to use the default.
 
 
