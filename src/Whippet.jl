@@ -4,11 +4,13 @@ module Whippet
 
 importall BioSymbols
 importall BioSequences
+importall BioAlignments
 
 import DataStructures: SortedSet
 
 using Base: midpoints
 using BioSequences
+using BioAlignments
 using BufferedStreams
 using FMIndexes
 using IntArrays

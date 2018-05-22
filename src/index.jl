@@ -79,6 +79,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       #BioSequences.immutable!(r.seq)
       sg = SGSequence( r.data[r.sequence] )
 
+      num = 0
       println(STDERR, "Building Splice Graphs for $( name ).." )
       @timer for g in seqdic[name]
          #println( STDERR, "Building $g Splice Graph..." )
@@ -89,11 +90,16 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
          push!(xinfo, ref[g].info )
          push!(xlength, ref[g].length )
          push!(xoffset, runoffset)
-         runoffset += length(curgraph.seq) 
+         runoffset += length(curgraph.seq)
+         num += 1
       end
    end
-   println( STDERR, "Building full sg-index.." )
-   @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true) 
+   if num > 1
+      println( STDERR, "Building full sg-index from $num genes..." )
+      @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true) 
+   else
+      error("ERROR: No genes in the GTF file matched chromosome names in the FASTA file!")
+   end
 
    # clean up
    xcript = DNASequence()
