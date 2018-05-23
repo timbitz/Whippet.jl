@@ -34,26 +34,12 @@ function process_spliced_record!( novelacc, noveldon, rec::BAM.Record )
    end
 end
 
-# Add to genes type:
-# noveldon::Dict{CoordInt,Int}
-# novelacc::Dict{CoordInt,Int}
-# exon_expr::Float64
 
-#for all introns (refset.jl)
-# intron procedure.
-# add new splice site(s) to dict
-#end
-
-#for all new splice sites (refset.jl)
-# delete if splice site is below threshold
-# add it to the don/acc lists
-#end
 
 #for all exons (in refset.jl)
 # add overlapping read count
 # add length
 #end
-#exon_exp = over_read_count / length
 
 # for graph.jl:
 #function is_retained()

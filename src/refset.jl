@@ -247,8 +247,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
                                gntxst[gene],  
                                gntxen[gene],
                                gnexons[gene],
-                               CoordTuple( setdiff(novelacctup, gnacc[gene]) ),
-                               CoordTuple( setdiff(noveldontup, gndon[gene]) ),
+                               usebam ? CoordTuple( setdiff(novelacctup, gnacc[gene]) ) : CoordTuple(),
+                               usebam ? CoordTuple( setdiff(noveldontup, gndon[gene]) ) : CoordTuple(),
                                exonexpr,
                                meanleng,
                                gnreftx[gene] )

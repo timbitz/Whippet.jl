@@ -165,7 +165,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       # now should we make a node?
       if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) ) ||
          (minidx == 2 && minval in gene.novelacc) ||
-         (secidx == 3 && secval in gene.noveldon) ||
+         (secidx == 3 && secval in gene.noveldon) #||
          #(usebam && isretainedintron( ))
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
