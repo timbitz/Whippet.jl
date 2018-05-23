@@ -131,8 +131,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
       @test gtfref["one"].don == (20,40,62,65)
       @test gtfref["one"].acc == (31,51,54,76)
-      @test gtfref["one"].noveldon == ()
-      @test gtfref["one"].novelacc == ()
+      @test gtfref["one"].noveldon == tuple()
+      @test gtfref["one"].novelacc == tuple()
 
    end
    
@@ -144,8 +144,8 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
       @test supgtfref["one"].don == (20,40,45,62,65)
       @test supgtfref["one"].acc == (31,51,54,76)
-      @test supgtfref["one"].noveldon == (45)
-      @test supgtfref["one"].novelacc == ()
+      @test supgtfref["one"].noveldon == tuple(45)
+      @test supgtfref["one"].novelacc == tuple()
 
    end
 

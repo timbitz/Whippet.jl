@@ -233,6 +233,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          noveldontup = map(CoordInt, Tuple(collect(keys(noveldon))))
 
          # add splice-sites from bam
+         annoacc     = gnacc[gene]
+         annodon     = gndon[gene]
          gnacc[gene] = unique_tuple( gnacc[gene], novelacctup )
          gndon[gene] = unique_tuple( gndon[gene], noveldontup )
       end
@@ -247,8 +249,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
                                gntxst[gene],  
                                gntxen[gene],
                                gnexons[gene],
-                               usebam ? Tuple( setdiff(novelacctup, gnacc[gene]) ) : Tuple{}(),
-                               usebam ? Tuple( setdiff(noveldontup, gndon[gene]) ) : Tuple{}(),
+                               usebam ? Tuple( setdiff(noveldontup, annodon) ) : Tuple{}(),
+                               usebam ? Tuple( setdiff(novelacctup, annoacc) ) : Tuple{}(),
                                exonexpr,
                                meanleng,
                                gnreftx[gene] )
