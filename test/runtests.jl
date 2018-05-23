@@ -2,12 +2,14 @@ using Base.Test
 
 importall BioSymbols
 importall BioSequences
+importall BioAlignments
 importall IntervalTrees
 
 using DataStructures
 using BufferedStreams
 using BioSequences
 using BioSymbols
+using BioAlignments
 using FMIndexes
 using IntArrays
 using IntervalTrees
@@ -19,6 +21,7 @@ include("../src/types.jl")
 include("../src/timer.jl")
 include("../src/sgkmer.jl")
 include("../src/fmindex_patch.jl")
+include("../src/bam.jl")
 include("../src/refset.jl")
 include("../src/graph.jl")
 include("../src/bias.jl")
@@ -114,31 +117,35 @@ chr0\tTEST\texon\t21\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss
 chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss\";
 ")
 
-   flat = IOBuffer("# refflat file test (gtfToGenePred -genePredExt test.gtf test.flat)
+#=   flat = IOBuffer("# refflat file test (gtfToGenePred -genePredExt test.gtf test.flat)
 def\tchr0\t+\t5\t85\t85\t85\t4\t5,30,53,75,\t20,40,62,85,\t0\tone\tnone\tnone\t-1,-1,-1,-1,
 int1_alt3\tchr0\t+\t5\t85\t85\t85\t3\t5,50,75,\t40,62,85,\t0\tone\tnone\tnone\t-1,-1,-1,
 apa_alt5\tchr0\t+\t5\t90\t90\t90\t4\t5,30,53,75,\t20,40,65,90,\t0\tone\tnone\tnone\t-1,-1,-1,-1,
 ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
-")
+")=#
 
    gtfref  = load_gtf( gtf )
-   flatref = load_refflat( flat )
+   #flatref = load_refflat( flat )
 
-   @testset "Gene Annotation" begin
+   @testset "Gene Annotations" begin
 
-      for gene in keys(flatref)
-         @test gtfref[gene].don    == flatref[gene].don
-         @test gtfref[gene].acc    == flatref[gene].acc
-         @test gtfref[gene].txst   == flatref[gene].txst
-         @test gtfref[gene].txen   == flatref[gene].txen
-         @test gtfref[gene].length == flatref[gene].length
-         for i in 1:length(flatref[gene].reftx)
-            flattx = flatref[gene].reftx[i]
-            gtftx  = gtfref[gene].reftx[i]
-            @test flattx.don == gtftx.don
-            @test flattx.acc == gtftx.acc
-         end
-      end
+      @test gtfref["one"].don == (20,40,62,65)
+      @test gtfref["one"].acc == (31,51,54,76)
+      @test gtfref["one"].noveldon == ()
+      @test gtfref["one"].novelacc == ()
+
+   end
+   
+   gtf.ptr = 1
+   bamreadr = open(BAM.Reader, "test.sort.bam", index="test.sort.bam.bai" )
+   supgtfref = load_gtf( gtf, usebam=true, bamreader=Nullable(bamreadr) )
+
+   @testset "BAM Supplemented Annotation" begin
+
+      @test supgtfref["one"].don == (20,40,45,62,65)
+      @test supgtfref["one"].acc == (31,51,54,76)
+      @test supgtfref["one"].noveldon == (45)
+      @test supgtfref["one"].novelacc == ()
 
    end
 

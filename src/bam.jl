@@ -1,5 +1,5 @@
 
-isspliced( rec::BAM.Record ) = ismatch(r"N", BAM.cigar(i))
+isspliced( rec::BAM.Record ) = ismatch(r"N", BAM.cigar(rec))
 strandpos( rec::BAM.Record ) = BAM.flag(rec) & 0x010 == 0
 
 function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange{Int64}, strand::Bool, 
@@ -21,25 +21,21 @@ end
 
 function process_spliced_record!( novelacc, noveldon, rec::BAM.Record )
    op,len = BAM.cigar_rle( rec )
-   refpos = position(rec) - 1
+   refpos = BAM.position(rec)
    for i in 1:length(op)
       if ismatchop(op[i])
          refpos += len[i]
       elseif isdeleteop(op[i])
          donor = refpos       #TODO check these
          accep = donor + len[i]
-         increment!( noveldon, donor, 1 )
-         increment!( novelacc, accep, 1 )
+         increment!( noveldon, CoordInt(donor), 1 )
+         increment!( novelacc, CoordInt(accep), 1 )
       end
    end
 end
 
 
 
-#for all exons (in refset.jl)
-# add overlapping read count
-# add length
-#end
 
 # for graph.jl:
 #function is_retained()

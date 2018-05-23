@@ -238,8 +238,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       end
 
       # clean up any txst or txen that match a splice site
-      gntxst[gene] = CoordTuple( setdiff( gntxst[gene], gnacc[gene] ) )
-      gntxen[gene] = CoordTuple( setdiff( gntxen[gene], gndon[gene] ) )
+      gntxst[gene] = Tuple( setdiff( gntxst[gene], gnacc[gene] ) )
+      gntxen[gene] = Tuple( setdiff( gntxen[gene], gndon[gene] ) )
 
       geneset[gene] = RefGene( gninfo[gene],
                                gndon[gene],
@@ -247,8 +247,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
                                gntxst[gene],  
                                gntxen[gene],
                                gnexons[gene],
-                               usebam ? CoordTuple( setdiff(novelacctup, gnacc[gene]) ) : CoordTuple(),
-                               usebam ? CoordTuple( setdiff(noveldontup, gndon[gene]) ) : CoordTuple(),
+                               usebam ? Tuple( setdiff(novelacctup, gnacc[gene]) ) : Tuple{}(),
+                               usebam ? Tuple( setdiff(noveldontup, gndon[gene]) ) : Tuple{}(),
                                exonexpr,
                                meanleng,
                                gnreftx[gene] )
