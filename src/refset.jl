@@ -31,10 +31,10 @@ parse_coordint( i ) = convert(CoordInt, parse(Int, i))
 parse_coordtup( i; c=0 ) = tuple(parse_coordint(i)+CoordInt(c))
 
 unique_tuple( tup1::Tuple{}, tup2::Tuple{} ) = ()
-unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) = unique_tuple(tup1, tup1)
-unique_tuple{T}( tup1::Tuple{}, tup2::Tuple{Vararg{T}} ) = unique_tuple(tup2, tup2)
+unique_tuple( tup1::Tuple{Vararg{T}}, tup2::Tuple{} ) where T = unique_tuple(tup1, tup1)
+unique_tuple( tup1::Tuple{}, tup2::Tuple{Vararg{T}} ) where T = unique_tuple(tup2, tup2)
 
-function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
+function unique_tuple( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}}) where T
    uniq = SortedSet{T,Base.Order.ForwardOrdering}()
    for i in tup1, j in tup2
      push!(uniq, i)
@@ -43,6 +43,13 @@ function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
    tuple(uniq...)
 end
 
+function minimum_threshold!( dict::Dict{K,V}, limit::V ) where {K, V <: Number}
+   for k in collect(keys(dict))
+      if dict[k] < limit
+         delete!( dict, k )
+      end
+   end
+end
 
 function load_refflat( fh; txbool=true )
    error("ERROR: Annotation files in refflat format have been deprecated as of Whippet v0.11, please use --gtf!")
@@ -210,12 +217,24 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       novelacc = Dict{CoordInt,Int}()
       noveldon = Dict{CoordInt,Int}()
       exonexpr = 0.0
+      meanleng = gnlen[gene] / gncnt[gene]
 
       if usebam
          seqname = gninfo[gene].name
          strand  = gninfo[gene].strand
          range   = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
          exoncount = process_records!( get(bamreader), seqname, range, strand, gnexons[gene], novelacc, noveldon )
+         exonexpr  = exoncount / (meanleng - 100)
+
+         # clean up cryptic splice-sites
+         minimum_threshold!( novelacc, 2 )
+         minimum_threshold!( noveldon, 2 )
+         novelacctup = map(CoordInt, Tuple(collect(keys(novelacc))))
+         noveldontup = map(CoordInt, Tuple(collect(keys(noveldon))))
+
+         # add splice-sites from bam
+         gnacc[gene] = unique_tuple( gnacc[gene], novelacctup )
+         gndon[gene] = unique_tuple( gndon[gene], noveldontup )
       end
 
       # clean up any txst or txen that match a splice site
@@ -223,10 +242,15 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       gntxen[gene] = CoordTuple( setdiff( gntxen[gene], gndon[gene] ) )
 
       geneset[gene] = RefGene( gninfo[gene],
-                               gndon[gene],   gnacc[gene],
-                               gntxst[gene],  gntxen[gene],
+                               gndon[gene],
+                               gnacc[gene],
+                               gntxst[gene],  
+                               gntxen[gene],
                                gnexons[gene],
-                               gnlen[gene] /  gncnt[gene],
+                               CoordTuple( setdiff(novelacctup, gnacc[gene]) ),
+                               CoordTuple( setdiff(noveldontup, gndon[gene]) ),
+                               exonexpr,
+                               meanleng,
                                gnreftx[gene] )
    end
 
