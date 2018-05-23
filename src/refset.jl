@@ -11,10 +11,13 @@ end
 struct RefGene
    info::GeneInfo
    don::CoordTuple 
-   acc::CoordTuple 
+   acc::CoordTuple
    txst::CoordTuple
    txen::CoordTuple
    exons::CoordTree
+   noveldon::CoordTuple
+   novelacc::CoordTuple
+   exonexpr::Float64
    length::Float64
    reftx::Vector{RefTx}
 end
@@ -41,104 +44,8 @@ function unique_tuple{T}( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}})
 end
 
 
-# Load refflat file from filehandle
-# Refflat format must be as expected from output of gtfToGenePred -ext
-# Options:
-#         if txbool=false, then return RefSet with empty txset variable
 function load_refflat( fh; txbool=true )
-   
-   # Temporary variables   
-   gninfo   = Dict{GeneName,GeneInfo}()
-   gndon    = Dict{GeneName,CoordTuple}()
-   gnacc    = Dict{GeneName,CoordTuple}()
-   gntxst   = Dict{GeneName,CoordTuple}()
-   gntxen   = Dict{GeneName,CoordTuple}()
-   gnlens   = Dict{GeneName,CoordTuple}()
-   gnexons  = Dict{GeneName,CoordTree}()
-   gnreftx  = Dict{GeneName,Vector{RefTx}}()
-   gnlen    = Dict{GeneName,Float64}()
-   gncnt    = Dict{GeneName,Int}()
-
-   # RefSet variables
-   geneset  = Dict{GeneName,RefGene}()
-
-
-   txnum = 75000
-   sizehint!(geneset, txnum >> 1)
-
-   for l in eachline(fh)
-
-      (l[1] == '#') && continue # ignore comment lines
-      
-      (refid,chrom,strand, # NM_001177644,chr3,+
-       txS,txE, # Int,Int
-       cdS,cdE, # Int,Int
-       exCnt, # Int,
-       accCom,donCom, # 'Int,Int,Int','Int,Int,Int'
-       _,gene) = split(chomp(l), '\t')
-
-      exCnt = parse(UInt16, exCnt)
-
-      txlen = 0
-
-      # get donor and acceptor splice sites, adjust for 0-based coords 
-      trandon = split(donCom, '\,', keep=false) |> s->parse_splice(s, r=0)
-      tranacc = split(accCom, '\,', keep=false) |> s->parse_splice(s, l=0, c=1)
-
-      # Add original exons to interval tree-->
-      for i in 1:length(trandon)
-         insval = Interval{CoordInt}(tranacc[i],trandon[i])
-         txlen += trandon[i] - tranacc[i] + 1
-         if haskey(gnexons, gene)
-            # make sure we are adding a unique value
-            if !haskey(gnexons[gene], (tranacc[i],trandon[i]))
-               push!(gnexons[gene], insval)
-            end
-         else
-            gnexons[gene] = CoordTree()
-            push!(gnexons[gene], insval)
-         end
-      end
-
-      don = trandon[1:(end-1)] #ignore txStart and end
-      acc = tranacc[2:end] 
-
-      # set values
-      txinfo = TxInfo(refid,parse(CoordInt, txS)+1,
-                            parse(CoordInt, txE),
-                            exCnt)
-
-      if haskey(gninfo, gene)
-         chrom == gninfo[gene].name || continue # can have only one chrom
-         gndon[gene]  = unique_tuple(gndon[gene], don)
-         gnacc[gene]  = unique_tuple(gnacc[gene], acc)
-         gntxst[gene] = unique_tuple(gntxst[gene], parse_coordtup(txS, c=1))
-         gntxen[gene] = unique_tuple(gntxen[gene], parse_coordtup(txE))
-         gnlen[gene] += txlen
-         gncnt[gene] += 1
-         push!( gnreftx[gene], RefTx( txinfo, trandon, tranacc, txlen ) )
-      else
-         gndon[gene]    = don
-         gnacc[gene]    = acc
-         gninfo[gene]   = GeneInfo(gene, chrom, strand[1])
-         gntxst[gene]   = parse_coordtup(txS, c=1)
-         gntxen[gene]   = parse_coordtup(txE)
-         gnlen[gene]    = txlen
-         gncnt[gene]    = 1
-         gnreftx[gene]  = RefTx[ RefTx( txinfo, trandon, tranacc, txlen ) ]
-      end
-   end
-   # now make RefSet and add genes.
-   for gene in keys(gninfo)
-      geneset[gene] = RefGene( gninfo[gene],  
-                               gndon[gene],   gnacc[gene],
-                               gntxst[gene],  gntxen[gene], 
-                               gnexons[gene], 
-                               gnlen[gene] /  gncnt[gene], 
-                               gnreftx[gene] )
-   end
-
-   return geneset
+   error("ERROR: Annotation files in refflat format have been deprecated as of Whippet v0.11, please use --gtf!")
 end
 
 function fetch_meta( var::String, meta; off=1 )
@@ -151,7 +58,7 @@ function fetch_meta( var::String, meta; off=1 )
    val,0
 end
 
-function load_gtf( fh; txbool=true, suppress=false )
+function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Nullable{BAM.Reader}() )
 
    # Temporary variables   
    gninfo   = Dict{GeneName,GeneInfo}()
@@ -248,7 +155,7 @@ function load_gtf( fh; txbool=true, suppress=false )
          end
 
       elseif haskey(used_txn, tranid)
-         error("GTF file is not in valid GTF2.2 format!\n\nAnnotation entries for 'transcript_id' $tranid has already been fully processed and closed.\nHint: All GTF lines with the same 'transcript_id' must be adjacent in the GTF file and referring to the same transcript and gene!")
+         error("ERROR: GTF file is not in valid GTF2.2 format!\n\nERROR: Annotation entries for 'transcript_id' $tranid has already been fully processed and closed.\nHINT: All GTF lines with the same 'transcript_id' must be adjacent in the GTF file and referring to the same transcript and gene!")
       elseif tranid == geneid && tranid != curtran
          if warning_num < 25
             warn("Generally 'transcript_id' should not equal 'gene_id' but does at $tranid == $geneid;")
@@ -296,7 +203,25 @@ function load_gtf( fh; txbool=true, suppress=false )
 
    private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
    
+   # iterate through genes, if usebam, add novel splice sites and calculate relative exonexpr
+   # set RefGene at the end of each iteration
    for gene in keys(gninfo)
+
+      novelacc = Dict{CoordInt,Int}()
+      noveldon = Dict{CoordInt,Int}()
+      exonexpr = 0.0
+
+      if usebam
+         seqname = gninfo[gene].name
+         strand  = gninfo[gene].strand
+         range   = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
+         exoncount = process_records!( get(bamreader), seqname, range, strand, gnexons[gene], novelacc, noveldon )
+      end
+
+      # clean up any txst or txen that match a splice site
+      gntxst[gene] = CoordTuple( setdiff( gntxst[gene], gnacc[gene] ) )
+      gntxen[gene] = CoordTuple( setdiff( gntxen[gene], gndon[gene] ) )
+
       geneset[gene] = RefGene( gninfo[gene],
                                gndon[gene],   gnacc[gene],
                                gntxst[gene],  gntxen[gene],
