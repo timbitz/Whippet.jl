@@ -43,9 +43,9 @@ function unique_tuple( tup1::Tuple{Vararg{T}}, tup2::Tuple{Vararg{T}}) where T
    tuple(uniq...)
 end
 
-function minimum_threshold!( dict::Dict{K,V}, limit::V ) where {K, V <: Number}
+function minimum_threshold!( dict::Dict{K,V}, limit::V, range::UnitRange ) where {K, V <: Number}
    for k in collect(keys(dict))
-      if dict[k] < limit
+      if dict[k] < limit || !(dict[k] in range)
          delete!( dict, k )
       end
    end
@@ -224,15 +224,17 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       meanleng = gnlen[gene] / gncnt[gene]
       seqname  = gninfo[gene].name
       strand   = gninfo[gene].strand
+      bamwasused = false
 
       if usebam && seqname in bamnames
+         bamwasused = true
          range   = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
          exoncount = process_records!( get(bamreader), seqname, range, strand, gnexons[gene], novelacc, noveldon )
          exonexpr  = exoncount / (meanleng - 100)
 
          # clean up cryptic splice-sites
-         minimum_threshold!( novelacc, 2 )
-         minimum_threshold!( noveldon, 2 )
+         minimum_threshold!( novelacc, 2, range )
+         minimum_threshold!( noveldon, 2, range )
          novelacctup = map(CoordInt, Tuple(collect(keys(novelacc))))
          noveldontup = map(CoordInt, Tuple(collect(keys(noveldon))))
 
@@ -253,8 +255,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
                                gntxst[gene],  
                                gntxen[gene],
                                gnexons[gene],
-                               usebam ? Tuple( setdiff(noveldontup, annodon) ) : Tuple{}(),
-                               usebam ? Tuple( setdiff(novelacctup, annoacc) ) : Tuple{}(),
+                               bamwasused ? Tuple( setdiff(noveldontup, annodon) ) : Tuple{}(),
+                               bamwasused ? Tuple( setdiff(novelacctup, annoacc) ) : Tuple{}(),
                                exonexpr,
                                meanleng,
                                gnreftx[gene] )

@@ -5,16 +5,19 @@ strandpos( rec::BAM.Record ) = BAM.flag(rec) & 0x010 == 0
 function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange{Int64}, strand::Bool, 
                            exons::CoordTree, novelacc::Dict{K,V}, noveldon::Dict{K,V} ) where {K,V}
    exoncount = 0
-   for rec in eachoverlap( reader, seqname, range )
-      # add to exon count if overlaps exon
-      if hasintersection( exons, leftposition(rec) ) ||
-         hasintersection( exons, rightposition(rec) )
-         exoncount += 1
+   try
+      for rec in eachoverlap( reader, seqname, range )
+         # add to exon count if overlaps exon
+         if hasintersection( exons, leftposition(rec) ) ||
+            hasintersection( exons, rightposition(rec) )
+            exoncount += 1
+         end
+         # if is spliced process splice sites
+         if isspliced(rec) && strand == strandpos(rec)
+            process_spliced_record!( novelacc, noveldon, rec )
+         end
       end
-      # if is spliced process splice sites
-      if isspliced(rec) && strand == strandpos(rec)
-         process_spliced_record!( novelacc, noveldon, rec )
-      end
+   catch e
    end
    exoncount
 end

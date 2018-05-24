@@ -139,11 +139,13 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
 
    # return a tuple containing the min coordinate's idx,val
    # each of 4 categories, txstart, donor, acceptor, txend
-   function getmin_ind_val( gene::RefGene, idx; def=Inf )
-      retarr = [ get(gene.txen, idx[1], def),
-                 get(gene.acc,  idx[2], def),
-                 get(gene.don,  idx[3], def),
-                 get(gene.txst, idx[4], def) ]
+   function getmin_ind_val( gene::RefGene, idx; def=typemax(CoordInt) )
+      retarr = CoordInt[ get(gene.txen, idx[1], def),
+                         get(gene.acc,  idx[2], def),
+                         get(gene.don,  idx[3], def),
+                         get(gene.txst, idx[4], def) ]
+#      println( retarr )
+#      println( gene )
       indmin( retarr ), min( retarr... )
    end
 
@@ -156,7 +158,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
 
       # last coordinate in the gene:
       # if secidx == 1 && get(gene.txst, idx[secidx], Inf) == Inf
-      if secval == Inf
+      if secval == typemax(CoordInt)
          termedge = strand ? EdgeType(0x03) : EdgeType(0x00)
          stranded_push!(edgetype, termedge, strand)
          break
@@ -164,8 +166,8 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       
       # now should we make a node?
       if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) ) ||
-         (minidx == 2 && minval in gene.novelacc) ||
-         (secidx == 3 && secval in gene.noveldon) #||
+         (minidx == 2 && minval in gene.novelacc) || #(secidx == 2 && secval in gene.novelacc)
+         (secidx == 3 && secval in gene.noveldon) #|| (minidx == 3 && minval in gene.noveldon)
          #(usebam && isretainedintron( ))
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0

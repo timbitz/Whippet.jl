@@ -73,13 +73,13 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    xgraph  = Vector{SpliceGraph}()
    # set up splice graphs
    runoffset = 0
+   num = 0
    for r in fhIter
       name = String(r.data[r.identifier])
       haskey(seqdic, name) || continue
       #BioSequences.immutable!(r.seq)
       sg = SGSequence( r.data[r.sequence] )
 
-      num = 0
       println(STDERR, "Building Splice Graphs for $( name ).." )
       @timer for g in seqdic[name]
          #println( STDERR, "Building $g Splice Graph..." )
