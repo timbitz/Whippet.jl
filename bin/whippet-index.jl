@@ -58,7 +58,7 @@ function main()
    end
 
    flat = fixpath( args[annotype] )
-   println(STDERR, "Opening $annotxt file: $flat")
+   println(STDERR, "Loading $annotxt file: $flat")
    fh = open( flat , "r")
    if isgzipped( flat )
       fh = fh |> x->ZlibInflateInputStream(x, reset_on_end=true)
@@ -70,10 +70,8 @@ function main()
       isfile(bam * ".bai") || error("ERROR: --bam parameter used, but no .bai index found for .bam file! Cannot set-up random access to $bam !")
       println(STDERR, "Loading BAM file for random-access: $bam")
       bamreadr = open(BAM.Reader, bam, index=bam * ".bai")
-      println(STDERR, "Reading $annotxt, utilizing BAM for de novo splice-sites/exons/retained-introns.")
       @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"], usebam=true, bamreader=Nullable(bamreadr))
    else
-      println(STDERR, "Reading $annotxt...")
       @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"])
    end
 

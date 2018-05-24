@@ -209,7 +209,11 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
    end
 
    private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
-   
+
+   if usebam
+      bamnames = map(x->values(x)[1], find(BAM.header(get(bamreader)), "SQ"))
+   end
+
    # iterate through genes, if usebam, add novel splice sites and calculate relative exonexpr
    # set RefGene at the end of each iteration
    for gene in keys(gninfo)
@@ -218,10 +222,10 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       noveldon = Dict{CoordInt,Int}()
       exonexpr = 0.0
       meanleng = gnlen[gene] / gncnt[gene]
+      seqname  = gninfo[gene].name
+      strand   = gninfo[gene].strand
 
-      if usebam
-         seqname = gninfo[gene].name
-         strand  = gninfo[gene].strand
+      if usebam && seqname in bamnames
          range   = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
          exoncount = process_records!( get(bamreader), seqname, range, strand, gnexons[gene], novelacc, noveldon )
          exonexpr  = exoncount / (meanleng - 100)
