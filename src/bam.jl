@@ -32,7 +32,8 @@ function process_spliced_record!( novelacc, noveldon, rec::BAM.Record )
          refpos += len[i]
       elseif isdeleteop(op[i])
          donor = refpos - 1
-         accep = donor + len[i] + 1
+         refpos += len[i]
+         accep = refpos
          increment!( noveldon, CoordInt(donor), 1 )
          increment!( novelacc, CoordInt(accep), 1 )
       end
