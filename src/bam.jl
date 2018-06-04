@@ -41,9 +41,7 @@ function process_spliced_record!( novelacc, noveldon, rec::BAM.Record )
 end
 
 
-
-
-# for graph.jl:
+# for graph.jl:  TODO (not yet implemented for additional RI)
 #function is_retained()
 # if ! current is intron and usebam=true
     #return false

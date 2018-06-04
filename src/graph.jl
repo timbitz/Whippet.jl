@@ -144,8 +144,6 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
                          get(gene.acc,  idx[2], def),
                          get(gene.don,  idx[3], def),
                          get(gene.txst, idx[4], def) ]
-#      println( retarr )
-#      println( gene )
       indmin( retarr ), min( retarr... )
    end
 
@@ -166,13 +164,12 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       
       # now should we make a node?
       if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) ) ||
-         (minidx == 2 && minval in gene.novelacc) || #(secidx == 2 && secval in gene.novelacc)
-         (secidx == 3 && secval in gene.noveldon) #|| (minidx == 3 && minval in gene.noveldon)
-         #(usebam && isretainedintron( ))
+         (minidx == 2 && minval in gene.novelacc) ||
+         (secidx == 3 && secval in gene.noveldon) 
+         #(usebam && isretainedintron( )) # TODO (not yet implemented)
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
          nodesize = Int(secval - minval) - leftadj - rightadj + 1
-         #println("$minval, $secval, $leftadj, $rightadj, $nodesize")
          nodeseq  = copy(genome[(Int(minval)+leftadj):(Int(secval)-rightadj)]) # collect slice
          edge     = get_edgetype( minidx, secidx, true, strand ) # determine EdgeType
          pushval  = minval + leftadj
