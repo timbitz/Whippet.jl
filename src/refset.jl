@@ -245,11 +245,6 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          gnacc[gene] = unique_tuple( gnacc[gene], novelacctup )
          gndon[gene] = unique_tuple( gndon[gene], noveldontup )
          added += length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon))
-         if length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon)) > 0
-            println(STDERR, "Names: $seqname" )
-            println(STDERR, setdiff(noveldontup, annodon) )
-            println(STDERR, setdiff(novelacctup, annoacc) )
-         end
       end
 
       # clean up any txst or txen that match a splice site
