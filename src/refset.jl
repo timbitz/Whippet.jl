@@ -45,7 +45,7 @@ end
 
 function minimum_threshold!( dict::Dict{K,V}, limit::V, range::UnitRange ) where {K, V <: Number}
    for k in collect(keys(dict))
-      if dict[k] < limit || !(dict[k] in range)
+      if dict[k] < limit || !(k in range)
          delete!( dict, k )
       end
    end
@@ -214,6 +214,7 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       bamnames = map(x->values(x)[1], find(BAM.header(get(bamreader)), "SQ"))
    end
 
+   added = 0
    # iterate through genes, if usebam, add novel splice sites and calculate relative exonexpr
    # set RefGene at the end of each iteration
    for gene in keys(gninfo)
@@ -243,6 +244,7 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          annodon     = gndon[gene]
          gnacc[gene] = unique_tuple( gnacc[gene], novelacctup )
          gndon[gene] = unique_tuple( gndon[gene], noveldontup )
+         added += length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon))
       end
 
       # clean up any txst or txen that match a splice site
@@ -262,6 +264,9 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
                                gnreftx[gene] )
    end
 
+   if usebam
+      println(STDERR, "Found $added new splice-sites from BAM file..")
+   end
    return geneset
 end
 

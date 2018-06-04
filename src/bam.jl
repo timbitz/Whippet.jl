@@ -11,6 +11,8 @@ function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange
          if hasintersection( exons, leftposition(rec) ) ||
             hasintersection( exons, rightposition(rec) )
             exoncount += 1
+         else
+            continue
          end
          # if is spliced process splice sites
          if isspliced(rec) && strand == strandpos(rec)
@@ -29,8 +31,8 @@ function process_spliced_record!( novelacc, noveldon, rec::BAM.Record )
       if ismatchop(op[i])
          refpos += len[i]
       elseif isdeleteop(op[i])
-         donor = refpos       #TODO check these
-         accep = donor + len[i]
+         donor = refpos - 1
+         accep = donor + len[i] + 1
          increment!( noveldon, CoordInt(donor), 1 )
          increment!( novelacc, CoordInt(accep), 1 )
       end
