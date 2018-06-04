@@ -71,7 +71,7 @@ Whippet v0.11+ allows you to build an index that includes unannotated splice-sit
 $ samtools sort filename.bam filename.sort
 $ samtools rmdup -S filename.sort.bam filename.sort.rmdup.bam
 $ samtools index filename.sort.rmdup.bam
-$ ls *bam*
+$ ls filename.sort.rmdup.bam*
 filename.sort.rmdup.bam        filename.sort.rmdup.bam.bai
 ```
 
@@ -79,6 +79,9 @@ Then build an index but with the additional `--bam` parameter:
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
+
+_Notes_:
+* `whippet-index.jl` is sensitive to strand for alignments in the BAM file... it is best to use strand-specific RNA-seq data if at all possible.
 
 ### 3) Quantify FASTQ files.
 
