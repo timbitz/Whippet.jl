@@ -35,9 +35,16 @@ function parse_cmd()
     "--index", "-x"
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
-      default = "$dir/../index/graph"
+      default  = "$dir/../index/graph"
     "--suppress-low-tsl"
       help = "Ignore low quality transcript annotations with TSL2+"
+      action   = :store_true
+    "--bam-min-reads"
+      help = "Minimum number of reads supporting a splice-site from BAM to include in index."
+      arg_type = Int
+      default  = 1
+    "--bam-one-known"
+      help = "Restrict spliced reads from BAM to those where at least one of the splice-sites are known."
       action   = :store_true
   end
   return parse_args(s)
@@ -70,7 +77,11 @@ function main()
       isfile(bam * ".bai") || error("ERROR: --bam parameter used, but no .bai index found for .bam file! Cannot set-up random access to $bam !")
       println(STDERR, "Loading BAM file for random-access: $bam")
       bamreadr = open(BAM.Reader, bam, index=bam * ".bai")
-      @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"], usebam=true, bamreader=Nullable(bamreadr))
+      @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"], 
+                                usebam=true, 
+                                bamreader=Nullable(bamreadr), 
+                                bamreads=args["bam-min-reads"],
+                                bamoneknown=args["bam-one-known"])
    else
       @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"])
    end

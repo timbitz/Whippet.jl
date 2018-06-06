@@ -3,7 +3,8 @@ isspliced( rec::BAM.Record ) = ismatch(r"N", BAM.cigar(rec))
 strandpos( rec::BAM.Record ) = BAM.flag(rec) & 0x010 == 0
 
 function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange{Int64}, strand::Bool, 
-                           exons::CoordTree, novelacc::Dict{K,V}, noveldon::Dict{K,V} ) where {K,V}
+                           exons::CoordTree, known, oneknown::Bool,
+                           novelacc::Dict{K,V}, noveldon::Dict{K,V} ) where {K,V}
    exoncount = 0
    try
       for rec in eachoverlap( reader, seqname, range )
@@ -11,12 +12,10 @@ function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange
          if hasintersection( exons, leftposition(rec) ) ||
             hasintersection( exons, rightposition(rec) )
             exoncount += 1
-         else
-            continue
          end
          # if is spliced process splice sites
          if isspliced(rec) && strand == strandpos(rec)
-            process_spliced_record!( novelacc, noveldon, rec )
+            known = process_spliced_record!( novelacc, noveldon, rec, known, oneknown )
          end
       end
    catch e
@@ -24,20 +23,27 @@ function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange
    exoncount
 end
 
-function process_spliced_record!( novelacc, noveldon, rec::BAM.Record )
+function process_spliced_record!( novelacc::Dict{K,V}, noveldon::Dict{K,V}, rec::BAM.Record,
+                                  known, oneknown::Bool ) where {K,V}
    op,len = BAM.cigar_rle( rec )
    refpos = BAM.position(rec)
    for i in 1:length(op)
       if ismatchop(op[i])
          refpos += len[i]
       elseif isdeleteop(op[i])
-         donor = refpos - 1
+         donor = CoordInt(refpos - 1)
          refpos += len[i]
-         accep = refpos
-         increment!( noveldon, CoordInt(donor), 1 )
-         increment!( novelacc, CoordInt(accep), 1 )
+         accep = CoordInt(refpos)
+         if oneknown && !(donor in known) && !(accep in known)
+            continue
+         else
+            increment!( noveldon, donor, 1 )
+            increment!( novelacc, accep, 1 )
+            known = union(known, (donor, accep))
+         end
       end
    end
+   known
 end
 
 
