@@ -138,7 +138,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    
    gtf.ptr = 1
    bamreadr = open(BAM.Reader, "test.sort.bam", index="test.sort.bam.bai" )
-   supgtfref = load_gtf( gtf, usebam=true, bamreader=Nullable(bamreadr) )
+   supgtfref = load_gtf( gtf, usebam=true, bamreader=Nullable(bamreadr), bamreads=2 )
 
    @testset "BAM Supplemented Annotation" begin
 
