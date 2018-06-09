@@ -43,8 +43,8 @@ function parse_cmd()
       help = "Minimum number of reads supporting a splice-site from BAM to include in index."
       arg_type = Int
       default  = 1
-    "--bam-one-known"
-      help = "Restrict spliced reads from BAM to those where at least one of the splice-sites are known."
+    "--bam-both-novel"
+      help = "Allow spliced reads from BAM where neither of the splice-sites are known (default off)."
       action   = :store_true
   end
   return parse_args(s)
@@ -81,7 +81,7 @@ function main()
                                 usebam=true, 
                                 bamreader=Nullable(bamreadr), 
                                 bamreads=args["bam-min-reads"],
-                                bamoneknown=args["bam-one-known"])
+                                bamoneknown=!args["bam-both-novel"])
    else
       @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"])
    end
