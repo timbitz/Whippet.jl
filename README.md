@@ -13,7 +13,8 @@
 ## Features
 - Splice graph representations of transcriptome structure
   - Build an index for any species with a genome and annotation file
-  - _de novo_ AS event discovery
+  - Supplement the index with splice-sites/exons from independently aligned RNA-seq (BAM file).
+  - _de novo_ AS event discovery (between indexed donor/acceptor splice sites)
 - High speed PolyA+ Spliced Read Alignment (Read lengths <= 255)
   - Repetitive read assignment for gene families
   - Bias correction methods for 5' sequence and GC-content
@@ -81,7 +82,8 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --
 ```
 
 _Notes_:
-* `whippet-index.jl` is sensitive to strand for alignments in the BAM file... it is best to use strand-specific RNA-seq data if at all possible.
+* The `--bam` option is sensitive to alignment strand, therefore strand-specific RNA-seq data is recommended when using de novo splice-read alignments to the genome.
+* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene).  Use the `--bam-both-novel` flag at your own risk to override this requirement.
 
 ### 3) Quantify FASTQ files.
 
