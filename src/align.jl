@@ -323,7 +323,6 @@ end
                # This is a std exon-exon junction, if the read is an inclusion read
                # then we simply jump ahead, otherwise lets try to find a compatible right
                # node
-               #println(STDERR, "VERBOSE: LR[1]")
                const rkmer_ind = kmer_index(read.sequence[ridx:(ridx+p.kmer_size-1)])
                rkmer_ind == 0 && break
                if kmer_index(sg.edgeright[curedge]) == rkmer_ind
@@ -343,30 +342,25 @@ end
                # of potential edges we pass along the way.  When the alignment
                # dies if we have not had sufficient matches we then explore
                # those edges. 
-               #println(STDERR, "VERBOSE: LR || LL")
                if isnull(passed_edges) # now we have to malloc
                   passed_edges = Nullable(Vector{UInt8}())
                end
                push!(get(passed_edges), length(align.path))
-               #sgidx   += 1
-               #ridx    -= 1
                nodeidx += 0x01
                push!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) )
-         elseif sg.edgetype[curedge] == EDGETYPE_LS && # 'LS'
-                readlen - ridx + 1   >= p.kmer_size
-               # obligate spliced_extension
-               const rkmer_ind = kmer_index(read.sequence[ridx:(ridx+p.kmer_size-1)])
-               rkmer_ind == 0 && break
-               align = spliced_fwd_extend( geneind, curedge, ridx, rkmer_ind, align )
+         elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
+               if readlen - ridx + 1   >= p.kmer_size
+                  # obligate spliced_extension
+                  const rkmer_ind = kmer_index(read.sequence[ridx:(ridx+p.kmer_size-1)])
+                  rkmer_ind == 0 && break
+                  align = spliced_fwd_extend( geneind, curedge, ridx, rkmer_ind, align )
+               end
                break
-         elseif sg.edgetype[curedge] == EDGETYPE_SR #||
-                #@bp
+         elseif sg.edgetype[curedge] == EDGETYPE_SR
                # end of alignment
                break # ?
          else #'RR' || 'SL' || 'RS'
                # ignore 'RR' and 'SL'
-               #sgidx += 1
-               #ridx  -= 1 # offset the lower ridx += 1
                nodeidx += 0x01
                nodeidx <= length(sg.nodelen) && push!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) )  
          end
@@ -416,7 +410,8 @@ end
    end
 
    # clean up any bad trailing nodes
-   while length(align.path) >= 1 && align.path[end].score.mismatches >= align.path[end].score.matches
+   while length(align.path) >= 1 && (align.path[end].score.mismatches >= align.path[end].score.matches || 
+                                     Int(align.path[end].score.matches) - Int(align.path[end].score.mismatches) <= 1)
       pop!( align.path )
       length(align.path) == 0 && (align.isvalid = false)
    end
@@ -502,14 +497,15 @@ end
                #ridx    += 1
                nodeidx -= 0x01
                unshift!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) )
-         elseif sg.edgetype[nodeidx] == EDGETYPE_SR && # 'SR'
-                                ridx >= p.kmer_size
-               # obligate spliced_extension
-               const lkmer_ind  = kmer_index(read.sequence[(ridx-p.kmer_size+1):ridx])
-               lkmer_ind == 0 && break
-               align = spliced_rev_extend( geneind, nodeidx, ridx, lkmer_ind, align )
+         elseif sg.edgetype[nodeidx] == EDGETYPE_SR # 'SR'
+               if ridx >= p.kmer_size
+                  # obligate spliced_extension
+                  const lkmer_ind  = kmer_index(read.sequence[(ridx-p.kmer_size+1):ridx])
+                  lkmer_ind == 0 && break
+                  align = spliced_rev_extend( geneind, nodeidx, ridx, lkmer_ind, align )
+               end
                break
-         elseif sg.edgetype[nodeidx] == EDGETYPE_LS #||
+         elseif sg.edgetype[nodeidx] == EDGETYPE_LS
                # end of alignment
                break # ?
          else #'LL' || 'RS' || 'SL'
@@ -575,7 +571,8 @@ end
    end
 
    # clean up any bad left trailing nodes
-   while length(align.path) >= 1 && align.path[1].score.mismatches >= align.path[1].score.matches
+   while length(align.path) >= 1 && (align.path[1].score.mismatches >= align.path[1].score.matches || 
+                                     Int(align.path[1].score.matches) - Int(align.path[1].score.mismatches) <= 1)
       offset_change = align.path[1].score.matches + align.path[1].score.mismatches
       shift!( align.path )
       if length(align.path) >= 1
