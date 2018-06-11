@@ -93,8 +93,7 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
          lib.info[ ind ].strand || (flag |= 0x10)
       else
          flag |= 0x80
-         lib.info[ ind ].strand || (flag |= 0x20)
-         #align.strand || (flag ⊻= 0x20)
+         lib.info[ ind ].strand || (flag |= 0x10)
          #is_pair_rc   && (flag ⊻= 0x20)
       end
    else

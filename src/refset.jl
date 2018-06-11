@@ -214,7 +214,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       bamnames = map(x->values(x)[1], find(BAM.header(get(bamreader)), "SQ"))
    end
 
-   added = 0
+   novel_ss = 0
+   annot_ss = 0
    # iterate through genes, if usebam, add novel splice sites and calculate relative exonexpr
    # set RefGene at the end of each iteration
    for gene in keys(gninfo)
@@ -226,6 +227,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       seqname  = gninfo[gene].name
       strand   = gninfo[gene].strand
       bamwasused = false
+
+      annot_ss += length(gndon[gene]) + length(gnacc[gene])
 
       if usebam && seqname in bamnames
          bamwasused = true
@@ -246,11 +249,11 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          annodon     = gndon[gene]
          gnacc[gene] = unique_tuple( gnacc[gene], novelacctup )
          gndon[gene] = unique_tuple( gndon[gene], noveldontup )
-         added += length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon))
-         if length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon)) > 0
-            println(STDERR, "$seqname . $range . $noveldontup vs. $annodon = $(map(Int, setdiff(noveldontup, annodon)))")
-            println(STDERR, "$seqname . $range . $novelacctup vs. $annoacc = $(map(Int, setdiff(novelacctup, annoacc)))")
-         end
+         novel_ss += length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon))
+         #=if length(gnacc[gene]) + length(gndon[gene]) - (length(annoacc) + length(annodon)) > 0 
+            println(STDERR, "$seqname . $range . $(map(Int, noveldontup)) vs. $(map(Int, annodon)) = $(map(Int, setdiff(noveldontup, annodon)))")
+            println(STDERR, "$seqname . $range . $(map(Int, novelacctup)) vs. $(map(Int, annoacc)) = $(map(Int, setdiff(novelacctup, annoacc)))")
+         end=#
       end
 
       # clean up any txst or txen that match a splice site
@@ -271,8 +274,13 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
    end
 
    if usebam
-      println(STDERR, "Found $added new splice-sites from BAM file..")
+      println(STDERR, "Found $novel_ss new splice-sites from BAM file..")
    end
+   println(STDERR, "Loaded $annot_ss annotated splice-sites from GTF file..")
+
+   println("$novel_ss\t$annot_ss")
+   quit()
+
    return geneset
 end
 
