@@ -1,7 +1,5 @@
 # index.jl - tim.sterne.weiler@utoronto.ca, 1/28/16
 
-# requires
-
 abstract type SeqLibrary end
 
 struct GraphLib <: SeqLibrary
