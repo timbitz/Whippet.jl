@@ -668,7 +668,7 @@ function output_exons( filename::String, lib::GraphLib )
    io = open( filename, "w" )
    stream = ZlibDeflateOutputStream( io )
 
-   write( stream, "Gene\tPutative_Exon\tWhippet_Nodes\tIs_Annotated\n" )
+   write( stream, "Gene\tPotential_Exon\tWhippet_Nodes\tIs_Annotated\n" )
    output_exons( stream, lib )
 
    close(stream)
