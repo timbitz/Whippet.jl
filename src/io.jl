@@ -595,3 +595,84 @@ function output_junctions( io::BufOut, lib::GraphLib, graphq::GraphLibQuant )
       write_junctions( lib.graphs[i], graphq.quant[i], i )
    end
 end
+
+
+function output_exons( nodecoord::Vector{CoordInt},
+                       nodelen::Vector{CoordInt},
+                       tx::RefTx, strand::Bool )
+   const path = IntSet()
+   # this may be `poor form`, but 256 is too big for default!
+   resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
+   for i in 1:length(tx.acc)
+      const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
+      push!( path, ind )
+      cur = ind + (strand ? 1 : -1)
+      while 1 <= cur <= length(nodecoord) &&
+            nodecoord[cur] <= tx.don[i]
+         push!( path, cur )
+         cur = cur + (strand ? 1 : -1 )
+      end
+   end
+   path
+end
+
+function Base.in( nodes::UnitRange, is::IntSet )
+   for i in nodes
+      if !(i in is)
+         return false
+      end
+   end
+   return true
+end
+
+function Base.in( nodes::UnitRange, v::Vector{IntSet} )
+   for is in v
+      if nodes in is
+         return true
+      end
+   end
+   return false
+end
+
+function output_exons( io::BufOut, sg::SpliceGraph, info::GeneInfo )
+   for i in 1:length(sg.nodecoord)
+      if isexonstart(sg.edgetype[i])
+         for j in i:length(sg.nodecoord)
+            if isexonstop(sg.edgetype[j+1])
+               # print exon
+               anno = i:j in sg.annopath ? "Y" : "N"
+               tab_write( io, info.gene )
+               if info.strand
+                  coord_write( io, info.name, sg.nodecoord[i], sg.nodecoord[j] + sg.nodelen[j] - 1, info.strand ? "+" : "-", tab=true )
+               else
+                  coord_write( io, info.name, sg.nodecoord[j], sg.nodecoord[i] + sg.nodelen[i] - 1, info.strand ? "+" : "-", tab=true )
+               end
+               tab_write( io, join(i:j, ",") )
+               end_write( io, anno )
+            end
+            if ishardedge(sg.edgetype[j+1])
+               break
+            end
+         end
+      end
+   end
+end
+
+function output_exons( io::BufOut, lib::GraphLib )
+   for i in 1:length(lib.graphs)
+      output_exons( io, lib.graphs[i], lib.info[i] )
+   end
+end
+
+function output_exons( filename::String, lib::GraphLib )
+   io = open( filename, "w" )
+   stream = ZlibDeflateOutputStream( io )
+
+   write( stream, "Gene\tPutative_Exon\tWhippet_Nodes\tIs_Annotated\n" )
+   output_exons( stream, lib )
+
+   close(stream)
+   close(io)
+end
+
+

@@ -69,6 +69,9 @@ _Notes_:
 
 Whippet v0.11+ allows you to build an index that includes unannotated splice-sites and exons found in a spliced RNA-seq alignment file.  In order to build a BAM supplemented index, you need your BAM file sorted and indexed (using samtools):
 ```bash
+# If using multiple BAM files (tissue1, ..., tissue3 etc), merge them first:
+$ samtools merge filename.bam tissue1.bam tissue2.bam tissue3.bam
+# If using a single BAM file start here:
 $ samtools sort filename.bam filename.sort
 $ samtools rmdup -S filename.sort.bam filename.sort.rmdup.bam
 $ samtools index filename.sort.rmdup.bam
@@ -83,7 +86,7 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --
 
 _Notes_:
 * The `--bam` option is sensitive to alignment strand, therefore strand-specific RNA-seq data is recommended when using de novo splice-read alignments to the genome.
-* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene).  Use the `--bam-both-novel` flag at your own risk to override this requirement.
+* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene).  Use the `--bam-both-novel` flag to override this requirement.
 
 ### 3) Quantify FASTQ files.
 
@@ -119,9 +122,10 @@ To specify output location or a specific index:
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz -o outputname -x customindex.jls
 ```
 
-You can also output the alignments in SAM format with the `--sam` flag and convert to bam with a pipe:
+You can also output the alignments in SAM format with the `--sam` flag and convert to bam with samtools:
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam | samtools view -bS - > fwd_file.bam
+$ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam > fwd_file.sam
+$ samtools view -bS fwd_file.sam > fwd_file.bam
 ```
 
 It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)

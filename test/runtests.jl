@@ -516,6 +516,12 @@ IIIIIIIIIIII
          @test sum(gquant.tpm) == 1000000
       end
 
+      @testset "Output Files" begin
+         output_junctions( "test.jnc.gz", lib, gquant )
+         output_stats( "test.map.gz", lib, gquant, param, "test_index.jls", 10, 10, 0, 20, "vTEST" )
+         output_exons( "test_index.exons.gz", lib )
+      end
+
       function parse_edge{S <: AbstractString}( str::S )
          s = split( str, ['-',':'] )
          (parse(Int, String(s[1])), parse(Int, String(s[2])), parse(Float64, String(s[3])))

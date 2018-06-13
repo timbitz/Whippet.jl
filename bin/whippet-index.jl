@@ -95,6 +95,9 @@ function main()
       @timer serialize( io, graphome )
    end
 
+   println(STDERR, "Printing a map of Whippet nodes to putative full exons... $(args["index"] * ".exons.tab.gz")")
+   output_exons( args["index"] * ".exons.tab.gz", graphome )
+
 end
 
 @timer main()
