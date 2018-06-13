@@ -55,7 +55,7 @@ _Notes_:
 
 #### a) Annotation (GTF) only index.
 
-You need your genome sequence in fasta, and a gene annotation file in Ensembl-style GTF format. Default annotation supplied for hg19 GENCODEv25 TSL1-level transcriptome in `Whippet/anno`. Other Ensembl GTF files can be downloaded [here](https://uswest.ensembl.org/info/data/ftp/index.html).
+You need your genome sequence in fasta, and a gene annotation file in Ensembl-style GTF format. Default GENCODE annotation supplied for hg19 and mm10 in `Whippet/anno`. You can also obtain Ensembl GTF files from these direct links for Human:[Ensembl_hg38_release_92](ftp://ftp.ensembl.org/pub/release-92/gtf/homo_sapiens/Homo_sapiens.GRCh38.92.gtf.gz) and Mouse:[Ensembl_mm10_release_92](ftp://ftp.ensembl.org/pub/release-92/gtf/mus_musculus/Mus_musculus.GRCm38.92.gtf.gz). Other Ensembl GTF files can be downloaded [here](https://uswest.ensembl.org/info/data/ftp/index.html),
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
@@ -190,7 +190,7 @@ We believe that this is (and should be) the correct generalization of event-leve
 2. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. Since, for example, it is possible for both (CE+AA) and CE exons to be excluded from the mature message, complex events may involve a number of overlapping full exons. If Whippet output was enumerated for all such combinations, the output for complex events would grow exponentially and approach uselessness.
 3. The general definition of Percent-spliced-in for an exon (or node) is the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites as they might with some other programs.
 
-This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined).  To ease this process, `whippet-index.jl` outputs an _index_`.exons.gz` file that contains the all theoretical full exon mappings to Whippet nodes for each gene, and whether or not the exon is found in annotation. 
+This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined).  To ease this process, `whippet-index.jl` outputs an _index_`.exons.gz` file that contains all theoretical full exon coordinates mapped to Whippet nodes for each gene, and whether or not the exon is found in annotation. 
 
 Note: 
 * **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS event.
@@ -232,12 +232,13 @@ Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean P
 
 If you are building an index for another organism, there are some general guidelines that can help to ensure that the index you build is as effective as it can be. In general you should seek to:
   * Use only the highest quality annotations you can find.
-  * If a high-quality annotation set like GENCODE, contains both high and low quality transcripts, filter it! For human, we only use TSL-1 annotations.
+  * Use strand-specific RNA-seq alignments to avoid false positives from overlapping gene regions (eg. head-to-head and tail-to-tail)
+  * If a high-quality annotation set like GENCODE, contains both high and low quality transcripts, filter it! For human, we only use TSL-1/2 annotations.
   * Avoid giving annotations with 'indels' such as ESTs or mRNAs without filtering out invalid splice sites first.
-  * If you plan to align very short reads (~36nt), decrease the Kmer size (we have used 6nt before), otherwise the default Kmer size (9nt) should be used.
+  * If you plan to align very short reads (~36nt), consider decreasing the Kmer size (we have used 6nt before, though this is quite low and it is not recommended to go below this), otherwise the default Kmer size (9nt) should be used. However, reads of lower length should still be of high-quality to expect performant spliced-read alignment.
 
 ---
 
 ## Troubleshooting
 
-With all of the executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `Pkg.test("Whippet")` from the Julia REPL, Whippet should run cleanly if your environment is working correctly (though it is untested on Windows, it should still work).  If you still think you have found a bug feel free to open an issue in github or make a pull request! 
+With all of the executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `Pkg.test("Whippet")` from the Julia REPL, Whippet should run cleanly if your environment is working correctly (although it is mostly untested on Windows, it should still work-- or at least it did the one time we tried it ;-).  If you _still_ think you have found a bug feel free to open an issue in github or make a pull request! 
