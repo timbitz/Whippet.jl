@@ -150,7 +150,7 @@ Note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -
 
 The output format for `whippet-quant.jl` is saved into two core quant filetypes, `.psi.gz` and `.tpm.gz` files.
 
-Each `.tpm.gz` file contains a simple format compatible with many downstream tools (one for the TPM of each annotated isoform, and another at the gene-level):
+Each `.tpm.gz` file contains a simple format compatible with many downstream tools (one for the TPM of each annotated transcript, and another at the gene-level):
 
 Gene/Isoform | TpM | Read Counts
 ---- | --- | -----------
@@ -190,9 +190,12 @@ We believe that this is (and should be) the correct generalization of event-leve
 2. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. Since, for example, it is possible for both (CE+AA) and CE exons to be excluded from the mature message, complex events may involve a number of overlapping full exons. If Whippet output was enumerated for all such combinations, the output for complex events would grow exponentially and approach uselessness.
 3. The general definition of Percent-spliced-in for an exon (or node) is the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites as they might with some other programs.
 
-This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined). 
+This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined).  To ease this process, `whippet-index.jl` outputs an _index_`.exons.gz` file that contains the all theoretical full exon mappings to Whippet nodes for each gene, and whether or not the exon is found in annotation. 
 
-Note: **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS event. **Entropy** refers to the shannon-entropy of the relative expression of the paths through the AS event.
+Note: 
+* **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS event.
+* **Entropy** refers to the shannon-entropy of the relative expression of the paths through the AS event.
+* **Inc_Paths/Exc_Paths** contain the paths quantified through the AS event (supporting inclusion or exclusion respectively), each path (eg. 1-2-3) gives the set of nodes in the path, followed by a `:` and the relative expression, such that the sum of all these paths is 1.0.
 
 ---
 The raw junctions are output in the format of `.jnc.gz` files, which look like:
