@@ -64,3 +64,12 @@ function hasextension( filename::String, ext::String )
    re = Base.match(Regex(restr), filename)
    return re == nothing ? false : true
 end
+
+function increment!( dict::Dict{K,V}, key::K, val::V=one(V) ) where {K,V}
+   if haskey( dict, key )
+      dict[key] += val
+   else
+      dict[key] = val
+   end
+   dict
+end

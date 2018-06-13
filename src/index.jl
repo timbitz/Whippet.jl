@@ -1,7 +1,5 @@
 # index.jl - tim.sterne.weiler@utoronto.ca, 1/28/16
 
-# requires
-
 abstract type SeqLibrary end
 
 struct GraphLib <: SeqLibrary
@@ -73,6 +71,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    xgraph  = Vector{SpliceGraph}()
    # set up splice graphs
    runoffset = 0
+   num = 0
    for r in fhIter
       name = String(r.data[r.identifier])
       haskey(seqdic, name) || continue
@@ -89,11 +88,16 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
          push!(xinfo, ref[g].info )
          push!(xlength, ref[g].length )
          push!(xoffset, runoffset)
-         runoffset += length(curgraph.seq) 
+         runoffset += length(curgraph.seq)
+         num += 1
       end
    end
-   println( STDERR, "Building full sg-index.." )
-   @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true) 
+   if num > 1
+      println( STDERR, "Building full sg-index from $num genes..." )
+      @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true) 
+   else
+      error("ERROR: No genes in the GTF file matched chromosome names in the FASTA file!")
+   end
 
    # clean up
    xcript = DNASequence()

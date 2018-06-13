@@ -4,11 +4,13 @@ module Whippet
 
 importall BioSymbols
 importall BioSequences
+importall BioAlignments
 
 import DataStructures: SortedSet
 
 using Base: midpoints
 using BioSequences
+using BioAlignments
 using BufferedStreams
 using FMIndexes
 using IntArrays
@@ -21,6 +23,7 @@ include("types.jl")
 include("timer.jl")
 include("sgkmer.jl")
 include("fmindex_patch.jl")
+include("bam.jl")
 include("refset.jl")
 include("graph.jl")
 include("bias.jl")
@@ -98,6 +101,7 @@ export SpliceGraph,
        output_tpm,
        output_stats,
        output_junctions,
+       output_exons,
        assign_ambig!,
        effective_lengths!,
        global_bias,

@@ -774,8 +774,8 @@ function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
    genestream = ZlibDeflateOutputStream( geneio )
    isoio = open( file * ".isoform.tpm.gz", "w" )
    isostream = ZlibDeflateOutputStream( isoio )
-   output_tpm_header( genestream, "GENE" )
-   output_tpm_header( isostream, "ISOFORM" )
+   output_tpm_header( genestream, "Gene" )
+   output_tpm_header( isostream, "Isoform" )
    for i in 1:length(lib.names)
       idx = gquant.geneidx[i]
       genetpm = 0.0

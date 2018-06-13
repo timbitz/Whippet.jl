@@ -146,7 +146,6 @@ end
    const def_sa = 2:1
    const readlen = convert(ReadLengthInt, length(read.sequence))
    ctry = 1
-   #ispos = true
    if offset_left
       const increment = p.seed_inc
       const increment_sm = 1
@@ -166,7 +165,6 @@ end
       const sa = FMIndexes.sa_range( curseq, index )
       const cnt = length(sa)
       ctry += 1
-      #println(STDERR, "VERBOSE: SEED $sa, curpos: $curpos, cnt: $cnt, try: $(ctry-1)")
       if cnt == 0 || cnt > p.seed_tolerate
          if both_strands
             reverse_complement!(curseq)
@@ -313,7 +311,6 @@ end
 
    while( mistol <= p.mismatches && ridx <= readlen && sgidx <= length(sg.seq) )
       if sgidx == sg.nodeoffset[nodeidx] + sg.nodelen[nodeidx] # hit next edge
-         # DEPRECATED isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const curedge = nodeidx + 0x01
          if     sg.edgetype[curedge] == EDGETYPE_LR &&
                 sg.nodelen[curedge]  >= p.kmer_size && # 'LR' && nodelen >= K
@@ -323,7 +320,6 @@ end
                # This is a std exon-exon junction, if the read is an inclusion read
                # then we simply jump ahead, otherwise lets try to find a compatible right
                # node
-               #println(STDERR, "VERBOSE: LR[1]")
                const rkmer_ind = kmer_index(read.sequence[ridx:(ridx+p.kmer_size-1)])
                rkmer_ind == 0 && break
                if kmer_index(sg.edgeright[curedge]) == rkmer_ind
@@ -343,30 +339,25 @@ end
                # of potential edges we pass along the way.  When the alignment
                # dies if we have not had sufficient matches we then explore
                # those edges. 
-               #println(STDERR, "VERBOSE: LR || LL")
                if isnull(passed_edges) # now we have to malloc
                   passed_edges = Nullable(Vector{UInt8}())
                end
                push!(get(passed_edges), length(align.path))
-               #sgidx   += 1
-               #ridx    -= 1
                nodeidx += 0x01
                push!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) )
-         elseif sg.edgetype[curedge] == EDGETYPE_LS && # 'LS'
-                readlen - ridx + 1   >= p.kmer_size
-               # obligate spliced_extension
-               const rkmer_ind = kmer_index(read.sequence[ridx:(ridx+p.kmer_size-1)])
-               rkmer_ind == 0 && break
-               align = spliced_fwd_extend( geneind, curedge, ridx, rkmer_ind, align )
+         elseif sg.edgetype[curedge] == EDGETYPE_LS # 'LS'
+               if readlen - ridx + 1   >= p.kmer_size
+                  # obligate spliced_extension
+                  const rkmer_ind = kmer_index(read.sequence[ridx:(ridx+p.kmer_size-1)])
+                  rkmer_ind == 0 && break
+                  align = spliced_fwd_extend( geneind, curedge, ridx, rkmer_ind, align )
+               end
                break
-         elseif sg.edgetype[curedge] == EDGETYPE_SR #||
-                #@bp
+         elseif sg.edgetype[curedge] == EDGETYPE_SR
                # end of alignment
                break # ?
          else #'RR' || 'SL' || 'RS'
                # ignore 'RR' and 'SL'
-               #sgidx += 1
-               #ridx  -= 1 # offset the lower ridx += 1
                nodeidx += 0x01
                nodeidx <= length(sg.nodelen) && push!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) )  
          end
@@ -384,7 +375,6 @@ end
       end
       ridx  += 1
       sgidx += 1
-      #print(" $(read.sequence[ridx-1]),$ridx\_$(sg.seq[sgidx-1]),$sgidx ")
    end
 
    # if edgemat < K, spliced_extension for each in length(edges)
@@ -402,12 +392,10 @@ end
             const cur_ridx = ridx - (sgidx - sg.nodeoffset[ cur_edge ])
             (cur_ridx + p.kmer_size - 1) <= readlen || continue
             
-            #lkmer = DNAKmer{p.kmer_size}(read.sequence[(ridx-p.kmer_size):(ridx-1)])
             const rkmer_ind  = kmer_index(read.sequence[cur_ridx:(cur_ridx+p.kmer_size-1)])
             rkmer_ind == 0 && continue
             res_align = spliced_fwd_extend( geneind, cur_edge, 
                                             cur_ridx, rkmer_ind, align )
-            #println(STDERR, "VERBOSE: RECURSIVE ALIGNMENT RESULT $res_align > $align $(res_align > align)")
             if length(res_align.path) > length(align.path) # we added a valid node
                align = res_align > align ? res_align : align
             end
@@ -416,7 +404,8 @@ end
    end
 
    # clean up any bad trailing nodes
-   while length(align.path) >= 1 && align.path[end].score.mismatches >= align.path[end].score.matches
+   while length(align.path) >= 1 && (align.path[end].score.mismatches >= align.path[end].score.matches || 
+                                     Int(align.path[end].score.matches) - Int(align.path[end].score.mismatches) <= 1)
       pop!( align.path )
       length(align.path) == 0 && (align.isvalid = false)
    end
@@ -424,7 +413,6 @@ end
    if identity(align, readlen) >= p.score_min  
       align.isvalid = true 
    end
-   #println(STDERR, "VERBOSE: FWD RETURNING $align")
    align
 end
 
@@ -473,7 +461,6 @@ end
 
    while( mistol <= p.mismatches && ridx > 0 && sgidx > 0 )
       if sgidx == sg.nodeoffset[nodeidx] - 1 # hit right edge
-        # DEPRECATED isambiguous(sg.seq[sgidx]) && !(sg.seq[sgidx] == DNA_N) # L,R,S
          const leftnode = nodeidx - 0x01
          if     sg.edgetype[nodeidx] == EDGETYPE_LR &&
                 sg.nodelen[leftnode] >= p.kmer_size && # 'LR' && nodelen >= K
@@ -498,24 +485,21 @@ end
                   passed_edges = Nullable(Vector{UInt8}())
                end
                push!(get(passed_edges), length(align.path)-1)
-               #sgidx   -= 1
-               #ridx    += 1
                nodeidx -= 0x01
                unshift!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) )
-         elseif sg.edgetype[nodeidx] == EDGETYPE_SR && # 'SR'
-                                ridx >= p.kmer_size
-               # obligate spliced_extension
-               const lkmer_ind  = kmer_index(read.sequence[(ridx-p.kmer_size+1):ridx])
-               lkmer_ind == 0 && break
-               align = spliced_rev_extend( geneind, nodeidx, ridx, lkmer_ind, align )
+         elseif sg.edgetype[nodeidx] == EDGETYPE_SR # 'SR'
+               if ridx >= p.kmer_size
+                  # obligate spliced_extension
+                  const lkmer_ind  = kmer_index(read.sequence[(ridx-p.kmer_size+1):ridx])
+                  lkmer_ind == 0 && break
+                  align = spliced_rev_extend( geneind, nodeidx, ridx, lkmer_ind, align )
+               end
                break
-         elseif sg.edgetype[nodeidx] == EDGETYPE_LS #||
+         elseif sg.edgetype[nodeidx] == EDGETYPE_LS
                # end of alignment
                break # ?
          else #'LL' || 'RS' || 'SL'
                # ignore 'LL' and 'RS'
-               #sgidx -= 1
-               #ridx  += 1 # offset the lower ridx += 1
                nodeidx -= 0x01
                nodeidx > 0 && unshift!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) ) 
          end
@@ -533,7 +517,6 @@ end
       end
       ridx  -= 1
       sgidx -= 1
-      #print(STDERR, " $(read.sequence[ridx+1]),$ridx\_$(sg.seq[sgidx+1]),$sgidx ")
    end
 
    cur_ridx  = ridx + 1
@@ -575,7 +558,8 @@ end
    end
 
    # clean up any bad left trailing nodes
-   while length(align.path) >= 1 && align.path[1].score.mismatches >= align.path[1].score.matches
+   while length(align.path) >= 1 && (align.path[1].score.mismatches >= align.path[1].score.matches || 
+                                     Int(align.path[1].score.matches) - Int(align.path[1].score.mismatches) <= 1)
       offset_change = align.path[1].score.matches + align.path[1].score.mismatches
       shift!( align.path )
       if length(align.path) >= 1

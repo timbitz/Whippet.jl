@@ -3,6 +3,7 @@ DataStructures
 ArgParse
 BioSymbols
 BioSequences 0.8.1
+BioAlignments
 FMIndexes 0.1.0
 IntArrays 
 IntervalTrees 0.4.1
