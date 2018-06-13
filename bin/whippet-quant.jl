@@ -201,7 +201,6 @@ function main()
    output_tpm( args["out"], lib, quant )
    output_stats( args["out"] * ".map.gz", lib, quant, param, indexpath, totreads, mapped, Int(round(total_multi(multi))), readlen, ver )
    output_junctions( args["out"] * ".jnc.gz", lib, quant )
-   output_exons( args["out"] * ".exn.gz", lib )
 
    println(STDERR, "Assigning multi-mapping reads based on maximum likelihood estimate..")
    # Now assign multi to edges.
