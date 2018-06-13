@@ -128,7 +128,7 @@ $ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam > fwd_file.sam
 $ samtools view -bS fwd_file.sam > fwd_file.bam
 ```
 
-For greater reproducibility in comparisons across datasets from multiple RNA-seq protocols, try the `--biascorrect` flag, which will apply GC-content and 5' sequence bias correction methods:
+For greater stability of quantifications across multiple RNA-seq protocols, try the `--biascorrect` flag, which will apply GC-content and 5' sequence bias correction methods:
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz --biascorrect
 ```
@@ -176,7 +176,9 @@ Type | Interpretation
  AL  | Alternative Last exon
  BS  | Circular back-splicing (output only when `--circ` flag is given)
 
-Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In.
+Each node is defined by a type (above) and has a corresponding value for `Psi` or the Percent-Spliced-In, see below:
+
+![Whippet AS Events](https://timbitz.github.io/images/Whippet-Event-Types.gif)
 
 The `.psi.gz` file itself is outputted in the form:
 
