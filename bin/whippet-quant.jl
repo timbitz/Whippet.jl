@@ -30,12 +30,6 @@ function parse_cmd()
       help     = "Where should the gzipped output go 'dir/prefix'?"
       arg_type = String
       default  = fixpath( "./output" )
-    "--sam", "-s"
-      help     = "Should SAM format be sent to stdout?"
-      action   = :store_true
-    "--biascorrect", "-b"
-      help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
-      action   = :store_true
     "--seed-len", "-L"
       help     = "Seed length"
       arg_type = Int
@@ -68,6 +62,12 @@ function parse_cmd()
       help     = "Minimum percent matching (matches - mismatches) / read_length"
       arg_type = Float64
       default  = 0.7
+    "--sam"
+      help     = "Should SAM format be sent to stdout?"
+      action   = :store_true
+    "--biascorrect"
+      help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
+      action   = :store_true
     "--stranded"
       help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag"
       action   = :store_true
