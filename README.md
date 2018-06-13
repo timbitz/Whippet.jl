@@ -55,7 +55,7 @@ _Notes_:
 
 #### a) Annotation (GTF) only index.
 
-You need your genome sequence in fasta, and a gene annotation file in Ensembl-style GTF format. Default GENCODE annotation supplied for hg19 and mm10 in `Whippet/anno`. You can also obtain Ensembl GTF files from these direct links for Human:[Ensembl_hg38_release_92](ftp://ftp.ensembl.org/pub/release-92/gtf/homo_sapiens/Homo_sapiens.GRCh38.92.gtf.gz) and Mouse:[Ensembl_mm10_release_92](ftp://ftp.ensembl.org/pub/release-92/gtf/mus_musculus/Mus_musculus.GRCm38.92.gtf.gz). Other Ensembl GTF files can be downloaded [here](https://uswest.ensembl.org/info/data/ftp/index.html),
+You need your genome sequence in fasta, and a gene annotation file in Ensembl-style GTF format. Default GENCODE annotation supplied for hg19 and mm10 in `Whippet/anno`. You can also obtain Ensembl GTF files from these direct links for Human: [Ensembl_hg38_release_92](ftp://ftp.ensembl.org/pub/release-92/gtf/homo_sapiens/Homo_sapiens.GRCh38.92.gtf.gz) and Mouse: [Ensembl_mm10_release_92](ftp://ftp.ensembl.org/pub/release-92/gtf/mus_musculus/Mus_musculus.GRCm38.92.gtf.gz). Other Ensembl GTF files can be downloaded [here](https://uswest.ensembl.org/info/data/ftp/index.html),
 
 ```bash
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
@@ -86,7 +86,7 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --
 
 _Notes_:
 * The `--bam` option is sensitive to alignment strand, therefore strand-specific RNA-seq data is recommended when using de novo splice-read alignments to the genome.
-* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene).  Use the `--bam-both-novel` flag to override this requirement.
+* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene).  Use the `--bam-both-novel` flag to override this requirement (similar to the default of other programs).
 
 ### 3) Quantify FASTQ files.
 
