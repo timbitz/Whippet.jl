@@ -128,6 +128,11 @@ $ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam > fwd_file.sam
 $ samtools view -bS fwd_file.sam > fwd_file.bam
 ```
 
+For greater reproducibility in comparisons across datasets from multiple RNA-seq protocols, try the `--biascorrect` flag, which will apply GC-content and 5' sequence bias correction methods:
+```bash
+$ julia bin/whippet-quant.jl fwd_file.fastq.gz --biascorrect
+```
+
 It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
 $ julia bin/whippet-quant.jl <( cat time-series_{1,2,3,4,5}.fastq.gz ) --force-gz -o interval_1-5
