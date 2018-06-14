@@ -45,7 +45,7 @@ $ cd ~/.julia/v0.6/Whippet
 ```
 
 *Notes*:
-* **Update** to the most recent version of Whippet at any time in the Julia REPL: `julia> Pkg.update()`
+* **Update to the most recent version** of Whippet at any time in the Julia REPL: `julia> Pkg.update()`
 * If you are having trouble finding the Whippet directory, you can ask the Julia REPL: `julia> Pkg.dir("Whippet")`
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 * You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
