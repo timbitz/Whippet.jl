@@ -44,10 +44,10 @@ The Whippet package directory can now be found in the default location:
 $ cd ~/.julia/v0.6/Whippet
 ```
 
-_Notes_:
+*Notes*:
+* **Update** to the most recent version of Whippet at any time in the Julia REPL: `julia> Pkg.update()`
 * If you are having trouble finding the Whippet directory, you can ask the Julia REPL: `julia> Pkg.dir("Whippet")`
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
-* You can always update to the latest version of Whippet using `Pkg.update()` in the Julia REPL!
 * You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
 * It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
  
