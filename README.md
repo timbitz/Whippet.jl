@@ -85,8 +85,8 @@ $ julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --
 ```
 
 _Notes_:
-* The `--bam` option is sensitive to alignment strand, therefore strand-specific RNA-seq data is recommended when using de novo splice-read alignments to the genome.
-* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene).  Use the `--bam-both-novel` flag to override this requirement (similar to the default of other programs).
+* The `--bam` option is sensitive to alignment strand, therefore using strand-specific alignments is recommended.
+* By default only spliced alignments where *one* of the splice-sites match a known splice-site in the annotation are used, to reduce false positives due to overlapping gene regions (i.e. falsely adding splice sites that belong to a different, but overlapping gene, which is common in many species).  Use the `--bam-both-novel` flag to override this requirement for greater Recall of unannotated splice-sites.
 
 ### 3) Quantify FASTQ files.
 
