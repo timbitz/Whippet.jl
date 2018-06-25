@@ -235,6 +235,12 @@ Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean P
 
 ---
 
+## Visualization
+
+Currently, Whippet supports the output of RNA-seq alignments in SAM/BAM format when the (`--sam`) flag is used.  These alignment files can be displayed using a number of different downstream visualization software tools, such as the IGV browser, which also supports display in the popular “sashimi-plot” format (e.g. for instructions on making sashimi-plots with IGV can be found [here](https://miso.readthedocs.io/en/fastmiso/sashimi.html#making-sashimi-plots-from-igv).
+
+---
+
 ## Index Building Strategies
 
 If you are building an index for another organism, there are some general guidelines that can help to ensure that the index you build is as effective as it can be. In general you should seek to:
