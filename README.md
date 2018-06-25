@@ -237,7 +237,7 @@ Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean P
 
 ## Visualization
 
-Currently, Whippet supports the output of RNA-seq alignments in SAM/BAM format when the (`--sam`) flag is used.  These alignment files can be displayed using a number of different downstream visualization software tools, such as the IGV browser, which also supports display in the popular “sashimi-plot” format (e.g. for instructions on making sashimi-plots with IGV can be found [here](https://miso.readthedocs.io/en/fastmiso/sashimi.html#making-sashimi-plots-from-igv).
+Currently, Whippet supports the output of RNA-seq alignments in SAM/BAM format when the (`--sam`) flag is used.  These alignment files can be displayed using a number of different downstream visualization software tools, such as the IGV browser, which also supports display in the popular “sashimi-plot” format (e.g. instructions on making sashimi-plots with IGV can be found [here](https://miso.readthedocs.io/en/fastmiso/sashimi.html#making-sashimi-plots-from-igv)).
 
 ---
 
