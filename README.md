@@ -22,7 +22,7 @@
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
   - Event-specific Percent-spliced-in (PSI)
-  - Gene expression (TPM)
+  - Gene expression (TPM) using transcript-level EM.
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
