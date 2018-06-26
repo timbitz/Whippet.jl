@@ -25,12 +25,13 @@ function PosteriorPsi( set::Vector{PosteriorPsi};
                        paired::Bool=false, size::Int=1000,
                        point_est::Bool=true, pseudo_adj::Float64=0.001)
    if point_est
-      if length(set) > 1
+      psiarr = [x.psi for x in set]
+      if length(set) > 1 && var(psiarr) > 0.0
          emperical = [x.psi for x in set]
       else
-         one = set[1].psi
+         one = psiarr[1]
          two = one < (1.0 - pseudo_adj) ? one + pseudo_adj : one - pseudo_adj
-         emperical = [one, two]
+         emperical = vcat(psiarr, two)
       end
    else
       emperical = vcat( map( x->x.emperical, set )... )
