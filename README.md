@@ -21,8 +21,8 @@
   - On-the-fly alignment/re-analysis of SRR accession ids using ebi.ac.uk
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
-  - Event-specific Percent-spliced-in (PSI)
-  - Gene expression (TPM) using transcript-level EM.
+  - Event-specific Percent-spliced-in (PSI) from event-level EM
+  - Gene expression (TPM) from transcript-level EM
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
