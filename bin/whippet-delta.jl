@@ -45,6 +45,13 @@ function parse_cmd()
       help     = "Calculate max probability of |deltaPsi| greater than this value (default is 0.0, it is not advisable to change this)."
       arg_type = Float64
       default  = 0.0 =#
+    "--pseudo-adjust"
+      help     = "When a single replicate is given, pseudo-adjust a \"second\" for mle fitting by this value."
+      arg_type = Float64
+      default  = 0.001
+    "--use-depth"
+      help     = "Sample each replicate's PSI according to read-depth of the event. (default off)"
+      action   = :store_true
     "--emperical-size", "-e"
       help     = "Emperical distribution size to sample from."
       arg_type = Int64
@@ -92,7 +99,9 @@ function main()
                              min_samp=args["min-samples"], 
                              min_reads=args["min-reads"],
                              amt=0.0,
-                             size=args["emperical-size"] ) 
+                             size=args["emperical-size"],
+                             point_est=!args["use-depth"], 
+                             pseudo_adj=args["pseudo-adjust"]) 
    println(STDERR, "Whippet $ver done." )
 end
 

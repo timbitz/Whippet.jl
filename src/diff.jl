@@ -21,11 +21,23 @@ end
 # combine multiple beta posteriors for replicates into one
 # if unpaired, we don't need to maintain sample1_rep1 to sample2_rep1
 # so we can re-sample from the new joint beta
-function PosteriorPsi( set::Vector{PosteriorPsi}; paired=false, size=1000 )
-   emperical = vcat( map( x->x.emperical, set )... )
+function PosteriorPsi( set::Vector{PosteriorPsi}; 
+                       paired::Bool=false, size::Int=1000,
+                       point_est::Bool=true, pseudo_adj::Float64=0.001)
+   if point_est
+      if length(set) > 1
+         emperical = [x.psi for x in set]
+      else
+         one = set[1].psi
+         two = one < (1.0 - pseudo_adj) ? one + pseudo_adj : one - pseudo_adj
+         emperical = [one, two]
+      end
+   else
+      emperical = vcat( map( x->x.emperical, set )... )
+   end
    beta = fit(Beta, emperical)
    psi  = mean(beta)
-   if !paired
+   if !paired || point_est
       emperical = rand(beta, size)
    end
    PosteriorPsi( beta, emperical, psi )
@@ -84,7 +96,8 @@ end
 
 parse_complexity{S <: AbstractString}( c::S ) = split( c, COMPLEX_CHAR, keep=false )[1] |> x->parse(Int,x)
 
-function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5, size=1000 )
+function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; 
+                           min_reads=5, size=1000 )
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
@@ -110,7 +123,9 @@ end
 
 function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStream}, 
                                      b::Vector{BufferedStreams.BufferedInputStream}; 
-                                     min_samp=1, min_reads=5, amt=0.0, size=1000 )
+                                     min_samp::Int=1, min_reads::Int=5, 
+                                     amt::Float64=0.0, size::Int=1000,
+                                     point_est::Bool=true, pseudo_adj::Float64=0.001 )
    io = open( outfile, "w" )
    stream = ZlibDeflateOutputStream( io )
    output_diff_header( stream )
@@ -124,8 +139,8 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
       entropy = a_entropy > b_entropy ? a_entropy : b_entropy
       @assert( a_event == b_event, "Incorrect events matched!!" )
       if length(a_post) >= min_samp && length(b_post) >= min_samp
-         a_post   = PosteriorPsi( a_post ) # fit new posterior
-         b_post   = PosteriorPsi( b_post ) 
+         a_post   = PosteriorPsi( a_post, point_est=point_est, pseudo_adj=pseudo_adj ) # fit new posterior
+         b_post   = PosteriorPsi( b_post, point_est=point_est, pseudo_adj=pseudo_adj ) 
          fwdprob  = probability( a_post, b_post, amt=amt )
          revprob  = probability( b_post, a_post, amt=amt )
          prob     = fwdprob > revprob ? fwdprob : revprob
