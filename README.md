@@ -1,7 +1,6 @@
 # Whippet
 
 [![Latest Release](https://img.shields.io/github/release/timbitz/Whippet.jl.svg)](https://github.com/timbitz/Whippet.jl/releases/latest)
-[![Whippet](http://pkg.julialang.org/badges/Whippet_0.6.svg)](http://pkg.julialang.org/detail/Whippet)
 [![Build Status](https://img.shields.io/travis/timbitz/Whippet.jl/master.svg?label=Linux+/+macOS)](https://travis-ci.com/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet.jl/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
