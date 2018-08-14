@@ -5,13 +5,13 @@
 #
 =#
 
-plug_write{S <: AbstractString}( io::BufOut, str::S; plug::Char='\t' ) = (write( io, str ); write( io, plug  ))
+plug_write( io::BufOut, str::S; plug::Char='\t' ) where {S <: AbstractString} = (write( io, str ); write( io, plug  ))
 plug_write( io::BufOut, str::Char; plug::Char='\t' ) = (write( io, str ); write( io, plug  ))
 
-tab_write{S <: AbstractString}( io::BufOut, str::S ) = plug_write( io, str, plug='\t' )
+tab_write( io::BufOut, str::S ) where {S <: AbstractString} = plug_write( io, str, plug='\t' )
 tab_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\t' )
 
-end_write{S <: AbstractString}( io::BufOut, str::S ) = plug_write( io, str, plug='\n' )
+end_write( io::BufOut, str::S ) where {S <: AbstractString} = plug_write( io, str, plug='\n' )
 end_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\n' )
 
 function coord_write( io::BufOut, chr, first, last; tab=false )
@@ -116,14 +116,14 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 
    for idx in 1:length(align.path)
 
-      const matches = align.path[idx].score.matches + align.path[idx].score.mismatches
+      matches = align.path[idx].score.matches + align.path[idx].score.mismatches
       total  += matches
       curpos += matches
 
       if idx < length( align.path )
-         const curi = align.path[idx].node
-         const nexti = align.path[idx+1].node
-         const intron = strand ? Int(sg.nodecoord[nexti]) - Int(sg.nodecoord[curi] +  sg.nodelen[curi] - 1) - 1 :
+         curi = align.path[idx].node
+         nexti = align.path[idx+1].node
+         intron = strand ? Int(sg.nodecoord[nexti]) - Int(sg.nodecoord[curi] +  sg.nodelen[curi] - 1) - 1 :
                                  Int(sg.nodecoord[curi])  - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
          if intron >= 1
             push!( cigar, string(running + matches) * "M" )
@@ -152,13 +152,13 @@ function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::Grap
                     mapq::Int=0, paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33,
                     supplemental::Bool=false, tagstr::String="" )
    (align.isvalid && length(align.path) >= 1) || return
-   const geneind = align.path[1].gene
-   const strand  = lib.info[geneind].strand   
-   const nodeind = strand ? align.path[1].node : align.path[end].node
+   geneind = align.path[1].gene
+   strand  = lib.info[geneind].strand   
+   nodeind = strand ? align.path[1].node : align.path[end].node
    (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
-   const sg = lib.graphs[geneind] 
-   const cigar,endpos = cigar_string( align, sg, strand, length(read.sequence) )
-   const offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
+   sg = lib.graphs[geneind] 
+   cigar,endpos = cigar_string( align, sg, strand, length(read.sequence) )
+   offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
    if !strand && !supplemental
       reverse_complement!(read)
    end
@@ -190,7 +190,7 @@ function indmax_score( vec::Vector{SGAlignment} )
    ind = 1
    max = score(vec[1])
    for i in 2:length(vec)
-      const cur = score(vec[i])
+      cur = score(vec[i])
       if cur > max
          max = cur
          ind = i
@@ -203,7 +203,7 @@ function indmax_score( fwd::Vector{SGAlignment}, rev::Vector{SGAlignment} )
    ind = 1
    max = score(fwd[1], rev[1])
    for i in 2:length(fwd)
-      const cur = score(fwd[i], rev[i])
+      cur = score(fwd[i], rev[i])
       if cur > max
          max = cur
          ind = i
@@ -600,11 +600,11 @@ end
 function output_exons( nodecoord::Vector{CoordInt},
                        nodelen::Vector{CoordInt},
                        tx::RefTx, strand::Bool )
-   const path = IntSet()
+   path = IntSet()
    # this may be `poor form`, but 256 is too big for default!
    resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
    for i in 1:length(tx.acc)
-      const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
+      ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )
       cur = ind + (strand ? 1 : -1)
       while 1 <= cur <= length(nodecoord) &&

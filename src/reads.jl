@@ -37,11 +37,11 @@ end
 # Use this version to parse reads from a parser that is reliant on the state
 function read_http_chunk!( chunk, parser, resp; maxtime=24 )
    i = 1
-   const iobuf      = resp.buffer
-   const nb_needed  = 8192
-   const start_mark = iobuf.mark
-   const start_size = iobuf.size
-   const start_time = time()
+   iobuf      = resp.buffer
+   nb_needed  = 8192
+   start_mark = iobuf.mark
+   start_size = iobuf.size
+   start_time = time()
    if !(200 <= resp.response.status < 300)
       error("HTTP Code $(resp.response.status)! Download failed!")
    end
@@ -84,7 +84,7 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
                          response=Requests.ResponseStream{TCPSocket}(), 
                          http=false ) where B <: BiasModel
   
-   const reads  = allocate_fastq_records( bufsize )
+   reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
    total        = 0
    mapped       = 0
@@ -134,8 +134,8 @@ function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam,
                                 mate_response=Requests.ResponseStream{TCPSocket}(), 
                                 http=false ) where B <: BiasModel
 
-   const fwd_reads  = allocate_fastq_records( bufsize )
-   const rev_reads  = allocate_fastq_records( bufsize )
+   fwd_reads  = allocate_fastq_records( bufsize )
+   rev_reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
    total        = 0
    mapped       = 0

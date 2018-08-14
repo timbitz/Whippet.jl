@@ -81,7 +81,7 @@ end
 Base.in( edge::I, is::IntSet ) where I <: IntervalValue = in( edge.first, edge.last, is )
 
 # This looks for an edge in a Vector of IntSets using ^
-function Base.in{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+function Base.in( edge::I, viset::Vector{IntSet} ) where I <: IntervalValue
    for iset in viset
       if edge in iset
          return true
@@ -91,7 +91,7 @@ function Base.in{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
 end
 
 # For events.jl:
-function inall{I <: IntervalValue}( edge::I, viset::Vector{IntSet} )
+function inall( edge::I, viset::Vector{IntSet} ) where I <: IntervalValue
    inone = false
    for iset in viset
       if edge.first >= first(iset) && edge.last <= last(iset)
@@ -572,8 +572,8 @@ function count!( graphq::GraphLibQuant{C,R}, align::SGAlignment, value ) where {
 
       # add a single edge support
       if length(align.path) == 2
-         const lnode = align.path[1].node
-         const rnode = align.path[2].node
+         lnode = align.path[1].node
+         rnode = align.path[2].node
          if lnode < rnode
             interv = Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
@@ -596,8 +596,8 @@ end
 ## Extension of count! for paired end counting
 function count!( graphq::GraphLibQuant{C,R}, fwd::SGAlignment, rev::SGAlignment, value ) where {C <: SGAlignContainer, R <: ReadCounter}
    (fwd.isvalid == true && rev.isvalid == true) || return
-   const init_gene = fwd.path[1].gene
-   const rev_gene  = rev.path[1].gene
+   init_gene = fwd.path[1].gene
+   rev_gene  = rev.path[1].gene
    (init_gene == rev_gene) || return
    sgquant = graphq.quant[ init_gene ]
    singlebool = false
@@ -629,8 +629,8 @@ function count!( graphq::GraphLibQuant{C,R}, fwd::SGAlignment, rev::SGAlignment,
 
          # add a single edge support
          if length(single) == 2
-            const lnode = single[1].node
-            const rnode = single[2].node
+            lnode = single[1].node
+            rnode = single[2].node
             if lnode < rnode
                interv = Interval{ExonInt}( lnode, rnode )
                pushzero!( sgquant.edge, interv, value )
@@ -656,7 +656,7 @@ end
    for i in 1:length(counts)
       @fastmath quant.tpm[ i ] = counts[i] / max( (quant.length[i] - readlen), 1.0 )
    end
-   const rpk_sum = max( sum( quant.tpm ), 1.0 )
+   rpk_sum = max( sum( quant.tpm ), 1.0 )
    for i in 1:length(quant.tpm)
       if sig > 0
          @fastmath quant.tpm[i] = round( quant.tpm[i] * SCALING_FACTOR / rpk_sum, sig )
@@ -693,7 +693,7 @@ function effective_lengths!( lib::GraphLib, graphq::GraphLibQuant, eff_len::Int,
    end
 end
 
-function Base.unsafe_copy!{T <: Number}( dest::Vector{T}, src::Vector{T}; indx_shift=0 )
+function Base.unsafe_copy!( dest::Vector{T}, src::Vector{T}; indx_shift=0 ) where T <: Number
    @inbounds for i in 1:length(src)
       dest[i+indx_shift] = src[i]
    end
@@ -702,7 +702,7 @@ end
 function copy_isdone!( dest::Vector{T}, src::Vector{T}, denominator::Float64=1.0, sig::Int=4 ) where T <: AbstractFloat
    isdifferent = false
    for i in 1:length(dest)
-      const val = round( src[i] / denominator, sig )
+      val = round( src[i] / denominator, sig )
       if val != dest[i]
          isdifferent = true
       end
@@ -720,11 +720,11 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
                    it::Int64=1, maxit::Int64=1000, 
                    sig::Int64=4, readlen::Int64=50 ) where {C <: SGAlignContainer, R <: ReadCounter}
 
-   const count_temp = ones(length(quant.count))
-   const tpm_temp   = ones(length(quant.count))
-   const prop_temp  = zeros( 500 )
-   const uniqsum    = sum(quant.count)
-   const ambigsum   = length(ambig.map)
+   count_temp = ones(length(quant.count))
+   tpm_temp   = ones(length(quant.count))
+   prop_temp  = zeros( 500 )
+   uniqsum    = sum(quant.count)
+   ambigsum   = length(ambig.map)
 
    @inline function maximize_and_assign!( eq::E, maximize::Bool=true ) where E <: EquivalenceClass
       eq.isdone && return
@@ -732,7 +732,7 @@ function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
          eq.prop_sum = 0.0
          c = 1
          for i in eq.class
-            const cur_tpm = quant.tpm[i]
+            cur_tpm = quant.tpm[i]
             prop_temp[c] = cur_tpm
             eq.prop_sum += cur_tpm
             c += 1

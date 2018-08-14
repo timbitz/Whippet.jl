@@ -37,7 +37,7 @@ struct GeneInfo
    strand::Bool # pos is true, neg is false
 end
 
-GeneInfo{S <: AbstractString}( gene::S, name::S, strand::Char ) = 
+GeneInfo( gene::S, name::S, strand::Char ) where {S <: AbstractString} = 
                                GeneInfo( convert(GeneName, gene),
                                          convert(SeqName, name), 
                                          strand == '+' ? true : 

@@ -31,7 +31,7 @@ Base.convert( ::Type{EdgeType}, one::DNA, two::DNA ) =
               Base.convert( EdgeType, convert(UInt8, trailing_zeros(one)), convert(UInt8, trailing_zeros(two)) )
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)
-Base.convert{I <: Integer}( ::Type{I}, edge::EdgeType) = Base.convert(I, Base.convert(UInt8, edge))
+Base.convert( ::Type{I}, edge::EdgeType) where {I <: Integer} = Base.convert(I, Base.convert(UInt8, edge))
 
 const EDGETYPE_SL = convert(EdgeType, 0b000)
 const EDGETYPE_SR = convert(EdgeType, 0b001)
@@ -82,7 +82,7 @@ end
 const ExpectedGC = Vector{Float16}
 
 function ExpectedGC( seq::BioSequence{A}; gc_param = GCBiasParams(50, 0.05) ) where A <: BioSequences.Alphabet
-   const bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
+   bins = zeros(Float16, Int(div(1.0, gc_param.width)+1))
    for i in 1:length(seq)-gc_param.length+1
       gc = Int(div(gc_content(seq[i:i+gc_param.length-1]), gc_param.width)+1)
       @inbounds bins[gc] += 1.0
@@ -232,8 +232,8 @@ end
 #  subint must be:     (low+x, high-y)
 #  where x and y are >= 0
 # Returns: bool
-function issubinterval{T <: IntervalTree, 
-                       I <: AbstractInterval}( itree::T, subint::I )
+function issubinterval( itree::T, subint::I ) where {T <: IntervalTree, 
+                                         I <: AbstractInterval}
    for i in intersect(itree, subint)
       if i.first <= subint.first && i.last >= subint.last
          return true
@@ -244,7 +244,7 @@ end
 
 # hacky extension of Base.get for tuples which isn't supported natively
 # because tuples aren't really a type of collection, fair enough
-function Base.get{T <: Tuple, I <: Integer}( collection::T, key::I, def )
+function Base.get( collection::T, key::I, def ) where {T <: Tuple, I <: Integer}
    if 1 <= key <= length(collection)
       return collection[key]
    else
@@ -258,11 +258,11 @@ end
 function build_annotated_path( nodecoord::Vector{CoordInt}, 
                                nodelen::Vector{CoordInt}, 
                                tx::RefTx, strand::Bool )
-   const path = IntSet()
+   path = IntSet()
    # this may be `poor form`, but 256 is too big for default!
    resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
    for i in 1:length(tx.acc)
-      const ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
+      ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )
       cur = ind + (strand ? 1 : -1)
       while 1 <= cur <= length(nodecoord) && 
@@ -277,9 +277,9 @@ end
 function build_paths_edges( nodecoord::Vector{CoordInt},
                             nodelen::Vector{CoordInt},
                             gene::RefGene )
-   const paths = Vector{IntSet}()
+   paths = Vector{IntSet}()
    for tx in gene.reftx
-      const curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
+      curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
       push!( paths, curpath )
    end
    paths
