@@ -24,8 +24,8 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 3, 9, 2, 4, 4, 18, 5, 18
                                                         false, false, true, false, true )
 
 # load from command line args
-@inline function AlignParam{S <: AbstractString}( args::Dict{S,Any}, ispaired=false; kmer=9 )
-   const aln = AlignParam( args["mismatches"], kmer,
+@inline function AlignParam( args::Dict{S,Any}, ispaired=false; kmer=9 ) where S <: AbstractString
+   aln = AlignParam( args["mismatches"], kmer,
                            args["seed-try"],
                            args["seed-tol"], 4,
                            args["seed-len"],
@@ -53,7 +53,7 @@ end
 
 @inline Base.zero(t::Type{SGAlignScore}) = SGAlignScore(0x0000,zero(MismatchInt),zero(MismatchFloat))
 @inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
-@inline match{I <: Integer}(t::Type{SGAlignScore}, val::I) = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
+@inline match(t::Type{SGAlignScore}, val::I) where {I <: Integer} = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
 
 struct SGAlignNode
    gene::NodeInt
@@ -108,11 +108,11 @@ end
    end
    score
 end
-@inline matches{A <: UngappedAlignment}( aln::A ) = matches( aln.path )   
-@inline mistolerance{A <: UngappedAlignment}( aln::A ) = mistolerance( aln.path )
-@inline score{A <: UngappedAlignment}( aln::A ) = score( aln.path )
-@inline identity{A <: UngappedAlignment, I <: Integer}( align::A, readlen::I ) = convert(Float32, @fastmath score( align ) / readlen)
-@inline isvalid{A <: UngappedAlignment}( align::A ) = align.isvalid && length(align.path) >= 1 && matches(align) > mistolerance(align) ? true : false
+@inline matches( aln::A ) where {A <: UngappedAlignment} = matches( aln.path )   
+@inline mistolerance( aln::A ) where {A <: UngappedAlignment} = mistolerance( aln.path )
+@inline score( aln::A ) where {A <: UngappedAlignment} = score( aln.path )
+@inline identity( align::A, readlen::I ) where {A <: UngappedAlignment, I <: Integer} = convert(Float32, @fastmath score( align ) / readlen)
+@inline isvalid( align::A ) where {A <: UngappedAlignment} = align.isvalid && length(align.path) >= 1 && matches(align) > mistolerance(align) ? true : false
 
 Base.:>( a::SGAlignment, b::SGAlignment ) = >( score(a), score(b) )
 Base.:<( a::SGAlignment, b::SGAlignment ) = <( score(a), score(b) )
@@ -143,35 +143,35 @@ end
 end
 
 @inline function seed_locate( p::AlignParam, index::FMIndex, read::FASTQRecord; offset_left::Bool=true, both_strands::Bool=true )
-   const def_sa = 2:1
-   const readlen = convert(ReadLengthInt, length(read.sequence))
+   def_sa = 2:1
+   readlen = convert(ReadLengthInt, length(read.sequence))
    ctry = 1
    if offset_left
-      const increment = p.seed_inc
-      const increment_sm = 1
+      increment = p.seed_inc
+      increment_sm = 1
       curpos = p.seed_buffer
    else
-      const increment = -p.seed_inc
-      const increment_sm = -1
+      increment = -p.seed_inc
+      increment_sm = -1
       curpos = readlen - p.seed_length - p.seed_buffer
    end
-   const maxright = readlen - p.seed_length - p.seed_buffer
+   maxright = readlen - p.seed_length - p.seed_buffer
    while( ctry <= p.seed_try && p.seed_buffer <= curpos <= maxright )
       if minimum( read.quality[curpos:(curpos+p.seed_length-1)] ) <= p.seed_min_qual
          curpos += increment_sm
          continue
       end
-      const curseq = read.sequence[curpos:(curpos+p.seed_length-1)]
-      const sa = FMIndexes.sa_range( curseq, index )
-      const cnt = length(sa)
+      curseq = read.sequence[curpos:(curpos+p.seed_length-1)]
+      sa = FMIndexes.sa_range( curseq, index )
+      cnt = length(sa)
       ctry += 1
       if cnt == 0 || cnt > p.seed_tolerate
          if both_strands
             reverse_complement!(curseq)
-            const rev_sa = FMIndexes.sa_range( curseq, index )
-            const rev_cnt = length(rev_sa)
+            rev_sa = FMIndexes.sa_range( curseq, index )
+            rev_cnt = length(rev_sa)
             if 0 < rev_cnt <= p.seed_tolerate
-               const rev_pos = readlen - (curpos+p.seed_length-1)+1
+               rev_pos = readlen - (curpos+p.seed_length-1)+1
                return rev_sa,rev_pos,false
             end
          end
@@ -183,7 +183,7 @@ end
    def_sa,curpos,true
 end
 
-@inline function splice_by_score!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer )
+@inline function splice_by_score!( arr::Vector{A}, threshold, buffer ) where A <: UngappedAlignment
    i = 1
    while i <= length( arr )
       @inbounds if threshold - score( arr[i] ) > buffer
@@ -194,7 +194,7 @@ end
    end
 end
 
-@inline function splice_by_identity!{A <: UngappedAlignment}( arr::Vector{A}, threshold, buffer, readlen )
+@inline function splice_by_identity!( arr::Vector{A}, threshold, buffer, readlen ) where A <: UngappedAlignment
    i = 1
    while i <= length( arr )
       @inbounds if threshold - identity( arr[i], readlen ) > buffer
@@ -208,8 +208,8 @@ end
 @inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::FASTQRecord, indx::Int, readloc::Int;
                                   ispos::Bool=true, geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
 
-   const sgidx       = indx - lib.offset[geneind]
-   const offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,convert(CoordInt, sgidx + 1)))
+   sgidx       = indx - lib.offset[geneind]
+   offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,convert(CoordInt, sgidx + 1)))
 
    align = ungapped_fwd_extend( p, lib, geneind, sgidx + 1,
                                 read, readloc + 1, ispos=ispos,
@@ -224,8 +224,8 @@ end
 @inline function ungapped_align( p::AlignParam, lib::GraphLib, read::FASTQRecord; 
                          ispos::Bool=true, anchor_left::Bool=true )
 
-   const seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
-   const readlen = convert(ReadLengthInt, length(read.sequence))
+   seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
+   readlen = convert(ReadLengthInt, length(read.sequence))
 
    if !pos
       reverse_complement!( read )
@@ -236,10 +236,10 @@ end
    maxscore = zero(Float32)
 
    for sidx in 1:length(seed)
-      const s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
+      s = FMIndexes.sa_value( seed[sidx], lib.index ) + 1
 
-      const align = _ungapped_align( p, lib, read, s, readloc, ispos=ispos )
-      const scvar = identity(align, readlen)
+      align = _ungapped_align( p, lib, read, s, readloc, ispos=ispos )
+      scvar = identity(align, readlen)
 
       if isvalid(align)
          if isnull( res )

@@ -19,7 +19,7 @@ Base.:>=( a::SGNode, b::SGNode ) = >=( a.gene, b.gene )
 
 sortlt( a::SGNode, b::SGNode ) = a.gene == b.gene ? <( a.node, b.node ) : <( a.gene, b.gene )
 
-Base.convert{K <: Integer}( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) = build_edges( graphs, K )
+Base.convert( ::Type{Edges{K}}, graphs::Vector{SpliceGraph} ) where {K <: Integer} = build_edges( graphs, K )
 
 # Is the EdgeType a connecting edge between two nodes?
 # Check a donor splice site by:   is_edge( edge, true )
@@ -37,7 +37,7 @@ Base.intersect( arrA::Vector{SGNode}, arrB::Vector{SGNode} ) = intersect_sorted(
 
 # Intersect two sorted arrays of SGNode by gene entry
 # Return the list of intersected arrB entries
-function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
+function intersect_sorted( arrA::Vector{T}, arrB::Vector{T} ) where T
    res = Vector{T}()
    i,j = 1,1
    @inbounds while i <= length(arrA) && j <= length(arrB)
@@ -55,9 +55,9 @@ function intersect_sorted{T}( arrA::Vector{T}, arrB::Vector{T} )
 end 
 
 
-function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet}, 
-                                          seq::S, l, r, left::Bool,
-                                          entry::SGNode )
+function add_kmer_edge!( kmers::Vector{SGNodeSet}, 
+                         seq::S, l, r, left::Bool,
+                         entry::SGNode ) where S <: SGSequence
    (l <= 0 || r > length(seq)) && return(zero(UInt64))
    s = copy(seq[l:r])
    ksize = r-l+1
@@ -80,6 +80,7 @@ function add_kmer_edge!{S <: SGSequence}( kmers::Vector{SGNodeSet},
       try
         curkmer = sgkmer( s )
         ind = kmer_index(curkmer)
+      catch
       end
    end
    if ind > 0

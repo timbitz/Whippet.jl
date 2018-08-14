@@ -103,19 +103,19 @@ const MOTIF_TABLE = fill(NONE_MOTIF, 2^6 )
 Base.convert(::Type{EdgeMotif}, tup::Tuple{EdgeType,EdgeType}) = Base.convert(EdgeMotif, tup... )
 Base.convert(::Type{EdgeMotif}, current::EdgeType, next::EdgeType) = MOTIF_TABLE[ (UInt8(current) << 3) | UInt8(next) + 1 ]
 
-Base.convert{S <: AbstractString}(::Type{S}, edg::EdgeMotif ) = MOTIF_STRING[ UInt8(edg) + 1 ]
+Base.convert(::Type{S}, edg::EdgeMotif ) where {S <: AbstractString} = MOTIF_STRING[ UInt8(edg) + 1 ]
 
 #isobligate(  motif::EdgeMotif ) = motif != NONE_MOTIF && !( UInt8(motif) & 0b100 == 0b100 )
 isobligate( motif::EdgeMotif ) = (0 <= UInt8(motif) <= 1)
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110 
 
-isspanning{I <: AbstractInterval, T <: Integer}( edge::I, node::T ) = edge.first < node < edge.last ? true : false
-isconnecting{I <: AbstractInterval, T <: Integer}( edge::I, node::T ) = edge.first == node || edge.last == node ? true : false
+isspanning( edge::I, node::T ) where {I <: AbstractInterval, T <: Integer} = edge.first < node < edge.last ? true : false
+isconnecting( edge::I, node::T ) where {I <: AbstractInterval, T <: Integer} = edge.first == node || edge.last == node ? true : false
 
 # this is meant for short arrays when it is faster
 # than using the overhead of a set
 # DEPRECATED, IntSet is very efficient
-function unique_push!{T}( arr::Vector{T}, el::T )
+function unique_push!( arr::Vector{T}, el::T ) where T
    if !( el in arr )
       push!( arr, el )
    end
@@ -129,7 +129,7 @@ end
 # is PsiGraph holding paths::Vector{PsiPath} (deprecated)
 # but the current implementation was choosen for 
 # faster memory access w.r.t. stride.
-type PsiGraph
+mutable struct PsiGraph
    psi::Vector{Float64}
    count::Vector{Float64}
    length::Vector{Float64}
@@ -168,7 +168,7 @@ function hasintersect_terminal( a, b )
    end  
 end
 
-function Base.in{T <: Integer}( i::T, pgraph::PsiGraph )
+function Base.in( i::T, pgraph::PsiGraph ) where T <: Integer
    for nodeset in pgraph.nodes
       (i in nodeset) && return true
    end
@@ -185,7 +185,7 @@ complexity( num_paths::Int ) = @fastmath Int(ceil(log2( num_paths )))
 function shannon_index( probs::Vector{Float64} )
    index = 0.0
    for i in 1:length(probs)
-      const prob = (probs[i] == 0.0 ? eps(Float64) : probs[i])
+      prob = (probs[i] == 0.0 ? eps(Float64) : probs[i])
       index += prob * log2(prob)
    end
    index * -1
@@ -198,11 +198,11 @@ shannon_index( one::PsiGraph ) = shannon_index( one.psi )
 function shannon_index( one::PsiGraph, two::PsiGraph )
    index = 0.0
    for i in 1:length(one.psi)
-      const prob = (one.psi[i] == 0.0 ? eps(Float64) : one.psi[i])
+      prob = (one.psi[i] == 0.0 ? eps(Float64) : one.psi[i])
       index += prob * log2(prob)
    end
    for j in 1:length(two.psi)
-      const prob = (two.psi[j] == 0.0 ? eps(Float64) : two.psi[j])
+      prob = (two.psi[j] == 0.0 ? eps(Float64) : two.psi[j])
       index += prob * log2(prob)
    end
    index * -1
@@ -280,8 +280,8 @@ end
 end
 
 
-function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I; 
-                                            value_bool=true, length=1.0 )
+function Base.push!( pgraph::PsiGraph, edg::I; 
+                     value_bool=true, length=1.0 ) where I <: AbstractInterval
    push!( pgraph.count, value_bool ? get(edg.value) : 0.0 )
    push!( pgraph.length, value_bool ? length : 0.0 )
    push!( pgraph.nodes, IntSet([edg.first, edg.last]) )
@@ -295,7 +295,7 @@ function Base.push!{I <: AbstractInterval}( pgraph::PsiGraph, edg::I;
 end
 
 
-type AmbigCounts
+mutable struct AmbigCounts
    paths::Vector{NodeInt}
    prop::Vector{Float64}
    prop_sum::Float64
@@ -305,8 +305,8 @@ end
 Base.:(==)( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
 Base.:(==)( a::AmbigCounts, b::IntSet ) = ( a.paths == b )
 Base.:(==)( a::IntSet, b::AmbigCounts ) = ( a == b.paths )
-Base.:(==){I <: Integer}( a::Vector{I}, b::IntSet ) = ( b == a )
-function Base.:(==){I <: Integer}( iset::IntSet, ivec::Vector{I} )
+Base.:(==)( a::Vector{I}, b::IntSet ) where {I <: Integer} = ( b == a )
+function Base.:(==)( iset::IntSet, ivec::Vector{I} ) where I <: Integer
    length(iset) != length(ivec) && return false
    for intv in ivec
       !(intv in iset) && return false
@@ -324,8 +324,8 @@ function Base.sum( vec::Vector{AmbigCounts} )
    sum
 end
 
-function extend_edges!{K,V}( edges::IntervalMap{K,V}, pgraph::PsiGraph, igraph::PsiGraph,
-                             ambig_edge::Nullable{Vector{IntervalValue}}, node::NodeInt )
+function extend_edges!( edges::IntervalMap{K,V}, pgraph::PsiGraph, igraph::PsiGraph,
+                        ambig_edge::Nullable{Vector{IntervalValue}}, node::NodeInt ) where {K,V}
 
    minv = min( pgraph.min, igraph.min )
    maxv = max( pgraph.max, igraph.max )
@@ -654,7 +654,7 @@ function _process_spliced( sg::SpliceGraph, sgquant::SpliceGraphQuant,
    connecting_val = 0.0 
    spanning_val   = 0.0
 
-   const maxvalue = length(sgquant.edge) > 0 ? get(maximum( sgquant.edge ).value) : 0.0
+   maxvalue = length(sgquant.edge) > 0 ? get(maximum( sgquant.edge ).value) : 0.0
 
    for edg in intersect( sgquant.edge, (node, node) )
 
@@ -797,7 +797,7 @@ function _process_events( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    iscircok && output_circular( io, sg, sgquant, info )
 end
 
-function divsignif!{ N <: Number, D <: Number, I <: Integer }( arr::Vector{N}, divisor::D, sig::I )
+function divsignif!( arr::Vector{N}, divisor::D, sig::I ) where { N <: Number, D <: Number, I <: Integer }
    if sig > 0
       for i in 1:length( arr )
          @fastmath arr[i] = signif( arr[i] / divisor, sig )
@@ -812,15 +812,15 @@ end
 
 # Beta(
 @inline function beta_posterior_ci( p, n; ci=0.9, sig=0 )
-   const lo_q = (1 - ci)/2
-   const hi_q = 1 - lo_q
-   const beta = Beta( p*n + 1, (1-p)*n + 1 )
+   lo_q = (1 - ci)/2
+   hi_q = 1 - lo_q
+   beta = Beta( p*n + 1, (1-p)*n + 1 )
    if sig > 0
-      const lo = signif( quantile(beta, lo_q), sig )
-      const hi = signif( quantile(beta, hi_q), sig )
+      lo = signif( quantile(beta, lo_q), sig )
+      hi = signif( quantile(beta, hi_q), sig )
    else 
-      const lo = quantile(beta, lo_q)
-      const hi = quantile(beta, hi_q)
+      lo = quantile(beta, lo_q)
+      hi = quantile(beta, hi_q)
    end
    lo,hi
 end
@@ -843,7 +843,7 @@ function calculate_psi!( pgraph::PsiGraph, counts::Vector{Float64}; sig=0, readl
    for i in 1:length(pgraph.psi)
       pgraph.psi[i] = counts[i] / max( pgraph.length[i] - readlen, 1 )
    end
-   const cnt_sum = sum( pgraph.psi )
+   cnt_sum = sum( pgraph.psi )
    divsignif!( pgraph.psi, cnt_sum, sig )
 end
 
@@ -851,9 +851,9 @@ end
 function spliced_em!( igraph::PsiGraph, egraph::PsiGraph, ambig::Vector{AmbigCounts};
                       it=1, maxit=1500, sig=0 )
 
-   const inc_temp   = zeros(length(igraph.count))
-   const exc_temp   = zeros(length(egraph.count))
-   const count_temp = ones(length(igraph.count)+length(egraph.count))
+   inc_temp   = zeros(length(igraph.count))
+   exc_temp   = zeros(length(egraph.count))
+   count_temp = ones(length(igraph.count)+length(egraph.count))
 
    while (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < maxit
  

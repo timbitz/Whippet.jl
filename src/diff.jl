@@ -59,7 +59,7 @@ function open_streams( files::Vector{String} )
    buf
 end
 
-parse_float_omit_text{S <: AbstractString}( str::S, header::String ) = str != "NA" && str != header ? parse(Float64, str) : 0.0
+parse_float_omit_text( str::S, header::String ) where {S <: AbstractString} = str != "NA" && str != header ? parse(Float64, str) : 0.0
 
 function parse_psi_line( line::String; min_num=5, size=1000 )
    res  = split( line, '\t' )
@@ -75,14 +75,14 @@ function parse_psi_line( line::String; min_num=5, size=1000 )
    res,post,bool
 end
 
-type PosteriorEvent
+mutable struct PosteriorEvent
    event::Vector{SubString{String}}
    complexity::String
    a::PosteriorPsi
    b::PosteriorPsi
 end
 
-parse_complexity{S <: AbstractString}( c::S ) = split( c, COMPLEX_CHAR, keep=false )[1] |> x->parse(Int,x)
+parse_complexity( c::S ) where {S <: AbstractString} = split( c, COMPLEX_CHAR, keep=false )[1] |> x->parse(Int,x)
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; min_reads=5, size=1000 )
    postvec = Vector{PosteriorPsi}()
