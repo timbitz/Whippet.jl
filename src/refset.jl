@@ -15,6 +15,7 @@ struct RefGene
    txst::CoordTuple
    txen::CoordTuple
    exons::CoordTree
+   cds::IntervalCollection{Int}
    noveldon::CoordTuple
    novelacc::CoordTuple
    exonexpr::Float64
