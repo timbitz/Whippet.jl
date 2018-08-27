@@ -2,12 +2,9 @@
 # ========
 #
 # LiftOverChain is an implementation of a liftOver capable IntervalCollection
-#
-# This file is a part of BioJulia.
-# License is MIT: https://github.com/BioJulia/Bio.jl/blob/master/LICENSE.md
 
 
-immutable ChainBlock
+struct ChainBlock
     score::Float64
     tsize::Int64
     qname::String
@@ -19,7 +16,7 @@ immutable ChainBlock
     blocks::IntervalMap{Int64,Int64}
 end
 
-typealias LiftOverChain IntervalCollection{ChainBlock}
+const LiftOverChain = IntervalCollection{ChainBlock}
 
 # Replace this default io constructor with ragel parser?
 function LiftOverChain(io)
@@ -80,7 +77,7 @@ end
 
 # TODO: add min-identity handling. & clean up iterators --> infinite while loop is not pretty
 # strand operations
-function liftover{T}( chain::LiftOverChain, istream::IntervalStreamOrArray{T}; minidentity=0.95 )
+function liftover( chain::LiftOverChain, istream::IntervalStreamOrArray{T}; minidentity=0.95 ) where T
     lifted  = Vector{Nullable{Interval{T}}}()
 
     cname    = ""
