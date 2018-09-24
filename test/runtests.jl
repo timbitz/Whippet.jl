@@ -358,10 +358,10 @@ IIIIIIIIIIII
 
          count!( gquant, align.value[best_ind], 1.0 )
 
-         const curgene   = align.value[best_ind].path[1].gene
-         const firstnode = align.value[best_ind].path[1].node
-         const lastnode  = align.value[best_ind].path[end].node
-         const curgraph  = lib.graphs[ curgene ]
+         curgene   = align.value[best_ind].path[1].gene
+         firstnode = align.value[best_ind].path[1].node
+         lastnode  = align.value[best_ind].path[end].node
+         curgraph  = lib.graphs[ curgene ]
 
          cigar,positions = split(readname, '%', keep=false)[1:2]
          first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
@@ -522,7 +522,7 @@ IIIIIIIIIIII
          output_exons( "test_index.exons.gz", lib )
       end
 
-      function parse_edge{S <: AbstractString}( str::S )
+      function parse_edge( str::S ) where S <: AbstractString
          s = split( str, ['-',':'] )
          (parse(Int, String(s[1])), parse(Int, String(s[2])), parse(Float64, String(s[3])))
       end

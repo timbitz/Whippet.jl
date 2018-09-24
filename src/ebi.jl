@@ -1,6 +1,6 @@
 
 
-type EBIResponse
+mutable struct EBIResponse
    fastq_1_url::String
    fastq_2_url::String
    paired::Bool

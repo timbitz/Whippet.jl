@@ -1,10 +1,9 @@
 # Whippet
 
 [![Latest Release](https://img.shields.io/github/release/timbitz/Whippet.jl.svg)](https://github.com/timbitz/Whippet.jl/releases/latest)
-[![Whippet](http://pkg.julialang.org/badges/Whippet_0.6.svg)](http://pkg.julialang.org/detail/Whippet)
 [![Build Status](https://img.shields.io/travis/timbitz/Whippet.jl/master.svg?label=Linux+/+macOS)](https://travis-ci.com/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet.jl/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet.jl)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Gitter Chat](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/Whippet-jl/Lobby)
 
 ## Graphical Overview
@@ -21,8 +20,8 @@
   - On-the-fly alignment/re-analysis of SRR accession ids using ebi.ac.uk
 - Fast and robust quantification of transcriptome structure and expression using EM
   - Dynamic building and entropic measurements of splicing events of any complexity
-  - Event-specific Percent-spliced-in (PSI)
-  - Gene expression (TPM)
+  - Percent-spliced-in (PSI) from event-level EM
+  - Gene expression (TPM) from transcript-level EM
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
@@ -31,7 +30,10 @@ Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
 ## Get started
 
 ### 1) Install 
-Get latest version of [Julia](https://julialang.org/downloads) if you don't have it.  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+
+Whippet v0.11 works on the **v0.6.4** version of [Julia](https://julialang.org/downloads/oldreleases.html).  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+
+**Note: Julia v0.7/v1.0 is now released, but it has breaking changes that still need to be supported (in progress).**
 
 Open the Julia REPL and install the Whippet package (to update the packages list try `Pkg.update()` first):
 ```julia

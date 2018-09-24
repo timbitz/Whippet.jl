@@ -1,6 +1,6 @@
 
-@inline score{A <: UngappedAlignment}( one::A, two::A  ) = @fastmath score( one ) + score( two )
-@inline identity{A <: UngappedAlignment}( one::A, two::A, onelen::Int, twolen::Int ) = @fastmath score( one, two ) / ( onelen + twolen )
+@inline score( one::A, two::A  ) where {A <: UngappedAlignment} = @fastmath score( one ) + score( two )
+@inline identity( one::A, two::A, onelen::Int, twolen::Int ) where {A <: UngappedAlignment} = @fastmath score( one, two ) / ( onelen + twolen )
 
 @inline function sorted_offsets( sa::UnitRange, index::FMIndexes.FMIndex )
    res = Vector{Int}(length(sa))
@@ -14,7 +14,7 @@
 end
 
 # Paired version.
-function splice_by_score!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A}, threshold, buffer )
+function splice_by_score!( one::Vector{A}, two::Vector{A}, threshold, buffer ) where A <: UngappedAlignment
    i = 1
    while i <= length( one )
       if threshold - score( one[i], two[i] ) > buffer
@@ -26,7 +26,7 @@ function splice_by_score!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A
    end
 end
 
-function splice_by_identity!{A <: UngappedAlignment}( one::Vector{A}, two::Vector{A}, threshold, buffer, onelen, twolen )
+function splice_by_identity!( one::Vector{A}, two::Vector{A}, threshold, buffer, onelen, twolen ) where A <: UngappedAlignment
    i = 1
    while i <= length( one )
       if threshold - identity( one[i], two[i], onelen, twolen ) > buffer
@@ -41,16 +41,16 @@ end
 # Paired ungapped_align
 function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FASTQRecord; ispos=true, anchor_left=true )
 
-   const fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
+   fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
    
    if (p.is_pair_rc && strand) || (!p.is_pair_rc && !strand)
       reverse_complement!(rev)
-      const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
+      rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
    else
-      const rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left, both_strands=false)
+      rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=anchor_left, both_strands=false)
    end
-   const fwd_len = length(fwd.sequence)
-   const rev_len = length(rev.sequence)
+   fwd_len = length(fwd.sequence)
+   rev_len = length(rev.sequence)
 
    if !strand
       reverse_complement!(fwd)
@@ -61,18 +61,18 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FA
    rev_res      = Nullable{Vector{SGAlignment}}()
    maxscore = 0.0
 
-   const fwd_sorted = sorted_offsets( fwd_seed, lib.index )
-   const rev_sorted = sorted_offsets( rev_seed, lib.index )
+   fwd_sorted = sorted_offsets( fwd_seed, lib.index )
+   rev_sorted = sorted_offsets( rev_seed, lib.index )
 
    fidx,ridx = 1,1
 
    while fidx <= length(fwd_sorted) && ridx <= length(rev_sorted)
 
-      const dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
+      dist = abs( fwd_sorted[fidx] - rev_sorted[ridx] )
       if dist < p.seed_pair_range # inside allowable pair distance
 
-         const geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
-         const next_offset= geneind < length(lib.offset) ? lib.offset[geneind+1] : 
+         geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
+         next_offset= geneind < length(lib.offset) ? lib.offset[geneind+1] : 
                                                            lib.offset[geneind] + length(lib.graphs[geneind].seq)
          if lib.offset[geneind] <= rev_sorted[ridx] < next_offset
 
