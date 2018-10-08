@@ -25,7 +25,7 @@
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
-Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
+Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 
 ## Get started
 
