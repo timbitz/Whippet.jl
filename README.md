@@ -25,17 +25,17 @@
 - Differential splicing comparisons
   - Probabilistic calculations of delta PSI leveraging multi-sample biological replicates
 
-Paper pre-print: http://www.biorxiv.org/content/early/2017/07/03/158519
+Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 
 ## Get started
 
 ### 1) Install 
 
-Whippet v0.11 works on the **v0.6.4** version of [Julia](https://julialang.org/downloads/oldreleases.html).  If you are new to julia, there is a [helpful guide here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Whippet v0.11 works on the **v0.6.4** version of Julia which is still available here (https://julialang.org/downloads/oldreleases.html).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
-**Note: Julia v0.7/v1.0 is now released, but it has breaking changes that still need to be supported (in progress).**
+**Note: Julia v1.0 is now released, but it has breaking changes that are not yet supported (in progress).**
 
-Open the Julia REPL and install the Whippet package (to update the packages list try `Pkg.update()` first):
+Open the Julia **v0.6.4** REPL and install the Whippet package (to update the packages list try `Pkg.update()` first):
 ```julia
 julia> Pkg.add("Whippet")
 julia> using Whippet
