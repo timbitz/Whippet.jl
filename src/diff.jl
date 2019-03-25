@@ -44,9 +44,9 @@ end
 function open_stream( filename )
    fopen = open( filename, "r" )
    if isgzipped( filename )
-      stream = ZlibInflateInputStream( fopen, reset_on_end=true )
+      stream = ZlibInflateInputStream( fopen, reset_on_end=true, bufsize=6_000_000 )
    else
-      stream = BufferedStreams.BufferedInputStream( fopen )
+      stream = BufferedStreams.BufferedInputStream( fopen, 28_000_000 )
    end
    stream
 end
@@ -90,19 +90,29 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
    complex = 0
    entropy = 0.0
    i = 1
+   j = 1
    while i <= length(streams)
       line = readline( streams[i] )
-      i += 1
+      println(line)
       if line != ""
+         i += 1
          par,post,isok = parse_psi_line( line, min_num=min_reads, size=size )
+         par[5] == "BS" && (i -= 1; continue)
+         if event != split( "", "" )
+            @assert( event == par[1:5], "(1) Incorrect events matched!! $event != $(par[1:5])" )                        
+         end
          event = par[1:5]
-         event[5] == "BS" && (i -= 1; continue)
          !isok && continue
          push!( postvec, post )
          parcomplex = parse_complexity( par[10] )
          parentropy = parse_float_omit_text( par[11], "Entropy" )
          complex = parcomplex > complex ? parcomplex : complex
          entropy = parentropy > entropy ? parentropy : entropy
+         j = 1
+      elseif j > 1
+         break
+      else
+         j += 1
       end
    end
    event,complex,entropy,postvec
@@ -122,7 +132,7 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
       end
       complex = a_complex > b_complex ? a_complex : b_complex
       entropy = a_entropy > b_entropy ? a_entropy : b_entropy
-      @assert( a_event == b_event, "Incorrect events matched!!" )
+      @assert( a_event == b_event, "(2) Incorrect events matched!! $a_event != $b_event" )
       if length(a_post) >= min_samp && length(b_post) >= min_samp
          a_post   = PosteriorPsi( a_post ) # fit new posterior
          b_post   = PosteriorPsi( b_post ) 
