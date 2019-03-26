@@ -44,9 +44,9 @@ end
 function open_stream( filename )
    fopen = open( filename, "r" )
    if isgzipped( filename )
-      stream = ZlibInflateInputStream( fopen, reset_on_end=true )
+      stream = ZlibInflateInputStream( fopen, reset_on_end=true, bufsize=6_000_000 )
    else
-      stream = BufferedStreams.BufferedInputStream( fopen )
+      stream = BufferedStreams.BufferedInputStream( fopen, 28_000_000 )
    end
    stream
 end
@@ -95,8 +95,11 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
       i += 1
       if line != ""
          par,post,isok = parse_psi_line( line, min_num=min_reads, size=size )
+         par[5] == "BS" && (i -= 1; continue)
+         if event != split( "", "" )
+            @assert( event == par[1:5], "(1) Incorrect events matched!! $event != $(par[1:5])" )                        
+         end
          event = par[1:5]
-         event[5] == "BS" && (i -= 1; continue)
          !isok && continue
          push!( postvec, post )
          parcomplex = parse_complexity( par[10] )
@@ -117,12 +120,12 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
    while true # go through all lines until we hit eof
       a_event,a_complex,a_entropy,a_post = process_psi_line( a, min_reads=min_reads, size=size )
       b_event,b_complex,b_entropy,b_post = process_psi_line( b, min_reads=min_reads, size=size )
-      if a_event == split( "", "" ) || b_event == split( "", "" )
+      if a_event == split( "", "" ) && b_event == split( "", "" )
          break # eof
       end
       complex = a_complex > b_complex ? a_complex : b_complex
       entropy = a_entropy > b_entropy ? a_entropy : b_entropy
-      @assert( a_event == b_event, "Incorrect events matched!!" )
+      @assert( a_event == b_event, "(2) Incorrect events matched!! $a_event != $b_event" )
       if length(a_post) >= min_samp && length(b_post) >= min_samp
          a_post   = PosteriorPsi( a_post ) # fit new posterior
          b_post   = PosteriorPsi( b_post ) 
