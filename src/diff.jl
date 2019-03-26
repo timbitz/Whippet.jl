@@ -90,12 +90,10 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
    complex = 0
    entropy = 0.0
    i = 1
-   j = 1
    while i <= length(streams)
       line = readline( streams[i] )
-      println(line)
+      i += 1
       if line != ""
-         i += 1
          par,post,isok = parse_psi_line( line, min_num=min_reads, size=size )
          par[5] == "BS" && (i -= 1; continue)
          if event != split( "", "" )
@@ -108,11 +106,6 @@ function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream};
          parentropy = parse_float_omit_text( par[11], "Entropy" )
          complex = parcomplex > complex ? parcomplex : complex
          entropy = parentropy > entropy ? parentropy : entropy
-         j = 1
-      elseif j > 1
-         break
-      else
-         j += 1
       end
    end
    event,complex,entropy,postvec
@@ -127,7 +120,7 @@ function process_psi_files( outfile, a::Vector{BufferedStreams.BufferedInputStre
    while true # go through all lines until we hit eof
       a_event,a_complex,a_entropy,a_post = process_psi_line( a, min_reads=min_reads, size=size )
       b_event,b_complex,b_entropy,b_post = process_psi_line( b, min_reads=min_reads, size=size )
-      if a_event == split( "", "" ) || b_event == split( "", "" )
+      if a_event == split( "", "" ) && b_event == split( "", "" )
          break # eof
       end
       complex = a_complex > b_complex ? a_complex : b_complex
