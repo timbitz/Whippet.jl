@@ -1,0 +1,7 @@
+test/test*.gz
+test/test*.jls
+output/
+testdata/
+index/
+
+.DS_Store

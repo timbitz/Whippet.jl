@@ -4,8 +4,8 @@
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/../VERSION")))
 
-tic()
-println( STDERR, "Whippet $ver loading and compiling... " )
+start = time_ns()
+println( stderr, "Whippet $ver loading and compiling... " )
 
 using Libz
 using ArgParse
@@ -31,7 +31,7 @@ function parse_cmd()
     "--num-nodes", "-n"
       help = "Maximum number of consecutive nodes to output sliding combinatorial paths through"
       arg_type = Int64
-      default  = 8 
+      default  = 8
     "--num-genes", "-g"
       help = "Choose the first -n genes from the index to simulate (starting at offset -i)."
       arg_type = Int64
@@ -53,16 +53,16 @@ function main()
 
    args = parse_cmd()
 
-   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
+   println(stderr, " $( round( (time_ns()-start)/1e9, digits=6 ) ) seconds" )
 
-   println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
+   println(stderr, "Loading splice graph index... $( args["index"] ).jls")
    @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
-   println(STDERR, "Simulating combinatorial transcripts..")
-   @timer simulate_genes( lib, output=args["out"], 
-                               gene_num=args["num-genes"], 
-                               offset=args["offset"], 
-                               node_num=args["num-nodes"], 
+   println(stderr, "Simulating combinatorial transcripts..")
+   @timer simulate_genes( lib, output=args["out"],
+                               gene_num=args["num-genes"],
+                               offset=args["offset"],
+                               node_num=args["num-nodes"],
                                verbose=args["verbose"],
                                theoretical=args["theoretical"] )
 end
@@ -118,7 +118,7 @@ function combinatorial_paths( sg::SpliceGraph; max_nodes=10, verbose=false, theo
    function add_combinations!( paths, i, j, sub_range, val )
        for m in combinations( sub_range, val )
           for iv in reverse(i)
-             unshift!( m, iv )
+             pushfirst!( m, iv )
           end
           for jv in j
              push!( m, jv )
@@ -175,26 +175,26 @@ function isvalid_path( path::Vector{Int}, sg::SpliceGraph )
 end
 
 
-function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs), 
+function simulate_genes( lib; output="simul_genes", gene_num=length(lib.graphs),
                               offset=1, node_num=10, verbose=false, theoretical=false )
-   fastaout = open( output * ".fa.gz", "w" ) 
+   fastaout = open( output * ".fa.gz", "w" )
    gtfout   = open( output * ".gtf.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
    gtfstr = ZlibDeflateOutputStream( gtfout )
-   
+
    isocnt  = 0
    junccnt = 0
 
    for g in offset:min(offset+gene_num-1, length(lib.graphs)) #sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g] )
-      iso,junc = simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g], 
+      iso,junc = simulate_transcripts( fastastr, gtfstr, sgene, lib.graphs[g], lib.info[g],
                                              node_num=node_num, verbose=verbose, theoretical=theoretical )
       #output_nodes( nodesstr, lib.names[g], lib.info[g], lib.graphs[g] )
       isocnt  += iso
       junccnt += junc
    end
-   println(STDERR, "$isocnt Unique Isoforms Simulated...")
-   println(STDERR, "$junccnt Unique Exon-exon Junctions..")
+   println(stderr, "$isocnt Unique Isoforms Simulated...")
+   println(stderr, "$junccnt Unique Exon-exon Junctions..")
    close( fastastr )
    close( fastaout )
    close( gtfstr )

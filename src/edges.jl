@@ -52,10 +52,10 @@ function intersect_sorted( arrA::Vector{T}, arrB::Vector{T} ) where T
       end
    end
    res
-end 
+end
 
 
-function add_kmer_edge!( kmers::Vector{SGNodeSet}, 
+function add_kmer_edge!( kmers::Vector{SGNodeSet},
                          seq::S, l, r, left::Bool,
                          entry::SGNode ) where S <: SGSequence
    (l <= 0 || r > length(seq)) && return(zero(UInt64))
@@ -95,23 +95,22 @@ end
 
 function build_edges( graphs::Vector{SpliceGraph}, k::Integer )
    @assert(1 <= k <= 32, "$k is out of bounds for Edges{K} set!")
-   left  = Vector{SGNodeSet}(4^k)
-   right = Vector{SGNodeSet}(4^k)
+   left  = Vector{SGNodeSet}(undef, 4^k)
+   right = Vector{SGNodeSet}(undef, 4^k)
 
    for (i,g) in enumerate(graphs)
       for (j,n) in enumerate(g.nodeoffset)
 
          if is_edge( g.edgetype[j], true ) #&& isvalid( g.seq, (n-k-2):(n-3) ) # left edge
             lkmer = add_kmer_edge!( left, g.seq, n-k, n-1, true,  SGNode(i,j) )
-            g.edgeleft[j] = convert(SGKmer{k}, lkmer)
+            g.edgeleft[j] = reinterpret(SGKmer{k}, lkmer)
          end
          if is_edge( g.edgetype[j], false ) #&& isvalid( g.seq, n:(n+k-1) )# right edge
             rkmer = add_kmer_edge!( right, g.seq, n,  n+k-1, false, SGNode(i,j) )
-            g.edgeright[j] = convert(SGKmer{k}, rkmer)
+            g.edgeright[j] = reinterpret(SGKmer{k}, rkmer)
          end
 
       end
    end
    Edges{k}(left, right)
 end
-

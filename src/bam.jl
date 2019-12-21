@@ -1,8 +1,8 @@
 
-isspliced( rec::BAM.Record ) = ismatch(r"N", BAM.cigar(rec))
+isspliced( rec::BAM.Record ) = occursin(r"N", BAM.cigar(rec))
 strandpos( rec::BAM.Record ) = BAM.flag(rec) & 0x010 == 0
 
-function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange{Int64}, strand::Bool, 
+function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange{Int64}, strand::Bool,
                            exons::CoordTree, known, oneknown::Bool,
                            novelacc::Dict{K,V}, noveldon::Dict{K,V} ) where {K,V}
    exoncount = 0
@@ -60,4 +60,3 @@ end
     # return false
 # end
 #end
-
