@@ -14,14 +14,13 @@ function Base.fill!( rec::FASTQRecord, offset=33 )
    rec.sequence = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}( rec.raw.data,
                                                                          first(rec.raw.sequence),
                                                                          last(rec.raw.sequence) )
-   rec.quality  = rec.raw.data[rec.raw.quality] - convert(UInt8, offset)
+   rec.quality  = rec.raw.data[rec.raw.quality] .- convert(UInt8, offset)
    rec
 end
 
 Base.string( rec::FASTQRecord ) = String(rec.raw.data[rec.raw.identifier])
 
-function reverse_complement!( rec::FASTQRecord )
-   reverse_complement!( rec.sequence )
-   reverse!( rec.quality )
+function reverse_complement!(rec::FASTQRecord)
+   BioSequences.reverse_complement!(rec.sequence)
+   reverse!(rec.quality)
 end
-

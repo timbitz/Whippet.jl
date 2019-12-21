@@ -37,10 +37,10 @@ struct GeneInfo
    strand::Bool # pos is true, neg is false
 end
 
-GeneInfo( gene::S, name::S, strand::Char ) where {S <: AbstractString} = 
+GeneInfo( gene::S, name::S, strand::Char ) where {S <: AbstractString} =
                                GeneInfo( convert(GeneName, gene),
-                                         convert(SeqName, name), 
-                                         strand == '+' ? true : 
+                                         convert(SeqName, name),
+                                         strand == '+' ? true :
                                                          false )
 
 struct TxInfo
@@ -57,12 +57,11 @@ Basic IO Functions
 
 fixpath( str::String ) = abspath( expanduser( str ) )
 
-isgzipped( filename::String ) = hasextension( filename, "gz" )
+isgzipped( filename::String ) = splitext(filename)[2] == ".gz"
 
 function hasextension( filename::String, ext::String )
-   restr = "\.$ext\$"
-   re = Base.match(Regex(restr), filename)
-   return re == nothing ? false : true
+   restr = "\\.$ext\$"
+   return occursin(restr, filename)
 end
 
 function increment!( dict::Dict{K,V}, key::K, val::V=one(V) ) where {K,V}

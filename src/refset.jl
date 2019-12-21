@@ -10,7 +10,7 @@ end
 # Single RefGene entry
 struct RefGene
    info::GeneInfo
-   don::CoordTuple 
+   don::CoordTuple
    acc::CoordTuple
    txst::CoordTuple
    txen::CoordTuple
@@ -67,7 +67,7 @@ end
 
 function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Nullable{BAM.Reader}(), bamreads=2, bamoneknown=false )
 
-   # Temporary variables   
+   # Temporary variables
    gninfo   = Dict{GeneName,GeneInfo}()
    gndon    = Dict{GeneName,CoordTuple}()
    gnacc    = Dict{GeneName,CoordTuple}()
@@ -136,13 +136,13 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       (l[1] == '#') && continue # ignore comment lines
 
       (chrom, src, entrytype,
-       st, en, _, 
+       st, en, _,
        strand, _,
        meta) = split(chomp(l), '\t')
 
       (entrytype == "exon") || continue
 
-      metaspl = split(meta, [' ',';','"'], keep=false)
+      metaspl = split(meta, [' ',';','"'], keepempty=false)
 
       geneid,pos  = fetch_meta( "gene_id", metaspl )
       tranid,pos  = fetch_meta( "transcript_id", metaspl )
@@ -155,9 +155,9 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          if suppress
             continue
          elseif !warning
-            println(STDERR, "")
-            warn("Using low quality Transcript Support Levels (TSL 3+) in your GTF file is not recommended!\nFor more information on TSL, see: http://www.ensembl.org/Help/Glossary?id=492\n\nIf you would like Whippet to ignore these when building its index, use `--suppress-low-tsl` option!\n\n")
-         
+            println(stderr, "")
+            @warn("Using low quality Transcript Support Levels (TSL 3+) in your GTF file is not recommended!\nFor more information on TSL, see: http://www.ensembl.org/Help/Glossary?id=492\n\nIf you would like Whippet to ignore these when building its index, use `--suppress-low-tsl` option!\n\n")
+
             warning=true
          end
 
@@ -165,9 +165,9 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          error("ERROR: GTF file is not in valid GTF2.2 format!\n\nERROR: Annotation entries for 'transcript_id' $tranid has already been fully processed and closed.\nHINT: All GTF lines with the same 'transcript_id' must be adjacent in the GTF file and referring to the same transcript and gene!")
       elseif tranid == geneid && tranid != curtran
          if warning_num < 25
-            warn("Generally 'transcript_id' should not equal 'gene_id' but does at $tranid == $geneid;")
+            @warn("Generally 'transcript_id' should not equal 'gene_id' but does at $tranid == $geneid;")
          elseif warning_num == 25
-            warn("... NOTE: 'transcript_id' == 'gene_id' will work OK for single isoform genes, but will not produce expected behavior for multi-isoform genes!\n... similar warnings will be suppressed; disregard if 'transcript_id' == 'gene_id' is intentional\n")
+            @warn("... NOTE: 'transcript_id' == 'gene_id' will work OK for single isoform genes, but will not produce expected behavior for multi-isoform genes!\n... similar warnings will be suppressed; disregard if 'transcript_id' == 'gene_id' is intentional\n")
          end
          warning_num += 1
       end
@@ -187,12 +187,12 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          empty!(tranacc)
          txlen = 0
 
-      end 
+      end
 
       sval = parse_coordint(st)
       eval = parse_coordint(en)
 
-      push!(tranacc, sval) 
+      push!(tranacc, sval)
       push!(trandon, eval)
       txlen += eval - sval + 1
 
@@ -205,13 +205,13 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       else
          gnexons[curgene] = CoordTree()
          push!(gnexons[curgene], insval)
-      end 
+      end
    end
 
    private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
 
    if usebam
-      bamnames = map(x->values(x)[1], find(BAM.header(get(bamreader)), "SQ"))
+      bamnames = map(x->values(x)[1], findall(BAM.header(get(bamreader)), "SQ"))
    end
 
    novel_ss = 0
@@ -233,7 +233,7 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       if usebam && seqname in bamnames
          bamwasused = true
          range   = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
-         exoncount = process_records!( get(bamreader), seqname, range, strand, 
+         exoncount = process_records!( get(bamreader), seqname, range, strand,
                                        gnexons[gene], union(gnacc[gene], gndon[gene]), bamoneknown,
                                        novelacc, noveldon )
          exonexpr  = exoncount / (meanleng - 100)
@@ -259,7 +259,7 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       geneset[gene] = RefGene( gninfo[gene],
                                gndon[gene],
                                gnacc[gene],
-                               gntxst[gene],  
+                               gntxst[gene],
                                gntxen[gene],
                                gnexons[gene],
                                bamwasused ? Tuple( setdiff(noveldontup, annodon) ) : Tuple{}(),
@@ -270,10 +270,9 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
    end
 
    if usebam
-      println(STDERR, "Found $novel_ss new splice-sites from BAM file..")
+      println(stderr, "Found $novel_ss new splice-sites from BAM file..")
    end
-   println(STDERR, "Loaded $annot_ss annotated splice-sites from GTF file..")
+   println(stderr, "Loaded $annot_ss annotated splice-sites from GTF file..")
 
    return geneset
 end
-

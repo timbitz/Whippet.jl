@@ -3,7 +3,7 @@
 primitive type EdgeType 8 end
 
 const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
-      EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start 
+      EDGETYPE_TO_UINT8[4,2] = 0x00 # 'SL' = 0x00; Tx Start
       EDGETYPE_TO_UINT8[4,3] = 0x01 # 'SR' = 0x01; Tandem Last Exon
       EDGETYPE_TO_UINT8[2,4] = 0x02 # 'LS' = 0x02; Tandem First Exon
       EDGETYPE_TO_UINT8[3,4] = 0x03 # 'RS' = 0x03; Tx End
@@ -11,7 +11,7 @@ const EDGETYPE_TO_UINT8 = fill( 0x07, (4,4) )
       EDGETYPE_TO_UINT8[2,2] = 0x05 # 'LL' = 0x05; Alt- 5'SS
       EDGETYPE_TO_UINT8[3,3] = 0x06 # 'RR' = 0x06; Alt- 3'SS
 
-const INDEX_TO_EDGETYPE = transpose(reshape([[0x03,0x01,0x03,0x03]; 
+const INDEX_TO_EDGETYPE = transpose(reshape([[0x03,0x01,0x03,0x03];
                                              [0x06  for _ in 1:4 ];
                                              [0x05,0x04,0x05,0x02];
                                              [0x00  for _ in 1:4 ] ], (4,4)))
@@ -23,15 +23,18 @@ const INDEX_TO_EDGETYPE_NODE = transpose(reshape([[0x03  for _ in 1:4 ];
 
 
 function Base.convert( ::Type{EdgeType}, one::UInt8, two::UInt8 )
-   @assert( 5 <= one <= 7 && 5 <= one <= 7 ) 
+   @assert( 5 <= one <= 7 && 5 <= one <= 7 )
    EDGETYPE_TO_UINT8[one-3,two-3]
 end
 
-Base.convert( ::Type{EdgeType}, one::DNA, two::DNA ) = 
+Base.convert( ::Type{EdgeType}, one::DNA, two::DNA ) =
               Base.convert( EdgeType, convert(UInt8, trailing_zeros(one)), convert(UInt8, trailing_zeros(two)) )
 Base.convert( ::Type{EdgeType}, edge::UInt8 ) = reinterpret(EdgeType, edge)
 Base.convert( ::Type{UInt8}, edge::EdgeType ) = reinterpret(UInt8, edge)
 Base.convert( ::Type{I}, edge::EdgeType) where {I <: Integer} = Base.convert(I, Base.convert(UInt8, edge))
+
+EdgeType(edge::UInt8) = reinterpret(EdgeType, edge)
+UInt8(edge::EdgeType) = reinterpret(UInt8, edge)
 
 const EDGETYPE_SL = convert(EdgeType, 0b000)
 const EDGETYPE_SR = convert(EdgeType, 0b001)
@@ -105,12 +108,12 @@ struct SpliceGraph{K}
    edgetype::Vector{EdgeType}
    edgeleft::Vector{SGKmer{K}}
    edgeright::Vector{SGKmer{K}}
-   annopath::Vector{IntSet}
+   annopath::Vector{BitSet}
    annoname::Vector{String}
    annobias::Vector{ExpectedGC}
    seq::SGSequence
 end
-# All positive strand oriented sequences---> 
+# All positive strand oriented sequences--->
 # Node array: txStart| 1 |   2   | 3 |    4    |5| 6 |txEnd
 # Edge array:        1   2       3   4         5 6   7
 # Node coord:  chr   100 200     300 400      500 600 700
@@ -132,7 +135,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    seq        = DNASequence()
 
    strand = gene.info.strand  # Bool
-   
+
    # initialize iterators
    a,alen = 1,length(gene.acc)
    d,dlen = 1,length(gene.don)
@@ -148,10 +151,10 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
                          get(gene.acc,  idx[2], def),
                          get(gene.don,  idx[3], def),
                          get(gene.txst, idx[4], def) ]
-      indmin( retarr ), min( retarr... )
+      argmin( retarr ), min( retarr... )
    end
 
-   while( idx[1] <= alen || idx[2] <= dlen || idx[3] <= slen || idx[4] <= plen )    
+   while( idx[1] <= alen || idx[2] <= dlen || idx[3] <= slen || idx[4] <= plen )
       # iterate through donors, and acceptors
       # left to right. '-' strand gets revcomp and unshift
       minidx,minval = getmin_ind_val( gene, idx )
@@ -165,11 +168,11 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
          stranded_push!(edgetype, termedge, strand)
          break
       end
-      
+
       # now should we make a node?
       if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) ) ||
          (minidx == 2 && minval in gene.novelacc) ||
-         (secidx == 3 && secval in gene.noveldon) 
+         (secidx == 3 && secval in gene.noveldon)
          #(usebam && isretainedintron( )) # TODO (not yet implemented)
          leftadj  = (minidx == 1 || minidx == 3) && minval != secval ? 1 : 0
          rightadj = (secidx == 2 || secidx == 4) && minval != secval ? 1 : 0
@@ -206,8 +209,8 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       curoffset += n
    end
 
-   eleft  = Vector{SGKmer{k}}(length(edgetype))
-   eright = Vector{SGKmer{k}}(length(edgetype))
+   eleft  = Vector{SGKmer{k}}(undef, length(edgetype))
+   eright = Vector{SGKmer{k}}(undef, length(edgetype))
 
    paths = build_paths_edges( nodecoord, nodelen, gene )
    names = map( x->x.info.name, gene.reftx )
@@ -216,12 +219,12 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    return SpliceGraph( nodeoffset, nodecoord, nodelen, edgetype, eleft, eright, paths, names, expgc, seq )
 end
 
-# re-orient - strand by using unshift! instead of push!
+# re-orient - strand by using pushfirst! instead of push!
 function stranded_push!( collection, value, strand::Bool )
    if strand
       push!( collection, value )
    else # '-' strand
-      unshift!( collection, value )
+      pushfirst!( collection, value )
    end
 end
 
@@ -232,12 +235,12 @@ end
 #  subint must be:     (low+x, high-y)
 #  where x and y are >= 0
 # Returns: bool
-function issubinterval( itree::T, subint::I ) where {T <: IntervalTree, 
+function issubinterval( itree::T, subint::I ) where {T <: IntervalTree,
                                          I <: AbstractInterval}
    for i in intersect(itree, subint)
       if i.first <= subint.first && i.last >= subint.last
          return true
-      end 
+      end
    end
    false
 end
@@ -253,19 +256,19 @@ function Base.get( collection::T, key::I, def ) where {T <: Tuple, I <: Integer}
 end
 
 # Functions for iso.jl annotated edges feature
-# Take a RefTx and produce an IntSet through the nodes of a SpliceGraph
-# returns: IntSet
-function build_annotated_path( nodecoord::Vector{CoordInt}, 
-                               nodelen::Vector{CoordInt}, 
+# Take a RefTx and produce an BitSet through the nodes of a SpliceGraph
+# returns: BitSet
+function build_annotated_path( nodecoord::Vector{CoordInt},
+                               nodelen::Vector{CoordInt},
                                tx::RefTx, strand::Bool )
-   path = IntSet()
+   path = BitSet()
    # this may be `poor form`, but 256 is too big for default!
-   resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
+   # resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
    for i in 1:length(tx.acc)
       ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )
       cur = ind + (strand ? 1 : -1)
-      while 1 <= cur <= length(nodecoord) && 
+      while 1 <= cur <= length(nodecoord) &&
             nodecoord[cur] <= tx.don[i]
          push!( path, cur )
          cur = cur + (strand ? 1 : -1 )
@@ -277,7 +280,7 @@ end
 function build_paths_edges( nodecoord::Vector{CoordInt},
                             nodelen::Vector{CoordInt},
                             gene::RefGene )
-   paths = Vector{IntSet}()
+   paths = Vector{BitSet}()
    for tx in gene.reftx
       curpath = build_annotated_path( nodecoord, nodelen, tx, gene.info.strand )
       push!( paths, curpath )
@@ -285,7 +288,7 @@ function build_paths_edges( nodecoord::Vector{CoordInt},
    paths
 end
 
-function path_to_seq( path::IntSet, nodeoffset::Vector{CoordInt}, 
+function path_to_seq( path::BitSet, nodeoffset::Vector{CoordInt},
                       nodelen::Vector{CoordInt}, seq::SGSequence )
    SGSequence(join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], collect(path) ) ))
 end

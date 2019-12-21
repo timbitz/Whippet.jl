@@ -4,8 +4,8 @@
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/../VERSION")))
 
-tic()
-println( STDERR, "Whippet $ver loading and compiling... " )
+start = time_ns()
+println( stderr, "Whippet $ver loading and compiling... " )
 
 using Libz
 using ArgParse
@@ -29,7 +29,7 @@ function parse_cmd()
       default  = fixpath( "$(dir)/../../simul" )
     "--gtf"
       help = "Gene anotation file in GTF format"
-      arg_type = String 
+      arg_type = String
     "--max-complexity", "-k"
       help = "Max complexity KMax allowed per gene (random K for each gene between K1:KMax)?"
       arg_type = Int64
@@ -46,12 +46,12 @@ function main()
 
    args = parse_cmd()
 
-   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
+   println(stderr, " $( round( (time_ns()-start)/1e9, digits=6 ) ) seconds" )
 
-   println(STDERR, "Loading splice graph index... $( args["index"] ).jls")
+   println(stderr, "Loading splice graph index... $( args["index"] ).jls")
    @timer const lib = open(deserialize, "$( args["index"] ).jls")
 
-   println(STDERR, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
+   println(stderr, "Simulating alternative transcripts of $( args["max-complexity"] ) max-complexity..")
    @timer simulate_genes( lib, anno, args["max-complexity"], output=args["out"], gene_num=args["num-genes"] )
 
 end
@@ -92,11 +92,11 @@ function collect_nodes!( st::SimulTranscript, sg::SpliceGraph, r::UnitRange; ski
 end
 
 function simulate_genes( lib, anno, max_comp; output="simul_genes", gene_num=length(lib.graphs) )
-   fastaout = open( output * ".fa.gz", "w" ) 
+   fastaout = open( output * ".fa.gz", "w" )
    nodesout = open( output * ".node.gz", "w" )
    fastastr = ZlibDeflateOutputStream( fastaout )
    nodesstr = ZlibDeflateOutputStream( nodesout )
-   
+
    for g in sample( 1:length(lib.graphs), min( length(lib.graphs), gene_num ), replace=false )
       comp = min( max_comp, length(lib.graphs[g].nodelen) - 2 )
       sgene = SimulGene( Vector{SimulTranscript}(), lib.names[g], rand(1:comp) )
