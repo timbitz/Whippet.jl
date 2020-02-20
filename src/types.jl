@@ -25,7 +25,6 @@ const SGSequence = BioSequences.BioSequence{DNAAlphabet{4}}
 const GeneName    = String
 const SeqName     = String
 const RefSeqId    = String
-const ASCIIString = String
 
 const GeneMeta = Tuple{GeneName, SeqName, Char}
 
@@ -58,11 +57,7 @@ Basic IO Functions
 fixpath( str::String ) = abspath( expanduser( str ) )
 
 isgzipped( filename::String ) = splitext(filename)[2] == ".gz"
-
-function hasextension( filename::String, ext::String )
-   restr = "\\.$ext\$"
-   return occursin(restr, filename)
-end
+hasextension( filename::String, ext::String ) = splitext(filename)[2] == ext
 
 function increment!( dict::Dict{K,V}, key::K, val::V=one(V) ) where {K,V}
    if haskey( dict, key )
