@@ -613,5 +613,9 @@ IIIIIIIIIIII
          @test cnt == 128482 # correct number of reads in file
          #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
       end
+
+      @testset "Diff and Delta" begin
+
+      end
    end
 end
