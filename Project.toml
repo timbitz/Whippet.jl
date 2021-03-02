@@ -1,7 +1,7 @@
 name = "Whippet"
 uuid = "0af2a87d-76f3-44e3-af6e-8f91dcdf7847"
-authors = ["Garrett Massman <gmassman20@gmail.com>"]
-version = "0.1.0"
+authors = ["Tim Sterne-Weiler <tsternew@gmail.com>"]
+version = "1.5.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -24,7 +24,7 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 WaveletMatrices = "c0580c95-5bac-53b2-8f35-dbbbc8487a1f"
 
 [compat]
-julia = ">= 1.0"
+julia = ">= 1.5"
 
 [extras]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
