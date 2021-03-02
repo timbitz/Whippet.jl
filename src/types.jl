@@ -67,3 +67,6 @@ function increment!( dict::Dict{K,V}, key::K, val::V=one(V) ) where {K,V}
    end
    dict
 end
+
+# add constructor for compatibility
+BioSequence{A}( var ) where {A <: Alphabet} = LongSequence{A}(var)

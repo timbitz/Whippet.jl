@@ -5,6 +5,8 @@ module Whippet
 import BioSymbols
 import BioSequences
 import BioAlignments
+import FASTX
+import XAM
 
 import DataStructures: SortedSet
 
@@ -12,6 +14,8 @@ using StatsBase: midpoints
 using BioSymbols
 using BioSequences
 using BioAlignments
+using FASTX
+using XAM
 using BufferedStreams
 using Distributions
 using FMIndexes

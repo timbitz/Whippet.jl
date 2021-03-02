@@ -1,13 +1,13 @@
 
-const SGKmer{K} = BioSequences.Kmer{DNA, K}
+const SGKmer{K} = BioSequences.DNAMer{K}
 
-Base.write(io::IO, k::BioSequences.Kmer) = write(io, reinterpret(UInt64, k))
-Base.read(io::IO, ::Type{T}) where {T <: BioSequences.Kmer} = convert(T, Base.read(io, UInt64))
+Base.write(io::IO, k::BioSequences.DNAMer) = write(io, reinterpret(UInt64, k))
+Base.read(io::IO, ::Type{T}) where {T <: BioSequences.DNAMer} = convert(T, Base.read(io, UInt64))
 
 # Conversion
 # ----------
 
-kmer_index( kmer::BioSequences.Kmer{T,K} ) where {T,K} = Int(reinterpret(UInt64, kmer)) + 1
+kmer_index( kmer::BioSequences.DNAMer{K} ) where {K} = Int(reinterpret(UInt64, kmer)) + 1
 
 kmer_index( seq::BioSequence ) = Int(kmer_index_trailing( seq )) + 1
 
