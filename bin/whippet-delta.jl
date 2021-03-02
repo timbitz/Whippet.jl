@@ -1,18 +1,20 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2016
 
+using Pkg
+
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/VERSION")))
 
 start = time_ns()
 println( stderr, "Whippet $ver loading and compiling... " )
 
-using ArgParse
-using Glob
+Pkg.activate(dir * "/..")
 
-push!( LOAD_PATH, dir * "/../src" )
 using Whippet
 using Random
+using ArgParse
+using Glob
 
 function parse_cmd()
   s = ArgParseSettings()

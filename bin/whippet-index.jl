@@ -1,20 +1,22 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+using Pkg
+
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/VERSION")))
 
 start = time_ns()
 println( stderr, "Whippet $ver loading and compiling... " )
 
-using ArgParse
+Pkg.activate(dir * "/..")
 
-push!( LOAD_PATH, dir * "/../src" )
 using Whippet
 using BioAlignments
 using Libz
 using Serialization
 using Nullables
+using ArgParse
 
 function parse_cmd()
   s = ArgParseSettings()

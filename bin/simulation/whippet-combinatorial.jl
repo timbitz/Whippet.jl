@@ -1,11 +1,15 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+using Pkg
+
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/../VERSION")))
 
 start = time_ns()
 println( stderr, "Whippet $ver loading and compiling... " )
+
+Pkg.activate(dir * "/..")
 
 using Libz
 using ArgParse
@@ -13,7 +17,6 @@ using StatsBase
 using BioSequences
 using Combinatorics
 
-push!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()
