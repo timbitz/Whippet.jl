@@ -31,27 +31,22 @@ Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 
 ### 1) Install
 
-Whippet v0.11 works on the **v0.6.4** version of Julia which is still available here (https://julialang.org/downloads/oldreleases/#v064_july_9_2018).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
-
-**Note: Julia v1.0 is now released, but it has breaking changes that are not yet supported (in progress).**
+Whippet v1.0 works on the **v1.1** version of Julia which is still available here (https://julialang.org/downloads/oldreleases/#v064_july_9_2018).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 Open the Julia **v0.6.4** REPL and install the Whippet package (to update the packages list try `Pkg.update()` first):
-```julia
-julia> Pkg.add("Whippet")
-julia> using Whippet
+```bash
+$ git clone 
+$ cd Whippet.jl
 ```
 
-The Whippet package directory can now be found in the default location:
-```bash
-$ cd ~/.julia/v0.6/Whippet
-```
+
 
 *Notes*:
-* **Update to the most recent version** of Whippet at any time in the Julia REPL: `julia> Pkg.update()`
+* **Update to the most recent version** of Whippet by pulling the master branch `git pull`
 * If you are having trouble finding the Whippet directory, you can ask the Julia REPL: `julia> Pkg.dir("Whippet")`
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 * You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
-* It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
+* For instructions on using Whippet with Julia v0.6.4, use the Whippet v0.11.1 tag
 
 ### 2) Build an index.
 
