@@ -31,22 +31,20 @@ Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 
 ### 1) Install
 
-Whippet v1.0 works on the **v1.1** version of Julia which is still available here (https://julialang.org/downloads/oldreleases/#v064_july_9_2018).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Whippet v1.0 works on the current version of Julia (**1.5.3**) which is available here (https://julialang.org).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
-Open the Julia **v0.6.4** REPL and install the Whippet package (to update the packages list try `Pkg.update()` first):
+
 ```bash
-$ git clone 
+$ git clone https://github.com/timbitz/Whippet.jl.git
 $ cd Whippet.jl
 ```
 
-
-
 *Notes*:
-* **Update to the most recent version** of Whippet by pulling the master branch `git pull`
-* If you are having trouble finding the Whippet directory, you can ask the Julia REPL: `julia> Pkg.dir("Whippet")`
+* Whippet.jl executables should work out-of-the-box, however the first time running them will be slow as julia will be setting up the environment, installing dependencies and precompiling code
+* Update to the most recent version of Whippet by pulling the master branch `git pull`
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
-* You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
-* For instructions on using Whippet with Julia v0.6.4, use the Whippet v0.11.1 tag
+* You should install Julia locally, if you have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
+* For instructions on using Whippet with **Julia v0.6.4**, look at the README.md within the Whippet v0.11.1 tag
 
 ### 2) Build an index.
 
@@ -252,4 +250,12 @@ If you are building an index for another organism, there are some general guidel
 
 ## Troubleshooting
 
-With all of the executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `Pkg.test("Whippet")` from the Julia REPL, Whippet should run cleanly if your environment is working correctly (although it is mostly untested on Windows, it should still work-- or at least it did the one time we tried it ;-).  If you _still_ think you have found a bug feel free to open an issue in github or make a pull request!
+With all of the executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  
+
+If you are having trouble running a Whippet executable in /bin, try opening the julia REPL within the Whippet.jl directory and testing:
+```julia
+] 
+(@v1.5) pkg> activate .
+(Whippet) pkg> test
+```
+Whippet should run cleanly if your environment is working correctly (although it is mostly untested on Windows, it should still work-- or at least it did the one time we tried it ;-).  If you _still_ think you have found a bug feel free to open an issue in github or make a pull request!
