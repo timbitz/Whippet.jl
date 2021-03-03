@@ -9,6 +9,7 @@ import FASTX
 using BioSymbols
 using BioSequences
 using BioAlignments
+using GenomicFeatures
 using XAM
 using FASTX
 using BufferedStreams
@@ -495,7 +496,7 @@ IIIIIIIIIIII
          compats[1].count = 10.0
          prev_node = get(gquant.quant[2].node[1])
          println(stderr, "prev_quant = $(gquant.quant[2])")
-         interv = Interval{ExonInt}( 1, 2 )
+         interv = IntervalTrees.Interval{ExonInt}( 1, 2 )
          prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
 
          println(gquant.quant[2].edge)

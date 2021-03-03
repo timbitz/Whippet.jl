@@ -7,7 +7,7 @@ function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange
                            novelacc::Dict{K,V}, noveldon::Dict{K,V} ) where {K,V}
    exoncount = 0
    try
-      for rec in eachoverlap( reader, seqname, range )
+      for rec in GenomicFeatures.eachoverlap( reader, seqname, range )
          # add to exon count if overlaps exon
          if hasintersection( exons, leftposition(rec) ) ||
             hasintersection( exons, rightposition(rec) )
@@ -19,6 +19,7 @@ function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange
          end
       end
    catch e
+      error(e)
    end
    exoncount
 end

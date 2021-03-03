@@ -196,7 +196,7 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       push!(trandon, eval)
       txlen += eval - sval + 1
 
-      insval = Interval{CoordInt}(sval, eval)
+      insval = IntervalTrees.Interval{CoordInt}(sval, eval)
       if haskey(gnexons, curgene)
          # make sure we are adding a unique value
          if !haskey(gnexons[curgene], (sval, eval))

@@ -271,7 +271,7 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle,
          lnode = path.fwd[i].node
          rnode = path.fwd[i+1].node
          if lnode < rnode
-            interv = Interval{ExonInt}( lnode, rnode )
+            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
             pushzero!( sgquant.circ, (lnode,rnode), value )
@@ -295,7 +295,7 @@ end
          push!(temp_iset, lnode)
          push!(temp_iset, rnode)
          if lnode < rnode
-            interv = Interval{ExonInt}( lnode, rnode )
+            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
             pushzero!( sgquant.circ, (lnode,rnode), value )
@@ -313,7 +313,7 @@ end
          rnode = path.rev[i+1].node
          (lnode in temp_iset && rnode in temp_iset) && continue
          if lnode < rnode
-            interv = Interval{ExonInt}( lnode, rnode )
+            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
             pushzero!( sgquant.circ, (lnode,rnode), value )
@@ -575,7 +575,7 @@ function count!( graphq::GraphLibQuant{C,R}, align::SGAlignment, value ) where {
          lnode = align.path[1].node
          rnode = align.path[2].node
          if lnode < rnode
-            interv = Interval{ExonInt}( lnode, rnode )
+            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
          elseif lnode >= rnode
             pushzero!( sgquant.circ, (lnode,rnode), value )
@@ -632,7 +632,7 @@ function count!( graphq::GraphLibQuant{C,R}, fwd::SGAlignment, rev::SGAlignment,
             lnode = single[1].node
             rnode = single[2].node
             if lnode < rnode
-               interv = Interval{ExonInt}( lnode, rnode )
+               interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
                pushzero!( sgquant.edge, interv, value )
             elseif lnode >= rnode
                pushzero!( sgquant.circ, (lnode,rnode), value )

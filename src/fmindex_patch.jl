@@ -1,8 +1,15 @@
 using WaveletMatrices
 
+for n in (2, 4)
+    @eval begin
+        bitsof(::Type{DNAAlphabet{$n}}) = $n
+        bitsof(::Type{RNAAlphabet{$n}}) = $n
+    end
+end
+
 @inline function raw_getindex(seq::BioSequence{A}, i::Integer) where A
     j = BioSequences.bitindex(seq, i)
-    @inbounds return convert(UInt8, (seq.data[BioSequences.index(j)] >> BioSequences.offset(j)) & BioSequences.mask(A))
+    @inbounds return convert(UInt8, (seq.data[BioSequences.index(j)] >> BioSequences.offset(j)) & BioSequences.bitmask(bitsof(A)))
 end
 
 ## This function is necessary as a result of changes made in Bio.jl as of Julia v0.5

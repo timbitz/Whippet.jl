@@ -14,6 +14,7 @@ using StatsBase: midpoints
 using BioSymbols
 using BioSequences
 using BioAlignments
+using GenomicFeatures
 using FASTX
 using XAM
 using BufferedStreams
