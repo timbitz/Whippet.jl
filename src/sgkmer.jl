@@ -28,5 +28,5 @@ end
 kmer_index_trailing( seq ) = kmer_index_trailing(UInt64, seq )
 
 kmer(seq::SGSequence) = sgkmer(seq)
-sgkmer(seq::String) = convert(SGKmer, seq)
-sgkmer(seq::SGSequence) = convert(SGKmer, seq)
+sgkmer(seq::String) = SGKmer(seq)
+sgkmer(seq::SGSequence) = SGKmer(seq)

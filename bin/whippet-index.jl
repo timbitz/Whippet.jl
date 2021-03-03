@@ -1,18 +1,22 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+using Pkg
+
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/VERSION")))
 
-tic()
-println( STDERR, "Whippet $ver loading and compiling... " )
+start = time_ns()
+println( stderr, "Whippet $ver loading and compiling... " )
 
-using ArgParse
+Pkg.activate(dir * "/..")
 
-push!( LOAD_PATH, dir * "/../src" )
 using Whippet
 using BioAlignments
 using Libz
+using Serialization
+using Nullables
+using ArgParse
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -53,11 +57,11 @@ end
 function main()
 
    args = parse_cmd()
-   
-   println(STDERR, " $( round( toq(), 6 ) ) seconds." )
+
+   println(stderr, " $( round( (time_ns()-start)/1e9, digits=6 ) ) seconds." )
 
    if args["gtf"] == nothing
-      println(STDERR, "ERROR: Must supply gene annotation file using `--gtf`!!")
+      println(stderr, "ERROR: Must supply gene annotation file using `--gtf`!!")
       exit(1)
    else
       annotype = "gtf"
@@ -65,7 +69,7 @@ function main()
    end
 
    flat = fixpath( args[annotype] )
-   println(STDERR, "Loading $annotxt file: $flat")
+   println(stderr, "Loading $annotxt file: $flat")
    fh = open( flat , "r")
    if isgzipped( flat )
       fh = fh |> x->ZlibInflateInputStream(x, reset_on_end=true)
@@ -75,27 +79,27 @@ function main()
       bam = fixpath( args["bam"] )
       isfile(bam) || error("ERROR: --bam parameter used, but cannot find .bam file at $bam !")
       isfile(bam * ".bai") || error("ERROR: --bam parameter used, but no .bai index found for .bam file! Cannot set-up random access to $bam !")
-      println(STDERR, "Loading BAM file for random-access: $bam")
+      println(stderr, "Loading BAM file for random-access: $bam")
       bamreadr = open(BAM.Reader, bam, index=bam * ".bai")
-      @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"], 
-                                usebam=true, 
-                                bamreader=Nullable(bamreadr), 
+      @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"],
+                                usebam=true,
+                                bamreader=Nullable(bamreadr),
                                 bamreads=args["bam-min-reads"],
                                 bamoneknown=!args["bam-both-novel"])
    else
       @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"])
    end
 
-   println(STDERR, "Indexing transcriptome...")
+   println(stderr, "Indexing transcriptome...")
    @timer graphome = fasta_to_index( fixpath( args["fasta"] ), ref, kmer=args["kmer"] )
 
-   println(STDERR, "Serializing splice graph index...")
+   println(stderr, "Serializing splice graph index...")
    indexname = hasextension(args["index"], ".jls") ? args["index"] : args["index"] * ".jls"
    open(indexname, "w") do io
       @timer serialize( io, graphome )
    end
 
-   println(STDERR, "Printing a map of Whippet nodes to putative full exons... $(args["index"] * ".exons.tab.gz")")
+   println(stderr, "Printing a map of Whippet nodes to putative full exons... $(args["index"] * ".exons.tab.gz")")
    output_exons( args["index"] * ".exons.tab.gz", graphome )
 
 end

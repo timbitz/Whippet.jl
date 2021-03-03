@@ -25,7 +25,6 @@ const SGSequence = BioSequences.BioSequence{DNAAlphabet{4}}
 const GeneName    = String
 const SeqName     = String
 const RefSeqId    = String
-const ASCIIString = String
 
 const GeneMeta = Tuple{GeneName, SeqName, Char}
 
@@ -37,10 +36,10 @@ struct GeneInfo
    strand::Bool # pos is true, neg is false
 end
 
-GeneInfo( gene::S, name::S, strand::Char ) where {S <: AbstractString} = 
+GeneInfo( gene::S, name::S, strand::Char ) where {S <: AbstractString} =
                                GeneInfo( convert(GeneName, gene),
-                                         convert(SeqName, name), 
-                                         strand == '+' ? true : 
+                                         convert(SeqName, name),
+                                         strand == '+' ? true :
                                                          false )
 
 struct TxInfo
@@ -57,13 +56,8 @@ Basic IO Functions
 
 fixpath( str::String ) = abspath( expanduser( str ) )
 
-isgzipped( filename::String ) = hasextension( filename, "gz" )
-
-function hasextension( filename::String, ext::String )
-   restr = "\.$ext\$"
-   re = Base.match(Regex(restr), filename)
-   return re == nothing ? false : true
-end
+isgzipped( filename::String ) = splitext(filename)[2] == ".gz"
+hasextension( filename::String, ext::String ) = splitext(filename)[2] == ext
 
 function increment!( dict::Dict{K,V}, key::K, val::V=one(V) ) where {K,V}
    if haskey( dict, key )

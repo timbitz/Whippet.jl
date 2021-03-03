@@ -39,7 +39,7 @@ end
 function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, sig=4 )
    lo,hi = conf_int #unpack
    if width
-      write( io, string( round(hi-lo, sig) ) )
+      write( io, string( round(hi-lo, digits=sig) ) )
       write( io, '\t' )
    end
    write( io, string(lo) )
@@ -57,7 +57,7 @@ function edges_write( io::BufOut, edges::IntervalMap{ExonInt,C}, range::UnitRang
          write( io, '-' )
          write( io, string(i.last) )
          write( io, ':' )
-         write( io, string(round(get(i.value), 1)) )
+         write( io, string(round(get(i.value), digits=1)) )
          first = false
       end
    end
@@ -100,7 +100,7 @@ function sam_flag( align::SGAlignment, lib::GraphLib, ind, paired, first, is_pai
       lib.info[ ind ].strand || (flag ⊻= 0x10)
    end
    is_supplemental && (flag |= 0x100)
-   flag   
+   flag
 end
 
 @inline function soft_pad( align::SGAlignment )
@@ -112,7 +112,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
    curpos    = align.offset                                 # left most position
    running   = 0                                            # cur number of running matches
    total     = align.offsetread - 1                         # total positions accounted for
-   cigar     = String[ soft_pad(align) ]                    # build cigar string here 
+   cigar     = String[ soft_pad(align) ]                    # build cigar string here
 
    for idx in 1:length(align.path)
 
@@ -148,15 +148,15 @@ end
 
 
 # Write single SAM entry for one SGAlignment
-function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::GraphLib; 
+function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::GraphLib;
                     mapq::Int=0, paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33,
                     supplemental::Bool=false, tagstr::String="" )
    (align.isvalid && length(align.path) >= 1) || return
    geneind = align.path[1].gene
-   strand  = lib.info[geneind].strand   
+   strand  = lib.info[geneind].strand
    nodeind = strand ? align.path[1].node : align.path[end].node
    (align.path[end].node < nodeind || align.path[end].node < align.path[1].node) && return # TODO: allow circular SAM output
-   sg = lib.graphs[geneind] 
+   sg = lib.graphs[geneind]
    cigar,endpos = cigar_string( align, sg, strand, length(read.sequence) )
    offset = strand ? (align.offset - sg.nodeoffset[nodeind]) : (sg.nodelen[nodeind] - (endpos - sg.nodeoffset[nodeind]))
    if !strand && !supplemental
@@ -165,7 +165,7 @@ function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::Grap
    tab_write( io, string(read) )
    tab_write( io, string( sam_flag(align, lib, geneind, paired, fwd_mate, is_pair_rc, supplemental) ) )
    tab_write( io, lib.info[geneind].name )
-   tab_write( io, string( sg.nodecoord[nodeind] + offset ) ) 
+   tab_write( io, string( sg.nodecoord[nodeind] + offset ) )
    tab_write( io, string(mapq) )
    tab_write( io, cigar )
    tab_write( io, '*' )
@@ -219,7 +219,7 @@ function write_sam( io::BufOut, read::FASTQRecord, alignvec::Vector{SGAlignment}
 
    best = indmax_score( alignvec )
    mapq_val = 10 * length(alignvec)
-   write_sam( io, read, alignvec[best], lib, mapq=mapq_val, paired=paired, fwd_mate=fwd_mate, 
+   write_sam( io, read, alignvec[best], lib, mapq=mapq_val, paired=paired, fwd_mate=fwd_mate,
                         is_pair_rc=is_pair_rc, qualoffset=qualoffset, supplemental=false )
    for i in 1:length(alignvec)
       if i != best
@@ -276,7 +276,7 @@ end
 #
 =#
 
-function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph}, 
+function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph},
                      total_reads::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
                      info::GeneMeta; empty=false )
    st = motif == TXST_MOTIF ? node : node - 1
@@ -300,14 +300,14 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
       if !isnull( pgraph )
          conf_int  = beta_posterior_ci( psi[i], total_reads, sig=3 )
          conf_int_write( io, conf_int, tab=true, width=true)
-         tab_write( io, string( signif(total_reads, 3) ) )
+         tab_write( io, string( round(total_reads, sigdigits=3) ) )
          complex_write( io, complexity( pgraph.value ), tab=true )
-         tab_write( io, string( round( shannon_index( pgraph.value ), 4 ) ) )
+         tab_write( io, string( round( shannon_index( pgraph.value ), digits=4 ) ) )
          count_write( io, get(pgraph).nodes[i], get(pgraph).psi[i], tab=true )
          write( io, "NA\t" )
       else
          tab_write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\t" )
-      end 
+      end
       write( io, "NA" )
       write( io, '\n' )
       i += 1
@@ -316,8 +316,8 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
 end
 
 function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
-                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif, 
-                     sg::SpliceGraph, edges::IntervalMap{ExonInt,C}, 
+                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif,
+                     sg::SpliceGraph, edges::IntervalMap{ExonInt,C},
                      node::Int, info::GeneMeta, bias ) where C <: ReadCounter
 
    sg.nodelen[node] == 0 && return
@@ -329,11 +329,11 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
    tab_write( io, string(psi) )
 
    conf_int_write( io, conf_int, tab=true, width=true )
-   tab_write( io, string( signif(total_reads, 3) ) )
+   tab_write( io, string( round(total_reads, sigdigits=3) ) )
 
    if !isnull( inc ) && !isnull( exc )
       complex_write( io, complexity( inc.value, exc.value ), tab=true )
-      tab_write( io, string( round( shannon_index( inc.value, exc.value ), 4 ) ) )
+      tab_write( io, string( round( shannon_index( inc.value, exc.value ), digits=4 ) ) )
    else
       write( io, "K0\t0.0\t" )
    end
@@ -345,7 +345,7 @@ function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nul
    else
       write( io, "NA\t" )
    end
-   
+
    if !isnull( exc )
       count_write( io, get(exc), 1.0-psi, tab=true )
       min = get(exc).min < min ? get(exc).min : min
@@ -373,14 +373,14 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
       psi = fore_cnt / total_reads
       if !isnan(psi) && total_reads > 0
          tab_write( io, info[1] )
-         tab_write( io, string(st) * "\-" * string(en) )
+         tab_write( io, string(st) * "-" * string(en) )
          coord_write( io, info[2], sg.nodecoord[st]+sg.nodelen[st]-1, sg.nodecoord[en], tab=true )
          tab_write( io, info[3] )
          tab_write( io, "BS" )
          tab_write( io, string(psi) )
          conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
          conf_int_write( io, conf_int, tab=true, width=true)
-         tab_write( io, string( signif(total_reads, 3) ) )
+         tab_write( io, string( round(total_reads, sigdigits=3) ) )
          write( io, "NA\tNA\tNA\tNA\tNA\n" )
       end
    end
@@ -396,7 +396,7 @@ function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int,
    write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 
-function Base.string( is::IntSet )
+function Base.string( is::BitSet )
    str = ""
    for n in is
       str *= string(n) * "-"
@@ -407,7 +407,7 @@ end
 function count_write( io::BufOut, nodestr, psi::Float64; tab=false )
    write( io, string(nodestr) )
    write( io, ':' )
-   write( io, string(round(psi, 6)) )
+   write( io, string(round(psi, digits=6)) )
    tab && write( io, '\t' )
 end
 
@@ -451,15 +451,15 @@ function output_diff_header( io::BufOut )
    write( io, "Type\tPsi_A\tPsi_B\tDeltaPsi\tProbability\tComplexity\tEntropy\n" )
 end
 
-function output_diff( io::BufOut, event, complex::Int, entropy::Float64, 
+function output_diff( io::BufOut, event, complex::Int, entropy::Float64,
                       psi_a::Float64, psi_b::Float64, deltapsi::Float64, prob::Float64, sig=5 )
    for i in 1:length(event)
       tab_write( io, event[i] )
    end
-   tab_write( io, string(signif(psi_a, sig)) )
-   tab_write( io, string(signif(psi_b, sig)) )
-   tab_write( io, string(signif(deltapsi, sig)) )
-   tab_write( io, string(signif(prob, sig)) )
+   tab_write( io, string(round(psi_a, sigdigits=sig)) )
+   tab_write( io, string(round(psi_b, sigdigits=sig)) )
+   tab_write( io, string(round(deltapsi, sigdigits=sig)) )
+   tab_write( io, string(round(prob, sigdigits=sig)) )
    write( io, COMPLEX_CHAR )
    tab_write( io, string(complex) )
    tab_write( io, string(entropy) )
@@ -505,7 +505,7 @@ function count_read_types( lib::GraphLib, graphq::GraphLibQuant )
    Int(round(bodyreads)),Int(round(juncreads)),Int(round(annoreads)),junccnt,annocnt
 end
 
-function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam, 
+function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
                        index::String, total::Int, mapped::Int, multi::Int, readlen::Int, ver::String )
    io = open( filename, "w" )
    stream = ZlibDeflateOutputStream( io )
@@ -524,23 +524,23 @@ function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::
    write( io, "Total_Reads\t$total\n" )
    write( io, "# -------- Mapping Stats ---------\n" )
    write( io, "Mapped_Reads\t$mapped\n" )
-   write( io, "Mapped_Percent\t$(signif((mapped/total)*100,2))%\n" )
+   write( io, "Mapped_Percent\t$(round((mapped/total)*100,sigdigits=2))%\n" )
    write( io, "# -------- Multi-loci Mapping ---------\n" )
    write( io, "Multimap_Reads\t$multi\n" )
-   write( io, "Multimap_Percent\t$(signif((multi/mapped)*100,2))%\n" )
-   write( io, "# -------- Unspliced Reads ---------\n" )   
+   write( io, "Multimap_Percent\t$(round((multi/mapped)*100,sigdigits=2))%\n" )
+   write( io, "# -------- Unspliced Reads ---------\n" )
    body,junc,anno,jcnt,acnt = count_read_types( lib, graphq )
    write( io, "Exon_Body_Reads\t$body\n" )
-   write( io, "Exon_Body_Percent\t$(signif((body/(body+junc))*100,2))%\n" )
-   write( io, "# -------- Spliced Reads ---------\n" ) 
+   write( io, "Exon_Body_Percent\t$(round((body/(body+junc))*100,sigdigits=2))%\n" )
+   write( io, "# -------- Spliced Reads ---------\n" )
    write( io, "Junction_Reads\t$junc\n" )
-   write( io, "Junction_Percent\t$(signif((junc/(body+junc))*100,2))%\n" )
+   write( io, "Junction_Percent\t$(round((junc/(body+junc))*100,sigdigits=2))%\n" )
    write( io, "Junction_Number\t$jcnt\n" )
    write( io, "Annotated_Junc_Reads\t$anno\n" )
-   write( io, "Annotated_Junc_Percent\t$(signif((anno/junc)*100,2))%\n" )
+   write( io, "Annotated_Junc_Percent\t$(round((anno/junc)*100,sigdigits=2))%\n" )
    write( io, "Annotated_Junc_Number\t$acnt\n" )
    write( io, "Novel_Junc_Number\t$(jcnt-acnt)\n" )
-   write( io, "Novel_Junc_Percent\t$(signif(((jcnt-acnt)/jcnt)*100,2))%\n" )
+   write( io, "Novel_Junc_Percent\t$(round(((jcnt-acnt)/jcnt)*100,sigdigits=2))%\n" )
 end
 
 
@@ -600,9 +600,9 @@ end
 function output_exons( nodecoord::Vector{CoordInt},
                        nodelen::Vector{CoordInt},
                        tx::RefTx, strand::Bool )
-   path = IntSet()
+   path = BitSet()
    # this may be `poor form`, but 256 is too big for default!
-   resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
+   # resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
    for i in 1:length(tx.acc)
       ind = collect(searchsorted( nodecoord, tx.acc[i], rev=!strand ))[end]
       push!( path, ind )
@@ -616,7 +616,7 @@ function output_exons( nodecoord::Vector{CoordInt},
    path
 end
 
-function Base.in( nodes::UnitRange, is::IntSet )
+function Base.in( nodes::UnitRange, is::BitSet )
    for i in nodes
       if !(i in is)
          return false
@@ -625,7 +625,7 @@ function Base.in( nodes::UnitRange, is::IntSet )
    return true
 end
 
-function Base.in( nodes::UnitRange, v::Vector{IntSet} )
+function Base.in( nodes::UnitRange, v::Vector{BitSet} )
    for is in v
       if nodes in is
          return true
@@ -674,5 +674,3 @@ function output_exons( filename::String, lib::GraphLib )
    close(stream)
    close(io)
 end
-
-

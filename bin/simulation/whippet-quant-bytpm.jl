@@ -1,16 +1,19 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2015
 
+using Pkg
+
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = readline(open(dir * "/../VERSION"))
 
-tic()
-println( STDERR, "Whippet $ver loading and compiling... " )
+start = time_ns()
+println( stderr, "Whippet $ver loading and compiling... " )
+
+Pkg.activate(dir * "/..")
 
 using ArgParse
 using Libz
 
-unshift!( LOAD_PATH, dir * "/../../src" )
 using Whippet
 
 function parse_cmd()
@@ -35,10 +38,10 @@ function main()
 
    args = parse_cmd()
 
-   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
+   println(stderr, " $( round( (time_ns()-start)/1e9, digits=6 ) ) seconds" )
 
    indexpath = fixpath( args["index"] )
-   println(STDERR, "Loading splice graph index... $( indexpath ).jls")
+   println(stderr, "Loading splice graph index... $( indexpath ).jls")
    @timer const lib = open(deserialize, "$( indexpath ).jls")
 
    data = load_tpm_file( fixpath(args["tpm"]) )
@@ -55,7 +58,7 @@ function main()
    close(stream)
    close(io)
 
-   println(STDERR, "Whippet $ver done." )
+   println(stderr, "Whippet $ver done." )
 end
 
 function load_tpm_file( filename::String, header=true )
@@ -135,7 +138,7 @@ function output_tpms( stream, tpms, lib )
              if tpm_total > 0.0
                 psi = tpm_node / tpm_total
                 write( stream, lib.info[i].gene * "\t" )
-                write( stream, lib.info[i].name * ":" * string(lib.graphs[i].nodecoord[n]) * 
+                write( stream, lib.info[i].name * ":" * string(lib.graphs[i].nodecoord[n]) *
                                                   "-" * string(lib.graphs[i].nodecoord[n]+lib.graphs[i].nodelen[n]-1) * "\t" )
                 write( stream, string(n) * "\t" )
                 write( stream, string(psi) * "\n" )

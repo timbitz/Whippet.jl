@@ -46,7 +46,7 @@ function load_fasta( fhIter; verbose=false )
       immutable!(r.seq)
       push!(names, r.name)
       push!(offset, length(seq)+1)
-      println( STDERR, r )
+      println( stderr, r )
       @time seq *= r.seq
    end
    seq, offset, names
@@ -55,7 +55,7 @@ end
 function single_genome_index!( fhIter; verbose=false )
    seq,offset,names = load_fasta( fhIter )
    @time fm = FMIndex(twobit_enc(seq), 4, r=4, program=:SuffixArrays, mmap=true)
-   println( STDERR, "Finished building Index..." )
+   println( stderr, "Finished building Index..." )
 
    SeqLib(seq, offset, names, fm, false)
 end
@@ -78,9 +78,9 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       #BioSequences.immutable!(r.seq)
       sg = SGSequence( r.data[r.sequence] )
 
-      println(STDERR, "Building Splice Graphs for $( name ).." )
+      println(stderr, "Building Splice Graphs for $( name ).." )
       @timer for g in seqdic[name]
-         #println( STDERR, "Building $g Splice Graph..." )
+         #println( stderr, "Building $g Splice Graph..." )
          curgraph = SpliceGraph( ref[g], sg, kmer )
          xcript  *= curgraph.seq
          push!(xgraph, curgraph)
@@ -93,17 +93,17 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
       end
    end
    if num > 1
-      println( STDERR, "Building full sg-index from $num genes..." )
-      @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true) 
+      println( stderr, "Building full sg-index from $num genes..." )
+      @time fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true)
    else
       error("ERROR: No genes in the GTF file matched chromosome names in the FASTA file!")
    end
 
    # clean up
    xcript = DNASequence()
-   gc()
+   GC.gc()
 
-   println( STDERR, "Building edges.." ) 
+   println( stderr, "Building edges.." )
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
    GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer )
@@ -111,14 +111,13 @@ end
 
 function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
    if isgzipped( filename )
-      println(STDERR, "Decompressing and Indexing $filename...")
+      println(stderr, "Decompressing and Indexing $filename...")
       to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
    else
-      println(STDERR, "Indexing $filename...")
+      println(stderr, "Indexing $filename...")
       to_open = open( filename ) |> BufferedInputStream
    end
    # iterate through fasta entries
    index = @time trans_index!(FASTA.Reader( to_open ), ref, kmer=kmer)
    index
 end
-

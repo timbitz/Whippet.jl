@@ -29,30 +29,25 @@ Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 
 ## Get started
 
-### 1) Install 
+### 1) Install
 
-Whippet v0.11 works on the **v0.6.4** version of Julia which is still available here (https://julialang.org/downloads/oldreleases/#v064_july_9_2018).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
-
-**Note: Julia v1.0 is now released, but it has breaking changes that are not yet supported (in progress).**
+Whippet v1.0 works on the **v1.1** version of Julia which is still available here (https://julialang.org/downloads/oldreleases/#v064_july_9_2018).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 Open the Julia **v0.6.4** REPL and install the Whippet package (to update the packages list try `Pkg.update()` first):
-```julia
-julia> Pkg.add("Whippet")
-julia> using Whippet
+```bash
+$ git clone 
+$ cd Whippet.jl
 ```
 
-The Whippet package directory can now be found in the default location:
-```bash
-$ cd ~/.julia/v0.6/Whippet
-```
+
 
 *Notes*:
-* **Update to the most recent version** of Whippet at any time in the Julia REPL: `julia> Pkg.update()`
+* **Update to the most recent version** of Whippet by pulling the master branch `git pull`
 * If you are having trouble finding the Whippet directory, you can ask the Julia REPL: `julia> Pkg.dir("Whippet")`
 * For all executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
-* You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M) 
-* It might be convenient to add a link (`ln -s ~/.julia/v0.6/Whippet`) to this directory for easy access, or export `Whippet/bin` to your path.
- 
+* You should install Julia and its packages locally, if you absolutely have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
+* For instructions on using Whippet with Julia v0.6.4, use the Whippet v0.11.1 tag
+
 ### 2) Build an index.
 
 #### a) Annotation (GTF) only index.
@@ -63,7 +58,7 @@ You need your genome sequence in fasta, and a gene annotation file in Ensembl-st
 $ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
-_Notes_: 
+_Notes_:
 * Whippet only uses GTF `exon` lines (others are ignored). These must contain both `gene_id` and `transcript_id` attributes (which should not be the same as one another!).  This GTF file should be consistent with the [GTF2.2](http://mblab.wustl.edu/GTF22.html) specification, and should have all entries for a transcript in a continuous block. Warning: The UCSC table browser will not produce valid GTF2.2 files. Similarly, GTF files obtained from iGenomes or the Refseq websites do not satisfy these specifications.
 * You can specify the output name and location of the index to build using the `-x / --index` parameter. The default (for both whippet-index.jl and whippet-quant.jl) is a generic index named `graph` located at `~/.julia/v0.6/Whippet/index/graph.jls`, so you must have write-access to this location to use the default.
 
@@ -74,7 +69,7 @@ Whippet v0.11+ allows you to build an index that includes unannotated splice-sit
 # If using multiple BAM files (tissue1, ..., tissue3 etc), merge them first:
 $ samtools merge filename.bam tissue1.bam tissue2.bam tissue3.bam
 # If using a single BAM file start here:
-$ samtools sort filename.bam filename.sort
+$ samtools sort -o filename.sort filename.bam
 $ samtools rmdup -S filename.sort.bam filename.sort.rmdup.bam
 $ samtools index filename.sort.rmdup.bam
 $ ls filename.sort.rmdup.bam*
@@ -97,26 +92,26 @@ _Notes_:
 ```bash
 $ julia bin/whippet-quant.jl file.fastq.gz
 ```
-Or you can provide a link/s to the fastq file/s on the web using `--url`, or just the experiment accession id (SRR id) using `--ebi`!  These will align on the fly as the reads are downloaded from the web directly into alignment. For example:
+
+As of version 1.0.0, `--ebi` and `--url` flags have been deprecated to ease maintenance. EBI file paths can be found at the URL http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt. Use your own accession id (SRR id) in place of $ebi_id.
+
+For example:
 ```bash
-$ julia bin/whippet-quant.jl --ebi SRR1199010
-```
-is equivalent to
-```bash
-$ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
+$ curl "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=SRR1199010&result=read_run&fields=fastq_ftp&display=txt"
+fastq_ftp
+ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 #### b) Paired-end reads
 ```bash
 $ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
-To stream reads from ebi.ac.uk, just provide a paired-end SRR id to to the `--ebi` flag:
+
+To locate paired-end SRR id files, use the same ebi.ac.uk URL:
 ```bash
-$ julia bin/whippet-quant.jl --ebi ERR1994736
-```
-is equivalent to
-```bash
-$ julia bin/whippet-quant.jl --url http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_1.fastq.gz http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_2.fastq.gz
+$ curl "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=ERR1994736&result=read_run&fields=fastq_ftp&display=txt"
+fastq_ftp
+ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_2.fastq.gz
 ```
 
 #### c) Non-default input/output
@@ -192,17 +187,17 @@ NFIA | 4 | chr1:61548433-61548490 | + | CE | 0.8329 | 0.069 | 0.795,0.864 | 318.
 NFIA | 5 | chr1:61553821-61554352 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
 NFIA | 6 | chr1:61743192-61743257 | + | CE | 0.99 | NA | NA | NA | NA | NA | NA | NA
 
-Whippet outputs quantification at the node-level (one PSI value for each node, not exon). For example, Whippet CE ('core exon') nodes may be bounded by one or more AA or AD nodes. So when those AA or AD nodes are spliced in, the full exon consists of the nodes combined (AA+CE). 
+Whippet outputs quantification at the node-level (one PSI value for each node, not exon). For example, Whippet CE ('core exon') nodes may be bounded by one or more AA or AD nodes. So when those AA or AD nodes are spliced in, the full exon consists of the nodes combined (AA+CE).
 
 We believe that this is (and should be) the correct generalization of event-level splicing quantification for the following reasons:
 
-1. Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`. 
+1. Whippet allows for dynamic quantification of observed splicing patterns. Therefore, in order to maintain consistent output from different Whippet runs on various samples, the basic unit of quantification needs to be a `node`.
 2. Whippet can handle highly complex events, in contrast to many other splicing quantification tools which only report binary event types. Since, for example, it is possible for both (CE+AA) and CE exons to be excluded from the mature message, complex events may involve a number of overlapping full exons. If Whippet output was enumerated for all such combinations, the output for complex events would grow exponentially and approach uselessness.
 3. The general definition of Percent-spliced-in for an exon (or node) is the percentage of transcripts that 'have that exon spliced in', irrespective of the upstream or downstream splice sites that connect to it (those merely alter another node's PSI). Therefore, we feel that the output of PSI values should not change based on upstream or downstream splice-sites as they might with some other programs.
 
-This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined).  To ease this process, `whippet-index.jl` outputs an _index_`.exons.gz` file that contains all theoretical full exon coordinates mapped to Whippet nodes for each gene, and whether or not the exon is found in annotation. 
+This must be taken into account when intersecting `.psi.gz` coordinate output with other formats that only represent full exons (which can be one or more adjacent nodes combined).  To ease this process, `whippet-index.jl` outputs an _index_`.exons.gz` file that contains all theoretical full exon coordinates mapped to Whippet nodes for each gene, and whether or not the exon is found in annotation.
 
-Note: 
+Note:
 * **Complexity** refers to the discrete categories based-on the ceiling(log2(number of paths)) through each AS event.
 * **Entropy** refers to the shannon-entropy of the relative expression of the paths through the AS event.
 * **Inc_Paths/Exc_Paths** contain the paths quantified through the AS event (supporting inclusion or exclusion respectively), each path (eg. 1-2-3) gives the set of nodes in the path, followed by a `:` and the relative expression, such that the sum of all these paths is 1.0.
@@ -232,7 +227,7 @@ The output format of `.diff.gz` files from `whippet-delta.jl` is:
 Gene | Node | Coord | Strand | Type | Psi_A | Psi_B | DeltaPsi | Probability | Complexity | Entropy
 ---- | ---- | ----- | ------ | ---- | ----- | ----- | -------- | ----------- | ---------- | -------
 ENSG00000117448.13_2 | 9 | chr1:46033654-46033849 | + | CE | 0.95971 | 0.97876 | -0.019047 | 0.643 | K0 | 0.0   
-ENSG00000117448.13_2 | 10 | chr1:46034157-46034356 | + | CE | 0.9115 | 0.69021 | 0.22129 | 0.966 | K1 | 0.874 
+ENSG00000117448.13_2 | 10 | chr1:46034157-46034356 | + | CE | 0.9115 | 0.69021 | 0.22129 | 0.966 | K1 | 0.874
 
 Between the set of replicates from -a and -b `whippet-delta.jl` outputs a mean Psi_A (from emperical sampling of the joint posterior distribution) and mean Psi_B.  It also outputs the mean deltaPsi (Psi_A - Psi_B) and the probability that there is some change in deltaPsi given the read depth of the AS event, such that P(|deltaPsi| > 0.0). To determine the significance of output in `.diff.gz` files, two heuristic filters are encouraged, however please note that the exact values for these filters have not yet been systematically optimized. These should be adjusted by the user according to the desired stringency, read depth, and experiment set-up: (1) In general, significant nodes should have a higher probability (e.g. >=0.90) suggesting there is likely to be a difference between the samples, and (2) significant nodes should have an absolute magnitude of change (|DeltaPsi| > x) where x is some value you consider to be a biologically relevant magnitude of change (we suggest |DeltaPsi| > 0.1).  
 
@@ -257,4 +252,4 @@ If you are building an index for another organism, there are some general guidel
 
 ## Troubleshooting
 
-With all of the executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `Pkg.test("Whippet")` from the Julia REPL, Whippet should run cleanly if your environment is working correctly (although it is mostly untested on Windows, it should still work-- or at least it did the one time we tried it ;-).  If you _still_ think you have found a bug feel free to open an issue in github or make a pull request! 
+With all of the executables in `Whippet/bin`, you can use the `-h` flag to get a list of the available command line options and their usage.  If you are having trouble using or interpreting the output of `Whippet` then please ask a question in our [gitter chat](https://gitter.im/Whippet-jl/Lobby)!.  If you are having trouble running a Whippet executable in /bin, try running `Pkg.test("Whippet")` from the Julia REPL, Whippet should run cleanly if your environment is working correctly (although it is mostly untested on Windows, it should still work-- or at least it did the one time we tried it ;-).  If you _still_ think you have found a bug feel free to open an issue in github or make a pull request!

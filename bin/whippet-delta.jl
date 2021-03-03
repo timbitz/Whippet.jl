@@ -1,17 +1,20 @@
 #!/usr/bin/env julia
 # Tim Sterne-Weiler 2016
 
+using Pkg
+
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = chomp(readline(open(dir * "/VERSION")))
 
-tic()
-println( STDERR, "Whippet $ver loading and compiling... " )
+start = time_ns()
+println( stderr, "Whippet $ver loading and compiling... " )
 
+Pkg.activate(dir * "/..")
+
+using Whippet
+using Random
 using ArgParse
 using Glob
-
-push!( LOAD_PATH, dir * "/../src" )
-using Whippet
 
 function parse_cmd()
   s = ArgParseSettings()
@@ -59,8 +62,8 @@ end
 
 function retrievefilelist( pattern::String, dir::String )
    list = Vector{String}()
-   if search(pattern, ',') > 0
-      tmp = split( pattern, ',', keep=false )
+   if something(findfirst(isequal(','), pattern), 0) > 0
+      tmp = split( pattern, ',', keepempty=false )
    else
       tmp = glob( "*" * pattern * "*.psi*", dir )
    end
@@ -73,27 +76,27 @@ end
 
 function main()
    args  = parse_cmd()
-   println(STDERR, " $( round( toq(), 6 ) ) seconds" )
-   srand( args["seed"] )
+   println(stderr, " $( round( (time_ns()-start)/1e9, digits=6 ) ) seconds" )
+   Random.seed!( args["seed"] )
    dir   = fixpath( args["directory"] )
    lista = retrievefilelist( args["a"], dir )
    listb = retrievefilelist( args["b"], dir )
-   println(STDERR, "Sample A: $(join(map(basename, lista), ','))")
-   println(STDERR, "Sample B: $(join(map(basename, listb), ','))")
+   println(stderr, "Sample A: $(join(map(basename, lista), ','))")
+   println(stderr, "Sample B: $(join(map(basename, listb), ','))")
    if length(lista) <= 0 || length(listb) <= 0
       error("Unable to match files! length(a) == $(length(lista)), length(b) == $(length(listb))!")
    end
-   
-   astreams = open_streams( lista )
-   bstreams = open_streams( listb )   
 
-   println(STDERR, "Now processing files and calculating posterior distributions...") 
-   @timer process_psi_files( args["out"] * ".diff.gz", astreams, bstreams, 
-                             min_samp=args["min-samples"], 
+   astreams = open_streams( lista )
+   bstreams = open_streams( listb )
+
+   println(stderr, "Now processing files and calculating posterior distributions...")
+   @timer process_psi_files( args["out"] * ".diff.gz", astreams, bstreams,
+                             min_samp=args["min-samples"],
                              min_reads=args["min-reads"],
                              amt=0.0,
-                             size=args["emperical-size"] ) 
-   println(STDERR, "Whippet $ver done." )
+                             size=args["emperical-size"] )
+   println(stderr, "Whippet $ver done." )
 end
 
 @timer main()

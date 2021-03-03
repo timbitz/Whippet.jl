@@ -1,21 +1,24 @@
-using Base.Test
+using Test
+using Serialization
 
-importall BioSymbols
-importall BioSequences
-importall BioAlignments
-importall IntervalTrees
+import BioSymbols
+import BioSequences
+import BioAlignments
 
-using DataStructures
-using BufferedStreams
-using BioSequences
 using BioSymbols
+using BioSequences
 using BioAlignments
+using BufferedStreams
+using DataStructures
+using Distributions
 using FMIndexes
 using IntArrays
+using InteractiveUtils
 using IntervalTrees
 using Libz
-using Distributions
-using Requests
+using LinearAlgebra
+using Nullables
+using Printf
 
 include("../src/types.jl")
 include("../src/timer.jl")
@@ -31,7 +34,6 @@ include("../src/record.jl")
 include("../src/align.jl")
 include("../src/quant.jl")
 include("../src/reads.jl")
-include("../src/ebi.jl")
 include("../src/paired.jl")
 include("../src/events.jl")
 include("../src/io.jl")
@@ -93,8 +95,6 @@ end
    egc = ExpectedGC( seq )
    @test length(egc) == 20
    @test egc[ Int(div(gc_content(seq), 0.05)+1) ] == 1.0
-   
-
 end
 
 @testset "Splice Graphs" begin
@@ -135,7 +135,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test gtfref["one"].novelacc == tuple()
 
    end
-   
+
    gtf.ptr = 1
    bamreadr = open(BAM.Reader, "test.sort.bam", index="test.sort.bam.bai" )
    supgtfref = load_gtf( gtf, usebam=true, bamreader=Nullable(bamreadr), bamreads=2 )
@@ -164,22 +164,22 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    apa       = dna"AATAA"      # 86-90   11-15
    buffer2   = dna"AAAAAAAAAA" # 91-100  1-10
 
-   fwd = buffer1 * utr5 * exon1 * int1 * 
-         exon2 * int2 * 
-         exon3alt3 * exon3def * exon3alt5 * int3 * 
+   fwd = buffer1 * utr5 * exon1 * int1 *
+         exon2 * int2 *
+         exon3alt3 * exon3def * exon3alt5 * int3 *
          exon4 * apa * buffer2
    rev = reverse_complement(fwd)
 
    genome = fwd * rev
 
-   expected_one = utr5 * exon1 * 
+   expected_one = utr5 * exon1 *
                int1 *
                exon2 *
-               exon3alt3 * 
-               exon3def *  
+               exon3alt3 *
+               exon3def *
                exon3alt5 *
-               exon4 * 
-               apa 
+               exon4 *
+               apa
 
    expected_sin = dna"GCGGATTACA"
    expected_kis = dna"AAAAAAAAAATGTAATCCGC"
@@ -197,9 +197,9 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       @test graph_kis.seq == expected_kis
 
       @test length(graph_one.annopath) == length(gtfref["one"].reftx)
-      @test graph_one.annopath[1] == IntSet([1,3,5,7]) # path of def
-      @test graph_one.annopath[2] == IntSet([1,2,3,4,5,7]) # path of int1_alt3
-      @test graph_one.annopath[3] == IntSet([1,3,5,6,7,8]) # path of apa_alt5
+      @test graph_one.annopath[1] == BitSet([1,3,5,7]) # path of def
+      @test graph_one.annopath[2] == BitSet([1,2,3,4,5,7]) # path of int1_alt3
+      @test graph_one.annopath[3] == BitSet([1,3,5,6,7,8]) # path of apa_alt5
    end
 
    # Build Index (from index.jl)
@@ -213,7 +213,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    runoffset = 0
 
    for g in keys(gtfref)
-      println(STDERR, g)
+      println(stderr, g)
       curgraph = SpliceGraph( gtfref[g], genome, kmer_size )
       xcript  *= curgraph.seq
       push!(xgraph, curgraph)
@@ -221,7 +221,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       push!(xinfo, gtfref[g].info )
       push!(xlength, gtfref[g].length )
       push!(xoffset, runoffset)
-      runoffset += length(curgraph.seq)   
+      runoffset += length(curgraph.seq)
    end
 
    fm = FMIndex(twobit_enc(xcript), 4, r=1, program=:SuffixArrays, mmap=true)
@@ -263,14 +263,14 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    end
 
    @testset "Saving and Loading Index" begin
-      println(STDERR, "Saving test index...")
-      println(STDERR, lib)
+      println(stderr, "Saving test index...")
+      println(stderr, lib)
       @timer open("test_index.jls", "w+") do io
          serialize( io, lib )
       end
-      println(STDERR, "Loading test index...")
+      println(stderr, "Loading test index...")
       @timer lib = open(deserialize, "test_index.jls")
-      println(STDERR, lib)
+      println(stderr, lib)
    end
 
    # store general data structures outside of testset
@@ -324,7 +324,7 @@ TCTTGTCTAATG
 IIIIIIIIIIII
 ")
 
-      const DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
+      DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
       fqparse = FASTQ.Reader( BufferedInputStream(fastq), fill_ambiguous=DNA_C )
       reads  = allocate_fastq_records( 10 )
       read_chunk!( reads, fqparse )
@@ -332,28 +332,28 @@ IIIIIIIIIIII
       @test length(reads) == 10
       for r in reads
          fill!( r, 33 )
-         println(STDERR, r)
+         println(stderr, r)
          readname = string(r)
 
          align = ungapped_align( param, lib, r )
-         println(STDERR, align)
+         println(stderr, align)
 
-         flush(STDERR)
+         flush(stderr)
          @test !isnull( align )
          @test length( align.value ) >= 1
          @test all(map( x->x.isvalid, align.value))
          scores = map( x->identity(x, length(r.sequence)), align.value )
          @test maximum(scores) - minimum(scores) <= score_range
 
-         if length(search(readname, ":rc")) > 0
+         if length(something(findfirst(":rc", readname), 0:-1)) > 0
             @test align.value[1].strand == false
          else
             @test align.value[1].strand == true
          end
 
-         best_ind = indmax(scores)
+         best_ind = argmax(scores)
 
-         ex_num = length(split(readname, '-', keep=false))
+         ex_num = length(split(readname, '-', keepempty=false))
          @test length(align.value[best_ind].path) == ex_num
 
          count!( gquant, align.value[best_ind], 1.0 )
@@ -363,18 +363,18 @@ IIIIIIIIIIII
          lastnode  = align.value[best_ind].path[end].node
          curgraph  = lib.graphs[ curgene ]
 
-         cigar,positions = split(readname, '%', keep=false)[1:2]
-         first,last   = split(positions, ',', keep=false) |> y->map(x->parse(Int,x), y)
+         cigar,positions = split(readname, '%', keepempty=false)[1:2]
+         first,last   = split(positions, ',', keepempty=false) |> y->map(x->parse(Int,x), y)
          # Test SAM Format
          @test cigar == cigar_string( align.value[best_ind], curgraph, true, length(r.sequence) )[1]
          test_cigar,endpos = cigar_string( align.value[best_ind], curgraph, true, length(r.sequence) )
-         #println(STDERR, "cigar = $test_cigar")
+         #println(stderr, "cigar = $test_cigar")
          @test first == Int(curgraph.nodecoord[firstnode] + (align.value[best_ind].offset - curgraph.nodeoffset[firstnode]))
          #@test last  == Int(curgraph.nodecoord[lastnode] + (endpos - curgraph.nodeoffset[lastnode]))
-         # test readlength = number of M and S entries in cigar  
+         # test readlength = number of M and S entries in cigar
          # test SAM offset is correct for both '+' and '-' genes.
          # test that cigar reversal works for '-' strand genes.
-      end 
+      end
 
       @testset "SGAlignContainer Hashing" begin
 
@@ -414,13 +414,13 @@ IIIIIIIIIIII
       end
 
       @testset "SGAlignPath Overlap" begin
-          
+
          single     = SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]
          single_two = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore))]
-         two_three  = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))] 
+         two_three  = SGAlignNode[SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))]
          larger     = SGAlignNode[SGAlignNode(1,1,one(SGAlignScore)), SGAlignNode(1,2,one(SGAlignScore)), SGAlignNode(1,3,one(SGAlignScore))]
 
-         println(STDERR, @which single in single)
+         println(stderr, @which single in single)
 
          @test single in single
          @test !(single in single_two)
@@ -434,7 +434,7 @@ IIIIIIIIIIII
 
       @testset "Isoform Equivalence Classes" begin
 
-         is = IntSet([1, 2, 5, 6])
+         is = BitSet([1, 2, 5, 6])
          @test in( 1, 2, is ) == true
          @test in( 1, 3, is ) == false
          @test in( 2, 3, is ) == false
@@ -459,19 +459,19 @@ IIIIIIIIIIII
          @test length(gquant.length) == 7
          @test gquant.geneidx == [0, 2, 5, 6]
          build_equivalence_classes!( gquant, lib, assign_long=true )
-         println(STDERR, gquant)
-         println(STDERR, gquant.classes)
-         
+         println(stderr, gquant)
+         println(stderr, gquant.classes)
+
       end
 
       @testset "MultiMapping Equivalence Classes" begin
 
-         multi  = MultiMapping{SGAlignSingle,DefaultCounter}() 
-         aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true), 
+         multi  = MultiMapping{SGAlignSingle,DefaultCounter}()
+         aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000007, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000004, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
 
          push!( multi, aligns, 1.0, gquant, lib )
-         println(STDERR, multi.map)
+         println(stderr, multi.map)
          compats = collect(values(multi.map))
          @test compats[1].isdone == true
          @test sum(multi.iset) == 0
@@ -480,18 +480,18 @@ IIIIIIIIIIII
 
          aligns = SGAlignment[SGAlignment(0x0000000e, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0))], false, true),
                               SGAlignment(0x00000001, 0x01, SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0))], false, true)]
- 
+
          push!( multi, aligns, 1.0, gquant, lib )
-         println(STDERR, multi.map)
+         println(stderr, multi.map)
          compats = collect(values(multi.map))
          @test compats[1].isdone == false
-         @test [3,4,5] == compats[1].class 
+         @test [3,4,5] == compats[1].class
          @test sum(multi.iset) == 0
 
          # Assignment
          compats[1].count = 10.0
          prev_node = get(gquant.quant[2].node[1])
-         println(STDERR, "prev_quant = $(gquant.quant[2])")
+         println(stderr, "prev_quant = $(gquant.quant[2])")
          interv = Interval{ExonInt}( 1, 2 )
          prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
 
@@ -499,8 +499,8 @@ IIIIIIIIIIII
 
          assign_ambig!( gquant, lib, multi )
          println(gquant.quant[2].edge)
-         
-         println(STDERR, "cur_quant = $(gquant.quant[2])")
+
+         println(stderr, "cur_quant = $(gquant.quant[2])")
          @test get(gquant.quant[2].node[1]) == prev_node + 7.5
          @test get(get(gquant.quant[2].edge, interv, IntervalValue(0,0,default(DefaultCounter)) ).value) == prev_edge + 2.5
       end
@@ -535,36 +535,36 @@ IIIIIIIIIIII
          1-3, 2-4, 3-6, 3-10, 4-6, 8-10
          expected paths:
          =#
-         expected_paths = [IntSet([1,2,3,4,5,6,7,8,9,10]) # (full)
-         IntSet([1,3,4,5,6,7,8,9,10]) # (1-3)
-         IntSet([1,2,4,5,6,7,8,9,10]) # (2-4)
-         IntSet([1,2,3,6,7,8,9,10])   # (3-6)
-         IntSet([1,3,6,7,8,9,10])     # (3-6)
-         IntSet([1,2,3,10])           # (3-10) 
-         IntSet([1,3,10])             # (3-10) 
-         IntSet([1,2,3,4,6,7,8,9,10]) # (4-6)  
-         IntSet([1,3,4,6,7,8,9,10])   # (4-6) 
-         IntSet([1,2,4,6,7,8,9,10])   # (4-6)  
-         IntSet([1,2,3,4,5,6,7,8,10]) # (8-10)  
-         IntSet([1,3,4,5,6,7,8,10])   # (8-10)  
-         IntSet([1,2,4,5,6,7,8,10])   # (8-10)  
-         IntSet([1,2,3,6,7,8,10])     # (8-10)  
-         IntSet([1,3,6,7,8,10])       # (8-10)  
-         IntSet([1,2,3,4,6,7,8,10])   # (8-10)  
-         IntSet([1,3,4,6,7,8,10])     # (8-10)  
-         IntSet([1,2,4,6,7,8,10])]    # (8-10) 
+         expected_paths = [BitSet([1,2,3,4,5,6,7,8,9,10]) # (full)
+         BitSet([1,3,4,5,6,7,8,9,10]) # (1-3)
+         BitSet([1,2,4,5,6,7,8,9,10]) # (2-4)
+         BitSet([1,2,3,6,7,8,9,10])   # (3-6)
+         BitSet([1,3,6,7,8,9,10])     # (3-6)
+         BitSet([1,2,3,10])           # (3-10)
+         BitSet([1,3,10])             # (3-10)
+         BitSet([1,2,3,4,6,7,8,9,10]) # (4-6)
+         BitSet([1,3,4,6,7,8,9,10])   # (4-6)
+         BitSet([1,2,4,6,7,8,9,10])   # (4-6)
+         BitSet([1,2,3,4,5,6,7,8,10]) # (8-10)
+         BitSet([1,3,4,5,6,7,8,10])   # (8-10)
+         BitSet([1,2,4,5,6,7,8,10])   # (8-10)
+         BitSet([1,2,3,6,7,8,10])     # (8-10)
+         BitSet([1,3,6,7,8,10])       # (8-10)
+         BitSet([1,2,3,4,6,7,8,10])   # (8-10)
+         BitSet([1,3,4,6,7,8,10])     # (8-10)
+         BitSet([1,2,4,6,7,8,10])]    # (8-10)
          edgestr = "1-2:616.0,1-3:4.0,2-3:569.0,2-4:20.0,3-4:629.0,3-6:1.0,3-10:3.0,4-5:1.0,4-6:664.0,5-6:5.0,6-7:789.0,7-8:790.0,8-9:2.0,8-10:606.0,9-10:15.0"
          edgespl  = split( edgestr, ',' )
          edges    = IntervalMap{Int,Float64}()
          psigraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                              Vector{Float64}(), Vector{IntSet}(), 1, 10 )
+                              Vector{Float64}(), Vector{BitSet}(), 1, 10 )
          for s in split( edgestr, ',' )
             f,l,v = parse_edge( s )
             edges[(f,l)] = v
             push!( psigraph.psi, 0.0 )
             push!( psigraph.length, 1.0 )
             push!( psigraph.count, v )
-            push!( psigraph.nodes, IntSet([f,l]) )
+            push!( psigraph.nodes, BitSet([f,l]) )
          end
 
          res = reduce_graph( psigraph )
@@ -575,7 +575,7 @@ IIIIIIIIIIII
       end
 
       @testset "Event Building" begin
-         out = IOBuffer(true,true)
+         out = IOBuffer(read=true,write=true)
          bs  = BufferedOutputStream(out)
          output_psi_header( bs )
          for g in 1:length(lib.graphs)
@@ -589,29 +589,8 @@ IIIIIIIIIIII
          for l in eachline(out)
             spl = split( l, '\t' )
             @test length(spl) == 14
-            println(STDERR,l)
+            println(stderr,l)
          end
-      end
-
-      @testset "EBI Accessions & HTTP Streaming" begin
-         ebi_res = ident_to_fastq_url("SRR1199010") # small single cell file
-         @test ebi_res.success
-         @test !ebi_res.paired
-
-         println(STDERR, "Streaming fastq file from http://timbitz.github.io/data/SRR1199010.fastq.gz...")
-         parser, response = make_http_fqparser( "http://timbitz.github.io/data/SRR1199010.fastq.gz" )
-         println(STDERR, "HTTP Response: $response")
-         reads  = allocate_fastq_records( 50 )
-         cnt    = 0
-         while length(reads) > 0
-            read_http_chunk!( reads, parser, response )
-            for r in reads
-               fill!( r, 33 )
-            end
-            cnt += length(reads)
-         end
-         @test cnt == 128482 # correct number of reads in file
-         #run(`julia ../bin/whippet-quant.jl --ebi SRR1199010`)
       end
    end
 end

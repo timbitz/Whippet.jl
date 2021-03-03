@@ -3,7 +3,7 @@
 @inline identity( one::A, two::A, onelen::Int, twolen::Int ) where {A <: UngappedAlignment} = @fastmath score( one, two ) / ( onelen + twolen )
 
 @inline function sorted_offsets( sa::UnitRange, index::FMIndexes.FMIndex )
-   res = Vector{Int}(length(sa))
+   res = Vector{Int}(undef, length(sa))
    ridx = 1
    for sidx in sa
       res[ridx] = FMIndexes.sa_value( sidx, index ) + 1
@@ -42,7 +42,7 @@ end
 function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FASTQRecord; ispos=true, anchor_left=true )
 
    fwd_seed,fwd_readloc,strand = seed_locate( p, lib.index, fwd, offset_left=anchor_left, both_strands=!p.is_stranded )
-   
+
    if (p.is_pair_rc && strand) || (!p.is_pair_rc && !strand)
       reverse_complement!(rev)
       rev_seed,rev_readloc = seed_locate( p, lib.index, rev, offset_left=!anchor_left, both_strands=false)
@@ -72,14 +72,14 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FA
       if dist < p.seed_pair_range # inside allowable pair distance
 
          geneind = convert( CoordInt, searchsortedlast( lib.offset, fwd_sorted[fidx] ) )
-         next_offset= geneind < length(lib.offset) ? lib.offset[geneind+1] : 
+         next_offset = geneind < length(lib.offset) ? lib.offset[geneind+1] :
                                                            lib.offset[geneind] + length(lib.graphs[geneind].seq)
          if lib.offset[geneind] <= rev_sorted[ridx] < next_offset
 
             fwd_aln = _ungapped_align( p, lib, fwd, fwd_sorted[fidx], fwd_readloc; ispos=ispos, geneind=geneind )
             rev_aln = _ungapped_align( p, lib, rev, rev_sorted[ridx], rev_readloc; ispos=!ispos, geneind=geneind )
 
-            @fastmath const scvar = identity( fwd_aln, rev_aln, fwd_len, rev_len )
+            @fastmath scvar = identity( fwd_aln, rev_aln, fwd_len, rev_len )
 
             if isvalid(fwd_aln) && isvalid(rev_aln)
                if isnull( fwd_res ) || isnull( rev_res )
@@ -107,8 +107,8 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FA
                         push!( rev_res.value, rev_aln )
                      end
                   end # end score vs maxscore
-               end # end isnull 
-            end # end isvalid 
+               end # end isnull
+            end # end isvalid
             ridx += 1
             fidx += 1
             continue
@@ -123,5 +123,3 @@ function ungapped_align( p::AlignParam, lib::GraphLib, fwd::FASTQRecord, rev::FA
 
    fwd_res,rev_res
 end
-
-
