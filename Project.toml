@@ -1,7 +1,7 @@
 name = "Whippet"
 uuid = "0af2a87d-76f3-44e3-af6e-8f91dcdf7847"
-authors = ["Garrett Massman <gmassman20@gmail.com>"]
-version = "0.1.0"
+authors = ["Tim Sterne-Weiler <tsternew@gmail.com>"]
+version = "1.5.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -11,7 +11,9 @@ BioSymbols = "3c28c6f8-a34d-59c4-9654-267d177fcfa9"
 BufferedStreams = "e1450e63-4bb3-523b-b2a4-4ffa8c0fd77d"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
 FMIndexes = "df4c4d3e-99e2-490c-be50-cc7f88de63b5"
+GenomicFeatures = "899a7d2d-5c61-547b-bef9-6698a8d05446"
 Glob = "c27321d9-0574-5035-807b-f59d2c89b15c"
 IntArrays = "45d23951-e9a5-545c-8049-e4c4887f5525"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -22,9 +24,10 @@ Nullables = "4d1e1d77-625e-5b40-9113-a560ec7a8ecd"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 WaveletMatrices = "c0580c95-5bac-53b2-8f35-dbbbc8487a1f"
+XAM = "d759349c-bcba-11e9-07c2-5b90f8f05f7c"
 
 [compat]
-julia = ">= 1.0"
+julia = ">= 1.5"
 
 [extras]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"

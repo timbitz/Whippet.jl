@@ -3,13 +3,8 @@ os:
   - linux
   - osx
 julia:
-  - 1.1
-  - 1.3
-  - nightly
+  - 1.5.3
 notifications:
   email: false
-allow_failures:
-- julia:
-  - nightly
 after_success:
 - julia -e 'using Pkg; cd(Pkg.dir("Whippet")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'

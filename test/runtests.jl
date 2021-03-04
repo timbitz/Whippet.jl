@@ -4,10 +4,14 @@ using Serialization
 import BioSymbols
 import BioSequences
 import BioAlignments
-
+import XAM
+import FASTX
 using BioSymbols
 using BioSequences
 using BioAlignments
+using GenomicFeatures
+using XAM
+using FASTX
 using BufferedStreams
 using DataStructures
 using Distributions
@@ -40,11 +44,11 @@ include("../src/io.jl")
 include("../src/diff.jl")
 
 @testset "SG Kmers & Seq" begin
-   @test sgkmer(dna"ATG") == BioSequences.DNAKmer(dna"ATG")
-   @test sgkmer("ATG") == BioSequences.DNAKmer(dna"ATG")
+   @test sgkmer(dna"ATG") == BioSequences.DNAMer(dna"ATG")
+   @test sgkmer("ATG") == BioSequences.DNAMer(dna"ATG")
    @test isa(sgkmer(dna"ATG"), SGKmer{3})
-   @test kmer_index( sgkmer(dna"ATG") ) == kmer_index( BioSequences.DNAKmer(dna"ATG") )
-   @test Int(kmer_index_trailing( dna"ATG" ))+1 == kmer_index( BioSequences.DNAKmer(dna"ATG") )
+   @test kmer_index( sgkmer(dna"ATG") ) == kmer_index( BioSequences.DNAMer(dna"ATG") )
+   @test Int(kmer_index_trailing( dna"ATG" ))+1 == kmer_index( BioSequences.DNAMer(dna"ATG") )
    @test Int(kmer_index_trailing( dna"ATGR" )) == 0
    seq = dna""
    for i in 1:32
@@ -492,7 +496,7 @@ IIIIIIIIIIII
          compats[1].count = 10.0
          prev_node = get(gquant.quant[2].node[1])
          println(stderr, "prev_quant = $(gquant.quant[2])")
-         interv = Interval{ExonInt}( 1, 2 )
+         interv = IntervalTrees.Interval{ExonInt}( 1, 2 )
          prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
 
          println(gquant.quant[2].edge)

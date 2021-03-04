@@ -132,7 +132,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
    nodecoord  = Vector{CoordInt}()
    nodelen    = Vector{CoordInt}()
    edgetype   = Vector{EdgeType}()
-   seq        = DNASequence()
+   seq        = LongSequence{DNAAlphabet{4}}()
 
    strand = gene.info.strand  # Bool
 
@@ -170,7 +170,7 @@ function SpliceGraph( gene::RefGene, genome::SGSequence, k::Int )
       end
 
       # now should we make a node?
-      if issubinterval( gene.exons, Interval{CoordInt}(minval,secval) ) ||
+      if issubinterval( gene.exons, IntervalTrees.Interval{CoordInt}(minval,secval) ) ||
          (minidx == 2 && minval in gene.novelacc) ||
          (secidx == 3 && secval in gene.noveldon)
          #(usebam && isretainedintron( )) # TODO (not yet implemented)

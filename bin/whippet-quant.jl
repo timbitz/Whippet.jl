@@ -7,7 +7,7 @@ const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = readline(open(dir * "/VERSION"))
 
 start = time_ns()
-println( stderr, "Whippet $ver loading and compiling... " )
+println( stderr, "Whippet $ver activating environment, compiling... " )
 
 Pkg.activate(dir * "/..")
 
