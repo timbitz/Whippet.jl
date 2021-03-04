@@ -35,15 +35,16 @@ Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 Whippet v1.5 works on the current version of Julia (**v1.5.3**) which is available here (https://julialang.org).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 
-
+Download and install dependencies
 ```bash
 $ git clone https://github.com/timbitz/Whippet.jl.git
 $ cd Whippet.jl
+$ julia --project -e 'using Pkg; Pkg.instantiate()'
 ```
 
 
 *Notes*:
-* Everything in Whippet.jl/bin should work out-of-the-box, however the first time running will be slow as julia will be setting up the environment, installing dependencies and precompiling code
+* Everything in Whippet.jl/bin should work out-of-the-box, however the first time running will be slow as julia will be precompiling code
 * Update to the most recent version of Whippet by pulling the master branch `git pull`
 * For all executables in `Whippet.jl/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 * You should install Julia locally, if you have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
