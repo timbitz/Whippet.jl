@@ -49,7 +49,6 @@ $ julia --project -e 'using Pkg; Pkg.instantiate()'
 * For all executables in `Whippet.jl/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 * You should install Julia locally, if you have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
 * For instructions on using Whippet with **Julia v0.6.4**, look at the README.md within the Whippet v0.11.1 tag
-* For compatability with Whippet on **Julia v1.0 to v1.3**, get the Whippet v1.0 release
 
 
 ### 2) Build an index.

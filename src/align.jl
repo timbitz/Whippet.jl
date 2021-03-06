@@ -167,7 +167,6 @@ end
       ctry += 1
       if cnt == 0 || cnt > p.seed_tolerate
          if both_strands
-            println("curseq is ", curseq, " of type ", typeof(curseq))
             BioSequences.reverse_complement!(curseq)
             # curseq = reverse_complement(curseq)
             rev_sa = FMIndexes.sa_range( curseq, index )

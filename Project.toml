@@ -1,7 +1,7 @@
 name = "Whippet"
 uuid = "0af2a87d-76f3-44e3-af6e-8f91dcdf7847"
 authors = ["Tim Sterne-Weiler <tsternew@gmail.com>"]
-version = "1.5.0"
+version = "1.5.1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
@@ -22,6 +22,7 @@ Libz = "2ec943e9-cfe8-584d-b93d-64dcb6d567b7"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Nullables = "4d1e1d77-625e-5b40-9113-a560ec7a8ecd"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 WaveletMatrices = "c0580c95-5bac-53b2-8f35-dbbbc8487a1f"
 XAM = "d759349c-bcba-11e9-07c2-5b90f8f05f7c"

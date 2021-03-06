@@ -23,6 +23,7 @@ using Libz
 using LinearAlgebra
 using Nullables
 using Printf
+using Random
 
 include("../src/types.jl")
 include("../src/timer.jl")

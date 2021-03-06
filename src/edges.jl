@@ -67,7 +67,7 @@ function add_kmer_edge!( kmers::Vector{SGNodeSet},
       ind = kmer_index(curkmer)
    catch
       abstr = String(s)
-      ismatch( r"S|N", abstr ) && return(zero(UInt64))
+      occursin( r"S|N", abstr ) && return(zero(UInt64))
       sub = replace( abstr, r"D|R", "" )
       curl,curr = l-1,r+1
       while length(sub) < ksize && curl >= 1 && curr <= length(seq)
