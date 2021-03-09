@@ -142,13 +142,13 @@ function main()
        println(stderr, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
        @timer mapped,totreads,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod,
                                                            sam=args["sam"], qualoffset=enc_offset )
-       readlen = Int(readlen)
+       readlen = Int(floor(readlen))
        println(stderr, "Finished mapping $mapped paired-end reads of length $readlen each out of a total of $totreads mate-pairs...")
     else
        println(stderr, "FASTQ: " * args["filename.fastq[.gz]"])
        @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod,
                                                      sam=args["sam"], qualoffset=enc_offset )
-       readlen = Int(readlen)
+       readlen = Int(floor(readlen))
        println(stderr, "Finished mapping $mapped single-end reads of length $readlen out of a total of $totreads reads...")
     end
 
