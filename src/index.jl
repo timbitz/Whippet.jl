@@ -100,7 +100,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    end
 
    # clean up
-   xcript = DNASequence()
+   xcript = SGSequence()
    GC.gc()
 
    println( stderr, "Building edges.." )
