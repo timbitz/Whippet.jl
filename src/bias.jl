@@ -88,7 +88,7 @@ count!( mod::DefaultBiasMod, x, y ) = 1.0
 # Implementation of Hansen et al, NAR 2010 
 
 # hash by identity for speed
-Base.hash( v::UInt16 ) = v
+Base.hash( v::UInt16 ) = convert(UInt64, v)
 
 function add_to_back!( back::Vector{Float64}, exp::ExpectedGC, weight::Float64 )
    for i in 1:length(exp)
