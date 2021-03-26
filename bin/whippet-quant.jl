@@ -6,6 +6,8 @@ using Pkg
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = readline(open(dir * "/VERSION"))
 
+const minversion = v"1.6"
+
 start = time_ns()
 println( stderr, "Whippet $ver loading... " )
 
@@ -19,7 +21,7 @@ function parse_cmd()
   s = ArgParseSettings()
   # TODO finish options...
   @add_arg_table s begin
-    "filename.fastq[.gz]"
+    "single_or_first_mate.fastq[.gz]--OR--pre_aligned_input.bam"
       arg_type = String
       required = true
     "paired_mate.fastq[.gz]"
@@ -103,10 +105,12 @@ function main()
    indexname = hasextension(indexpath, ".jls") ? indexpath : indexpath * ".jls"
    println(stderr, "Loading splice graph index... $indexname")
    @timer lib = open(deserialize, indexname)
+   checkversion( lib, ver, minversion )
+
+   inputfile  = fixpath( args["single_or_first_mate.fastq[.gz]--OR--pre_aligned_input.bam"] )
+   isbaminput = hasextension(inputfile, "bam")
 
    ispaired = args["paired_mate.fastq[.gz]"] != nothing
-
-    args["filename.fastq[.gz]"] = fixpath(args["filename.fastq[.gz]"])
     if ispaired
        args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
     end
@@ -128,24 +132,24 @@ function main()
 
    enc_offset = args["phred-64"] ? 64 : 33
 
-   parser = make_fqparser( args["filename.fastq[.gz]"], forcegzip=args["force-gz"] )
+   parser = make_fqparser( inputfile, forcegzip=args["force-gz"] )
 
    if ispaired
       mate_parser = make_fqparser( args["paired_mate.fastq[.gz]"], forcegzip=args["force-gz"] )
    end
 
-   #TODO: first implementation was too slow, ie too much communication overhead
-   # try speeding up by using Distributed.nprocs > 1
    println(stderr, "Processing reads from file...")
-    if ispaired
-       println(stderr, "FASTQ_1: " * args["filename.fastq[.gz]"])
+    if isbaminput
+       # Load bam file
+    elseif ispaired
+       println(stderr, "FASTQ_1: " * inputfile)
        println(stderr, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
        @timer mapped,totreads,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod,
                                                            sam=args["sam"], qualoffset=enc_offset )
        readlen = Int(floor(readlen))
        println(stderr, "Finished mapping $mapped paired-end reads of length $readlen each out of a total of $totreads mate-pairs...")
     else
-       println(stderr, "FASTQ: " * args["filename.fastq[.gz]"])
+       println(stderr, "FASTQ: " * inputfile)
        @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod,
                                                      sam=args["sam"], qualoffset=enc_offset )
        readlen = Int(floor(readlen))

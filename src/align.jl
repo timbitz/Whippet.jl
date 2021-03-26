@@ -27,14 +27,18 @@ AlignParam( ispaired = false ) = ispaired ? AlignParam( 3, 9, 2, 4, 4, 18, 5, 18
 @inline function AlignParam( args::Dict{S,Any}, ispaired=false; kmer=9 ) where S <: AbstractString
    aln = AlignParam( args["mismatches"], kmer,
                            args["seed-try"],
-                           args["seed-tol"], 4,
+                           args["seed-tol"], 
+                           4,
                            args["seed-len"],
                            args["seed-buf"],
                            args["seed-inc"],
-                           args["pair-range"], 0.05,
+                           args["pair-range"], 
+                           0.05,
                            args["score-min"],
-                           args["stranded"], ispaired,
-                          !args["pair-same-strand"], false,
+                           args["stranded"], 
+                           ispaired,
+                           !args["pair-same-strand"], 
+                           false,
                            args["circ"] )
    aln
 end

@@ -281,7 +281,10 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle,
 end
 
 # This function re-counts paired SGAlignPaths that weren't counted because they were too long, disjointed, or both
-@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignPaired}, path::SGAlignPaired, value, temp_iset::BitSet=BitSet() )
+@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignPaired}, 
+                                 path::SGAlignPaired, 
+                                 value, 
+                                 temp_iset::BitSet=BitSet() )
    init_gene = path.fwd[1].gene
    sgquant = graphq.quant[ init_gene ]
 
@@ -453,8 +456,11 @@ function total_multi( mm::MultiMapping )
    total
 end
 
-function Base.push!( ambig::MultiMapping{SGAlignSingle,R}, alns::Vector{SGAlignment}, value,
-                     graphq::GraphLibQuant, lib::GraphLib ) where R <: ReadCounter
+function Base.push!( ambig::MultiMapping{SGAlignSingle,R}, 
+                     alns::Vector{SGAlignment}, 
+                     value,
+                     graphq::GraphLibQuant, 
+                     lib::GraphLib ) where R <: ReadCounter
    cont = Vector{SGAlignSingle}(undef, length(alns))
    for i in 1:length(alns)
       cont[i] = SGAlignSingle( alns[i].path )
@@ -468,8 +474,12 @@ function Base.push!( ambig::MultiMapping{SGAlignSingle,R}, alns::Vector{SGAlignm
    end
 end
 
-function Base.push!( ambig::MultiMapping{SGAlignPaired,R}, fwd::Vector{SGAlignment}, rev::Vector{SGAlignment}, value,
-                     graphq::GraphLibQuant, lib::GraphLib ) where R <: ReadCounter
+function Base.push!( ambig::MultiMapping{SGAlignPaired,R}, 
+                     fwd::Vector{SGAlignment}, 
+                     rev::Vector{SGAlignment}, 
+                     value,
+                     graphq::GraphLibQuant, 
+                     lib::GraphLib ) where R <: ReadCounter
    cont = Vector{SGAlignPaired}( undef, length(fwd) )
    for i in 1:length(fwd)
       cont[i] = SGAlignPaired( fwd[i].path, rev[i].path )
@@ -496,8 +506,10 @@ primer_adjust!( multi::MultiMapping{C,R}, mod::B ) where {C <: SGAlignContainer,
 gc_adjust!( multi::MultiMapping{C,R}, mod::B ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel} = adjust!( multi, mod, gc_adjust! )
 
 # for a given alignment container, set the temp_iset in multi to the compatibility class
-@inbounds function set_equivalence_class!( multi::MultiMapping{C,R}, graphq::GraphLibQuant,
-                                           lib::GraphLib, aln::C ) where {C <: SGAlignContainer, R <: ReadCounter}
+@inbounds function set_equivalence_class!( multi::MultiMapping{C,R}, 
+                                           graphq::GraphLibQuant,
+                                           lib::GraphLib, 
+                                           aln::C ) where {C <: SGAlignContainer, R <: ReadCounter}
    empty!(multi.iset)
    g = aln.fwd[1].gene
    for p in 1:length(lib.graphs[g].annopath)
@@ -517,7 +529,9 @@ function get_class_value( iset::BitSet, compat::MultiCompat )
    value
 end
 
-function assign_ambig!( graphq::GraphLibQuant{C,R}, lib::GraphLib, ambig::MultiMapping{C,R} ) where {C <: SGAlignContainer, R <: ReadCounter}
+function assign_ambig!( graphq::GraphLibQuant{C,R}, 
+                        lib::GraphLib, 
+                        ambig::MultiMapping{C,R} ) where {C <: SGAlignContainer, R <: ReadCounter}
    @inbounds for (vp,mc) in ambig.map
       # store relative weight of each alignment path
       vals = zeros(length(vp))
@@ -553,7 +567,9 @@ function assign_ambig!( graphq::GraphLibQuant{C,R}, lib::GraphLib, ambig::MultiM
 end
 
 # Count a single alignment in quant
-function count!( graphq::GraphLibQuant{C,R}, align::SGAlignment, value ) where {C <: SGAlignContainer, R <: ReadCounter}
+function count!( graphq::GraphLibQuant{C,R}, 
+                 align::SGAlignment, 
+                 value ) where {C <: SGAlignContainer, R <: ReadCounter}
    align.isvalid == true || return
    init_gene = align.path[1].gene
    sgquant   = graphq.quant[ init_gene ]
@@ -594,7 +610,10 @@ function count!( graphq::GraphLibQuant{C,R}, align::SGAlignment, value ) where {
 end
 
 ## Extension of count! for paired end counting
-function count!( graphq::GraphLibQuant{C,R}, fwd::SGAlignment, rev::SGAlignment, value ) where {C <: SGAlignContainer, R <: ReadCounter}
+function count!( graphq::GraphLibQuant{C,R}, 
+                 fwd::SGAlignment, 
+                 rev::SGAlignment, 
+                 value ) where {C <: SGAlignContainer, R <: ReadCounter}
    (fwd.isvalid == true && rev.isvalid == true) || return
    init_gene = fwd.path[1].gene
    rev_gene  = rev.path[1].gene
@@ -652,7 +671,10 @@ function count!( graphq::GraphLibQuant{C,R}, fwd::SGAlignment, rev::SGAlignment,
    end
 end
 
-@inline function calculate_tpm!( quant::GraphLibQuant, counts::Vector{Float64}=quant.count; readlen::Int64=50, sig::Int64=1 )
+@inline function calculate_tpm!( quant::GraphLibQuant, 
+                                 counts::Vector{Float64}=quant.count; 
+                                 readlen::Int64=50, 
+                                 sig::Int64=1 )
    for i in 1:length(counts)
       @fastmath quant.tpm[ i ] = counts[i] / max( (quant.length[i] - readlen), 1.0 )
    end
@@ -716,9 +738,12 @@ end
 # at each iteration.   It also requires that calculate_tpm! be
 # run initially once prior to gene_em!() call.
 
-function gene_em!( quant::GraphLibQuant, ambig::MultiMapping{C,R};
-                   it::Int64=1, maxit::Int64=1000,
-                   sig::Int64=4, readlen::Int64=50 ) where {C <: SGAlignContainer, R <: ReadCounter}
+function gene_em!( quant::GraphLibQuant, 
+                   ambig::MultiMapping{C,R};
+                   it::Int64=1, 
+                   maxit::Int64=1000,
+                   sig::Int64=4, 
+                   readlen::Int64=50 ) where {C <: SGAlignContainer, R <: ReadCounter}
 
    count_temp = ones(length(quant.count))
    tpm_temp   = ones(length(quant.count))

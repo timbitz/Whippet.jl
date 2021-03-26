@@ -12,8 +12,19 @@ struct GraphLib <: SeqLibrary
    index::FMIndex
    sorted::Bool
    kmer::Int64
+   hasindex::Bool             
+   version::VersionNumber
 end
 
+function checkversion( lib::GraphLib, currentver, minversion::VersionNumber )
+   try
+      if lib.version < minversion
+         error("Index is from Whippet $(lib.version)\nWhippet $currentver requires a $minversion index or greater!")
+      end
+   catch e
+      error("Index is from Whippet v1.5 or older!\nWhippet $currentver requires a $minversion index or greater!")
+   end
+end
 
 function build_chrom_dict( ref::RefSet )
    ret = Dict{SeqName,Vector{GeneName}}() # refgenomeseq->geneid[]
@@ -61,7 +72,7 @@ function single_genome_index!( fhIter; verbose=false )
 end
 
 
-function trans_index!( fhIter, ref::RefSet; kmer=9 )
+function trans_index!( fhIter, ref::RefSet; kmer=9, version=v"1.6" )
    seqdic  = build_chrom_dict( ref )
    xcript  = dna""
    xoffset = Vector{UInt64}()
@@ -106,7 +117,7 @@ function trans_index!( fhIter, ref::RefSet; kmer=9 )
    println( stderr, "Building edges.." )
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
 
-   GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer )
+   GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer, true, version )
 end
 
 function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
