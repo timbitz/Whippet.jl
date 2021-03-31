@@ -1,7 +1,7 @@
 name = "Whippet"
 uuid = "0af2a87d-76f3-44e3-af6e-8f91dcdf7847"
 authors = ["Tim Sterne-Weiler <tsternew@gmail.com>"]
-version = "1.6"
+version = "1.6.1"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
