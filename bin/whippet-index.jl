@@ -13,6 +13,7 @@ Pkg.activate(dir * "/..")
 
 using Whippet
 using BioAlignments
+using XAM
 using Libz
 using Serialization
 using Nullables
