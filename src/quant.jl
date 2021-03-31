@@ -256,11 +256,15 @@ end
    end
 end
 
-assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle,
-              value, temp_iset::BitSet ) = assign_path!( graphq, path, value )
+assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
+              path::SGAlignSingle,
+              value, 
+              temp_iset::BitSet ) = assign_path!( graphq, path, value )
 
 # This function re-count!'s SGAlignPaths which were not count!'ed originally
-@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, path::SGAlignSingle, value )
+@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
+                                 path::SGAlignSingle, 
+                                 value )
    init_gene = path.fwd[1].gene
    sgquant = graphq.quant[ init_gene ]
 

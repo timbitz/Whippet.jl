@@ -21,7 +21,7 @@ function parse_cmd()
   s = ArgParseSettings()
   # TODO finish options...
   @add_arg_table s begin
-    "single_or_first_mate.fastq[.gz]--OR--pre_aligned_input.bam"
+    "filename.fastq[.gz]--OR--pre-aligned.bam"
       arg_type = String
       required = true
     "paired_mate.fastq[.gz]"
@@ -107,7 +107,7 @@ function main()
    @timer lib = open(deserialize, indexname)
    checkversion( lib, ver, minversion )
 
-   inputfile  = fixpath( args["single_or_first_mate.fastq[.gz]--OR--pre_aligned_input.bam"] )
+   inputfile  = fixpath( args["filename.fastq[.gz]--OR--pre-aligned.bam"] )
    isbaminput = hasextension(inputfile, "bam")
 
    ispaired = args["paired_mate.fastq[.gz]"] != nothing
