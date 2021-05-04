@@ -5,6 +5,13 @@ struct SGNode
    node::NodeInt
 end
 
+#SGNode( gene::I, node::J ) where {I <: Integer, J <: Integer} = SGNode( gene, node, true )
+#struct SGNodeAnno
+#   gene::NodeInt
+#   node::NodeInt
+#   isexonic::Bool
+#end
+
 const SGNodeSet = Vector{SGNode}
 
 struct Edges{K}

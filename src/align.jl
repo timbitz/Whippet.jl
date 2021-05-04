@@ -59,18 +59,20 @@ end
 @inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
 @inline match(t::Type{SGAlignScore}, val::I) where {I <: Integer} = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
 
-struct SGAlignNode
+struct SGNodeMeta{A <: Any}
    gene::NodeInt
    node::NodeInt
-   score::SGAlignScore
+   meta::A
 end
+
+const SGAlignNode = SGNodeMeta{SGAlignScore}
 
 Base.hash( sgn::SGAlignNode ) = hash( sgn.gene, hash(sgn.node) )
 Base.hash( sgn::SGAlignNode, h::UInt64 ) = hash( sgn.gene, hash(sgn.node, h) )
 Base.isequal( a::SGAlignNode, b::SGAlignNode ) = a.gene == b.gene && a.node == b.node
 Base.:(==)( a::SGAlignNode, b::SGAlignNode ) = a.gene == b.gene && a.node == b.node
 
-const SGAlignPath = Vector{SGAlignNode}
+const SGAlignPath = Vector{SGNodeMeta{A}} where A <: Any
 
 @inline SGAlignNode(sgn::SGNode) = SGAlignNode(sgn.gene, sgn.node, zero(SGAlignScore))
 @inline Base.push!( v::Vector{SGAlignNode}, sgn::SGNode ) = push!( v, SGAlignNode(sgn) )
@@ -94,21 +96,21 @@ const DEF_ALIGN = SGAlignment(zero(UInt32), zero(ReadLengthInt), SGAlignNode[], 
 @inbounds function matches( v::Vector{SGAlignNode} )
    matches = zero(MatchesInt)
    for i in 1:length(v)
-      matches += v[i].score.matches
+      matches += v[i].meta.matches
    end
    matches
 end
 @inbounds function mistolerance( v::Vector{SGAlignNode} )
    mistol = zero(MismatchFloat)
    for i in 1:length(v)
-      mistol += v[i].score.mistolerance
+      mistol += v[i].meta.mistolerance
    end
    mistol
 end
 @inbounds function score( v::Vector{SGAlignNode} )
    score = zero(MismatchFloat)
    for i in 1:length(v)
-      score += v[i].score.matches - v[i].score.mistolerance
+      score += v[i].meta.matches - v[i].meta.mistolerance
    end
    score
 end
@@ -370,13 +372,13 @@ end
       end
       if read.sequence[ridx] == sg.seq[sgidx]
          # match
-         align.path[end].score.matches += 0x01
+         align.path[end].meta.matches += 0x01
       else
          # mismatch
          prob  = phred_to_prob( read.quality[ridx] )
-         @fastmath align.path[end].score.mistolerance += prob
+         @fastmath align.path[end].meta.mistolerance += prob
          @fastmath mistol += prob
-         align.path[end].score.mismatches += 0x01
+         align.path[end].meta.mismatches += 0x01
       end
       ridx  += 1
       sgidx += 1
@@ -409,8 +411,8 @@ end
    end
 
    # clean up any bad trailing nodes
-   while length(align.path) >= 1 && (align.path[end].score.mismatches >= align.path[end].score.matches ||
-                                     Int(align.path[end].score.matches) - Int(align.path[end].score.mismatches) <= 1)
+   while length(align.path) >= 1 && (align.path[end].meta.mismatches >= align.path[end].meta.matches ||
+                                     Int(align.path[end].meta.matches) - Int(align.path[end].meta.mismatches) <= 1)
       pop!( align.path )
       length(align.path) == 0 && (align.isvalid = false)
    end
@@ -512,13 +514,13 @@ end
       end
       if read.sequence[ridx] == sg.seq[sgidx]
          # match
-         align.path[1].score.matches += 0x01
+         align.path[1].meta.matches += 0x01
          # mismatch
       else
          prob  = phred_to_prob( read.quality[ridx] )
-         @fastmath align.path[1].score.mistolerance += prob
+         @fastmath align.path[1].meta.mistolerance += prob
          @fastmath mistol += prob
-         align.path[1].score.mismatches += 0x01
+         align.path[1].meta.mismatches += 0x01
       end
       ridx  -= 1
       sgidx -= 1
@@ -563,9 +565,9 @@ end
    end
 
    # clean up any bad left trailing nodes
-   while length(align.path) >= 1 && (align.path[1].score.mismatches >= align.path[1].score.matches ||
-                                     Int(align.path[1].score.matches) - Int(align.path[1].score.mismatches) <= 1)
-      offset_change = align.path[1].score.matches + align.path[1].score.mismatches
+   while length(align.path) >= 1 && (align.path[1].meta.mismatches >= align.path[1].meta.matches ||
+                                     Int(align.path[1].meta.matches) - Int(align.path[1].meta.mismatches) <= 1)
+      offset_change = align.path[1].meta.matches + align.path[1].meta.mismatches
       popfirst!( align.path )
       if length(align.path) >= 1
          align.offset      = sg.nodeoffset[ align.path[1].node ]

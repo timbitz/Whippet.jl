@@ -18,81 +18,81 @@ using Serialization
 using ArgParse
 
 function parse_cmd()
-  s = ArgParseSettings()
-  # TODO finish options...
-  @add_arg_table s begin
-    "filename.fastq[.gz]--OR--pre-aligned.bam"
-      arg_type = String
-      required = true
-    "paired_mate.fastq[.gz]"
-      arg_type = String
-      required = false
-    "--index", "-x"
-      help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph[.jls])"
-      arg_type = String
-      default  = fixpath( "$dir/../index/graph" )
-    "--out", "-o"
-      help     = "Where should the gzipped output go 'dir/prefix'?"
-      arg_type = String
-      default  = fixpath( "./output" )
-    "--seed-len", "-L"
-      help     = "Seed length"
-      arg_type = Int
-      default  = 18
-    "--seed-try", "-M"
-      help     = "Number of failed seeds to try before giving up"
-      arg_type = Int
-      default  = 3
-    "--seed-tol", "-T"
-      help     = "Number of seed hits to tolerate"
-      arg_type = Int
-      default  = 4
-    "--seed-buf", "-B"
-      help     = "Ignore this many bases from beginning and end of read for seed"
-      arg_type = Int
-      default  = 5
-    "--seed-inc", "-I"
-      help     = "Number of bases to increment seed each iteration"
-      arg_type = Int
-      default  = 18
-    "--pair-range", "-P"
-      help     = "Seeds for paired end reads must match within _ bases of one another"
-      arg_type = Int
-      default  = 5000
-    "--mismatches", "-X"
-      help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
-      arg_type = Int
-      default  = 3
-    "--score-min", "-S"
-      help     = "Minimum percent matching (matches - mismatches) / read_length"
-      arg_type = Float64
-      default  = 0.7
-    "--sam"
-      help     = "Should SAM format be sent to stdout?"
-      action   = :store_true
-    "--biascorrect"
-      help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
-      action   = :store_true
-    "--stranded"
-      help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag"
-      action   = :store_true
-    "--pair-same-strand"
-      help     = "Whippet by default tries to align fwd/rev pairs, if your data is fwd/fwd or rev/rev set this flag"
-      action   = :store_true
-    "--phred-33"
-      help     = "Qual string is encoded in Phred+33 integers (default)"
-      action   = :store_true
-    "--phred-64"
-      help     = "Qual string is encoded in Phred+64 integers"
-      action   = :store_true
-    "--circ"
-      help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
-      action   = :store_true
-    "--force-gz"
-      help     = "Regardless of suffix, consider read input as gzipped"
-      action   = :store_true
-  end
-  return parse_args(s)
+   s = ArgParseSettings()
+   # TODO finish options...
+   @add_arg_table s begin
+      "filename.fastq[.gz]--OR--pre-aligned.bam"
+         arg_type = String
+         required = true
+      "paired_mate.fastq[.gz]"
+         arg_type = String
+         required = false
+      "--index", "-x"
+         help     = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph[.jls])"
+         arg_type = String
+         default  = fixpath( "$dir/../index/graph" )
+      "--out", "-o"
+         help     = "Where should the gzipped output go 'dir/prefix'?"
+         arg_type = String
+         default  = fixpath( "./output" )
+      "--seed-len", "-L"
+         help     = "Seed length"
+         arg_type = Int
+         default  = 18
+      "--seed-try", "-M"
+         help     = "Number of failed seeds to try before giving up"
+         arg_type = Int
+         default  = 3
+      "--seed-tol", "-T"
+         help     = "Number of seed hits to tolerate"
+         arg_type = Int
+         default  = 4
+      "--seed-buf", "-B"
+         help     = "Ignore this many bases from beginning and end of read for seed"
+         arg_type = Int
+         default  = 5
+      "--seed-inc", "-I"
+         help     = "Number of bases to increment seed each iteration"
+         arg_type = Int
+         default  = 18
+      "--pair-range", "-P"
+         help     = "Seeds for paired end reads must match within _ bases of one another"
+         arg_type = Int
+         default  = 5000
+      "--mismatches", "-X"
+         help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
+         arg_type = Int
+         default  = 3
+      "--score-min", "-S"
+         help     = "Minimum percent matching (matches - mismatches) / read_length"
+         arg_type = Float64
+         default  = 0.7
+      "--sam"
+         help     = "Should SAM format be sent to stdout?"
+         action   = :store_true
+      "--biascorrect"
+         help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
+         action   = :store_true
+      "--stranded"
+         help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag"
+         action   = :store_true
+      "--pair-same-strand"
+         help     = "Whippet by default tries to align fwd/rev pairs, if your data is fwd/fwd or rev/rev set this flag"
+         action   = :store_true
+      "--phred-33"
+         help     = "Qual string is encoded in Phred+33 integers (default)"
+         action   = :store_true
+      "--phred-64"
+         help     = "Qual string is encoded in Phred+64 integers"
+         action   = :store_true
+      "--circ"
+         help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
+         action   = :store_true
+      "--force-gz"
+         help     = "Regardless of suffix, consider read input as gzipped"
+         action   = :store_true
+   end
+   return parse_args(s)
 end
 
 function main()
@@ -132,29 +132,38 @@ function main()
 
    enc_offset = args["phred-64"] ? 64 : 33
 
-   parser = make_fqparser( inputfile, forcegzip=args["force-gz"] )
+   println(stderr, "Processing reads from file...")   
+   if isbaminput
+      parser = make_bamparser( inputfile )
+      println(stderr, "BAM: " * inputfile)
 
-   if ispaired
-      mate_parser = make_fqparser( args["paired_mate.fastq[.gz]"], forcegzip=args["force-gz"] )
-   end
+      @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod,
+                                                       sam=args["sam"], qualoffset=enc_offset )
+      readlen = Int(floor(readlen))
+      println(stderr, "Finished loading $mapped alignments of length $readlen out of a total of $totreads reads...")
 
-   println(stderr, "Processing reads from file...")
-    if isbaminput
-       # Load bam file
-    elseif ispaired
-       println(stderr, "FASTQ_1: " * inputfile)
-       println(stderr, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
-       @timer mapped,totreads,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod,
+   else  # default fastq input
+      parser = make_fqparser( inputfile, forcegzip=args["force-gz"] )
+
+      if ispaired
+         mate_parser = make_fqparser( args["paired_mate.fastq[.gz]"], forcegzip=args["force-gz"] )
+      end
+
+       if ispaired
+         println(stderr, "FASTQ_1: " * inputfile)
+         println(stderr, "FASTQ_2: " * args["paired_mate.fastq[.gz]"])
+         @timer mapped,totreads,readlen = process_paired_reads!( parser, mate_parser, param, lib, quant, multi, mod,
                                                            sam=args["sam"], qualoffset=enc_offset )
-       readlen = Int(floor(readlen))
-       println(stderr, "Finished mapping $mapped paired-end reads of length $readlen each out of a total of $totreads mate-pairs...")
-    else
-       println(stderr, "FASTQ: " * inputfile)
-       @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod,
+         readlen = Int(floor(readlen))
+         println(stderr, "Finished mapping $mapped paired-end reads of length $readlen each out of a total of $totreads mate-pairs...")
+      else
+         println(stderr, "FASTQ: " * inputfile)
+         @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod,
                                                      sam=args["sam"], qualoffset=enc_offset )
-       readlen = Int(floor(readlen))
-       println(stderr, "Finished mapping $mapped single-end reads of length $readlen out of a total of $totreads reads...")
-    end
+         readlen = Int(floor(readlen))
+         println(stderr, "Finished mapping $mapped single-end reads of length $readlen out of a total of $totreads reads...")
+      end
+   end
 
    # TPM_EM
    println(stderr, "Calculating expression values and MLE of equivalence classes with EM:")

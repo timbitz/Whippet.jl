@@ -8,6 +8,7 @@ struct GraphLib <: SeqLibrary
    info::Vector{GeneInfo}
    lengths::Vector{Float64}
    graphs::Vector{SpliceGraph}
+   #coords::IntervalCollection{SGNodeMeta{Null}}
    edges::Edges
    index::FMIndex
    sorted::Bool
@@ -22,7 +23,7 @@ function checkversion( lib::GraphLib, currentver, minversion::VersionNumber )
          error("Index is from Whippet $(lib.version)\nWhippet $currentver requires a $minversion index or greater!")
       end
    catch e
-      error("Index is from Whippet v1.5 or older!\nWhippet $currentver requires a $minversion index or greater!")
+      error("Index is from Whippet 1.6 or older!\nWhippet $currentver requires a $minversion index or greater!")
    end
 end
 
@@ -132,3 +133,21 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
    index = @time trans_index!(FASTA.Reader( to_open ), ref, kmer=kmer)
    index
 end
+
+#=function add_nodes_to_collection!( ic::IntervalCollection{SGNodeAnno}, refname::String, sg::SpliceGraph, gene::Int )
+   for i in 1:length(sg.nodecoord)
+      left, right = sg.nodecoord[i], sg.nodecoord[i]+sg.nodelen[i]-1
+      int = GenomicFeatures.Interval(refname, left, right, )
+   end
+end
+
+function interval_index( graphs::Vector{SpliceGraph},
+                         info::Vector{GeneInfo} )
+   
+   retic = IntervalCollection{SGNodeAnno}()
+
+   for i in 1:length(graphs)
+      refname = info[i].name
+      add_nodes_to_collection!(retic, refname, graphs[i], i)
+   end
+end=#

@@ -236,7 +236,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    #println(edges.left)
    #println(edges.right)
 
-   lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size )
+   lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size, true, v"1.6" )
 
    @testset "Kmer Edges" begin
       left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA"]

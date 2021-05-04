@@ -116,7 +116,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
 
    for idx in 1:length(align.path)
 
-      matches = align.path[idx].score.matches + align.path[idx].score.mismatches
+      matches = align.path[idx].meta.matches + align.path[idx].meta.mismatches
       total  += matches
       curpos += matches
 
