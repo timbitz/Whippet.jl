@@ -1,9 +1,11 @@
+
 #=
 Basic Types and Aliases
 =#
 
 const Mb = 1_000_000
 const GENOMESIZE = 3235Mb
+const MININTRONSIZE = 20
 
 # ALIAS NEW TYPES FOR INCREASED CODE READABILITY
 if GENOMESIZE < typemax(UInt32)
@@ -16,6 +18,21 @@ const CoordTuple = Tuple{Vararg{CoordInt}}
 const CoordArray = Vector{CoordInt}
 const CoordTree  = IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
 const CoordSet   = Set{Tuple{CoordInt,CoordInt}}
+
+const NodeInt = UInt32
+
+struct SGNode
+   gene::NodeInt
+   node::NodeInt
+end
+
+struct SGNodeMeta{A <: Any}
+   gene::NodeInt
+   node::NodeInt
+   meta::A
+end
+
+const SGNodeIsExon = SGNodeMeta{Bool} # Bool true if exonic, false if intronic
 
 const ExonInt    = UInt16
 const ExonTree   = IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
@@ -49,7 +66,6 @@ struct TxInfo
    exnum::CoordInt
 end
 
-
 # add constructor for compatibility
 BioSequence{A}()             where {A <: Alphabet} = LongSequence{A}()
 BioSequence{A}( var )        where {A <: Alphabet} = LongSequence{A}(var)
@@ -58,7 +74,6 @@ BioSequence{A}( arr, a, b )  where {A <: Alphabet} = LongSequence{A}(arr, a, b)
 #=
 Basic IO Functions
 =#
-
 fixpath( str::String ) = abspath( expanduser( str ) )
 
 isgzipped( filename::String ) = splitext(filename)[2] == ".gz"

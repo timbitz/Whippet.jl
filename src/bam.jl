@@ -1,4 +1,33 @@
 
+const AlignBlocks = Vector{Tuple{CoordInt,CoordInt}}
+const AlignNodes  = Vector{GenomicFeatures.Interval{SGNodeIsExon}}
+
+const emptypath   = Vector{SGNodeIsExon}()
+
+# reuse temporary data
+struct AlignData
+   blocks::AlignBlocks
+   nodes::AlignNodes
+   overlaps::Dict{NodeInt, Int}
+end
+
+function AlignData()
+   blocks   = AlignBlocks()
+   nodes    = AlignNodes()
+   overlaps = Dict{NodeInt,Int}()
+   sizehint!(blocks, 100)
+   sizehint!(nodes,  100)
+   sizehint!(overlaps, 25)
+   AlignData(blocks, nodes, overlaps)
+end
+
+function Base.empty!( data::AlignData )
+   empty!( data.blocks )
+   empty!( data.overlaps )
+   empty!( data.nodes )
+   data
+end
+
 tempname( rec::SAM.Record ) = SAM.tempname(rec)
 tempname( rec::BAM.Record ) = BAM.tempname(rec)
 refname( rec::SAM.Record ) = SAM.refname(rec)
@@ -33,6 +62,7 @@ function cigar_rle( rec::SAM.Record )
    (op_arr, len_arr)
 end
 
+strandchar( rec::R ) where R <: Union{SAM.Record, BAM.Record} = isstrandfwd(rec) ? '+' : '-'
 isskipchar( c::Char ) = c == 'N'
 introncount( rec::R ) where R <: Union{SAM.Record, BAM.Record} = count(isskipchar, cigar(rec))
 isspliced( rec::R ) where R <: Union{SAM.Record, BAM.Record} = introncount(rec) > 0
@@ -42,7 +72,40 @@ isleftmate( rec::R ) where R <: Union{SAM.Record, BAM.Record} = flag(rec) & 0x40
 isrightmate( rec::R ) where R <: Union{SAM.Record, BAM.Record} = flag(rec) & 0x80 != 0
 
 
-function extract_introns( rec::R ) where R <: Union{SAM.Record, BAM.Record}
+function fill_alignment_blocks!( blocks::AlignBlocks, 
+                                 rec::R ) where R <: Union{SAM.Record, BAM.Record}
+   op,len = cigar_rle( rec )
+   left   = leftposition(rec)
+   right  = rightposition(rec)
+   refpos = left
+   empty!(blocks)
+
+   for i in 1:length(op)
+      if ismatchop(op[i])  
+         refpos += len[i]
+      elseif isdeleteop(op[i])
+         donor = CoordInt(refpos - 1)
+         refpos += len[i]
+         accep = CoordInt(refpos)
+         op[i] == OP_SKIP || continue
+
+         push!( blocks, (left, donor))
+         left = accep
+      end
+   end
+   push!( blocks, (left, right))
+   blocks
+end
+
+#= deprecated
+function extract_alignment_blocks( rec::R ) where R <: Union{SAM.Record, BAM.Record}
+   blocks = AlignBlocks()
+   fill_alignment_blocks!( blocks, rec )
+   blocks
+end
+
+
+function extract_junctions( rec::R ) where R <: Union{SAM.Record, BAM.Record}
    op,len = cigar_rle( rec )
    refpos = leftposition( rec )
 
@@ -61,6 +124,144 @@ function extract_introns( rec::R ) where R <: Union{SAM.Record, BAM.Record}
       end
    end
    introns
+end=#
+
+function unstranded_overlap( i_a::I, i_b::I,
+                             j_a::J, j_b::J) where {I <: Integer, J <: Integer}
+   max(0, min(i_b, j_b) - max(i_a, j_a))
+end
+
+# return key that has the first max value
+function max_value_key( d::Dict{K,V} ) where {K,V}
+   bestval = first(values(d))
+   bestkey = first(keys(d))
+   for (k,v) in d
+      if v > bestval
+         bestkey = k
+         bestval = v
+      end
+   end
+   bestkey
+end
+
+function overlapping_nodes( ic::IntervalCollection{SGNodeIsExon}, 
+                            data::AlignData,
+                            rec::R ) where R <: Union{SAM.Record, BAM.Record}
+   
+   refn   = refname(rec)
+
+   for i in 1:length(data.blocks)
+      l,r = data.blocks[i]
+      
+      for n in eachoverlap( ic, GenomicFeatures.Interval(refn, l, r))
+         if strandchar(rec) == convert(Char, n.strand)
+            overlap = unstranded_overlap(n.first, n.last, l, r)
+            increment!( data.overlaps, n.metadata.gene, overlap )
+            push!( data.nodes, n)
+         end
+      end
+   end
+   length(data.overlaps) > 0 || return emptypath, 0
+
+   bestgene = max_value_key(data.overlaps)
+   path     = Vector{SGNodeIsExon}()
+   sizehint!(path, length(data.nodes))
+
+   for n in data.nodes
+      if n.metadata.gene == bestgene
+         push!( path, n.metadata )
+      end
+   end
+
+   path, bestgene
+end
+
+function check_introns( data )
+   j = 1
+   badsplice = Vector{eltype(eltype(data.blocks))}()
+   for i in 1:length(data.blocks)
+      println(Int(data.blocks[i][1]))
+      println(Int(data.blocks[i][2]))
+      println("$i\n")
+      if i > 1
+         for k in j:length(data.nodes)
+            println(k)
+            println(data.nodes[k])
+            j = k
+            if first(data.nodes[k]) == data.blocks[i][1]
+               println(first(data.nodes[k]))
+               println(Int(data.blocks[i][1]))
+               break
+            elseif first(data.nodes[k]) > data.blocks[i][1]
+               push!(badsplice, data.blocks[i][1])
+               break
+            end
+         end
+      end
+      println()
+      if i < length(data.blocks)
+         for k in j:length(data.nodes)
+            println(k)
+            println(data.nodes[k])
+            j = k
+            if last(data.nodes[k]) == data.blocks[i][2]
+               println(last(data.nodes[k]))
+               println(Int(data.blocks[i][2]))
+               j += 1
+               break
+            elseif last(data.nodes[k]) > data.blocks[i][2]
+               push!(badsplice, data.blocks[i][2])
+               break
+            end
+         end
+      end
+      println()
+   end
+   badsplice
+end
+
+function all_introns_valid( data::AlignData, gene::NodeInt )
+   j = 1
+   for i in 1:length(data.blocks)
+      if i > 1
+         for k in j:length(data.nodes)
+            j = k
+            data.nodes[k].metadata.gene == gene || continue
+            if first(data.nodes[k]) == data.blocks[i][1]
+               break
+            elseif first(data.nodes[k]) > data.blocks[i][1]
+               return false
+            end
+         end
+      end
+
+      if i < length(data.blocks)
+         for k in j:length(data.nodes)
+            j = k
+            data.nodes[k].metadata.gene == gene || continue
+            if last(data.nodes[k]) == data.blocks[i][2]
+               j += 1
+               break
+            elseif last(data.nodes[k]) > data.blocks[i][2]
+               return false
+            end
+         end
+      end
+   end
+   true
+end
+
+
+function align_bam( ic::IntervalCollection{SGNodeIsExon}, 
+                    data::AlignData,
+                    rec::R ) where R <: Union{SAM.Record, BAM.Record}
+   empty!(data) 
+   fill_alignment_blocks!( data.blocks, rec )
+   path,gene = overlapping_nodes(ic, data, rec)
+   if all_introns_valid( data, gene )
+      return path, true
+   end
+   empty_path, false
 end
 
 function make_bamparser( bamfile )
@@ -106,7 +307,7 @@ function make_collated_parser( filename; flag="-f", force_collated=true )
 end
 
 
-function read_collated_bam( parser; paired_mode=true, niter=100000 )
+function read_collated_bam( parser, lib; paired_mode=true, niter=100000 )
    concordant = 0
    singletons = 0
    numintrons = 0
@@ -120,6 +321,8 @@ function read_collated_bam( parser; paired_mode=true, niter=100000 )
    # assuming a 10M library size
    i = 0
 
+   data = AlignData()
+
    while !eof( parser ) && i < niter
 
       read!( parser, leftmate )
@@ -128,6 +331,7 @@ function read_collated_bam( parser; paired_mode=true, niter=100000 )
       while tempname(leftmate) != tempname(rightmate)
          # Process leftmate as singleton
          #align and count
+         leftpath, leftvalid = align_bam( lib.coords, data, leftmate )
 
          singletons += 1
          i += 1
@@ -137,7 +341,7 @@ function read_collated_bam( parser; paired_mode=true, niter=100000 )
          empty!(rightmate)
          eof(parser) && break
          read!(parser, rightmate)
-         println("shifting singleton at $i")
+         #println("shifting singleton at $i")
       end
 
       absdist = abs(rightposition(leftmate) - leftposition(rightmate))
@@ -147,21 +351,26 @@ function read_collated_bam( parser; paired_mode=true, niter=100000 )
          absdist > maxdist
 
          # Non-concordant reads
-         println("non-concordant pair at $i")
-      end
+         #println("non-concordant pair at $i")
+      else
 
       # Process left/right first_mates
-      if introncount(leftmate) > 0
-         introns = extract_introns(leftmate)
-         numintrons += length(introns)
+         leftpath, leftvalid   = align_bam( lib.coords, data, leftmate )
+         rightpath, rightvalid = align_bam( lib.coords, data, rightmate )
+      
+         #=if introncount(leftmate) > 0
+            introns = extract_introns(leftmate)
+            numintrons += length(introns)
+         end
+
+         if introncount(rightmate) > 0
+            introns = extract_introns(rightmate)
+            numintrons += length(introns)
+         end=#
+
+         concordant += 1
       end
 
-      if introncount(rightmate) > 0
-         introns = extract_introns(rightmate)
-         numintrons += length(introns)
-      end
-
-      concordant += 1
       i += 1
       if i % 10000000 == 0
          println(i)

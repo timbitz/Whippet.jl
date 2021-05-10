@@ -59,12 +59,6 @@ end
 @inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
 @inline match(t::Type{SGAlignScore}, val::I) where {I <: Integer} = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
 
-struct SGNodeMeta{A <: Any}
-   gene::NodeInt
-   node::NodeInt
-   meta::A
-end
-
 const SGAlignNode = SGNodeMeta{SGAlignScore}
 
 Base.hash( sgn::SGAlignNode ) = hash( sgn.gene, hash(sgn.node) )

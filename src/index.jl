@@ -1,5 +1,6 @@
 # index.jl - tim.sterne.weiler@utoronto.ca, 1/28/16
 
+
 abstract type SeqLibrary end
 
 struct GraphLib <: SeqLibrary
@@ -8,7 +9,7 @@ struct GraphLib <: SeqLibrary
    info::Vector{GeneInfo}
    lengths::Vector{Float64}
    graphs::Vector{SpliceGraph}
-   #coords::IntervalCollection{SGNodeMeta{Null}}
+   coords::IntervalCollection{SGNodeIsExon}
    edges::Edges
    index::FMIndex
    sorted::Bool
@@ -16,6 +17,9 @@ struct GraphLib <: SeqLibrary
    hasindex::Bool             
    version::VersionNumber
 end
+
+
+isexonic( node::SGNodeIsExon ) = node.meta
 
 function checkversion( lib::GraphLib, currentver, minversion::VersionNumber )
    try
@@ -25,6 +29,7 @@ function checkversion( lib::GraphLib, currentver, minversion::VersionNumber )
    catch e
       error("Index is from Whippet 1.6 or older!\nWhippet $currentver requires a $minversion index or greater!")
    end
+   true
 end
 
 function build_chrom_dict( ref::RefSet )
@@ -73,7 +78,7 @@ function single_genome_index!( fhIter; verbose=false )
 end
 
 
-function trans_index!( fhIter, ref::RefSet; kmer=9, version=v"1.6" )
+function trans_index!( fhIter, ref::RefSet; kmer=9, version=v"1.7" )
    seqdic  = build_chrom_dict( ref )
    xcript  = dna""
    xoffset = Vector{UInt64}()
@@ -117,8 +122,9 @@ function trans_index!( fhIter, ref::RefSet; kmer=9, version=v"1.6" )
 
    println( stderr, "Building edges.." )
    @time edges = build_edges( xgraph, kmer ) # TODO make variable kmer
+   @time ic = interval_index( xgraph, xinfo, min_intron_size=MININTRONSIZE )
 
-   GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer, true, version )
+   GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, ic, edges, fm, true, kmer, true, version )
 end
 
 function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
@@ -134,20 +140,47 @@ function fasta_to_index( filename::String, ref::RefSet; kmer=9 )
    index
 end
 
-#=function add_nodes_to_collection!( ic::IntervalCollection{SGNodeAnno}, refname::String, sg::SpliceGraph, gene::Int )
+function add_nodes_to_collection!( ic::IntervalCollection{SGNodeIsExon}, 
+                                   info::GeneInfo, 
+                                   sg::SpliceGraph, 
+                                   gene::Int;
+                                   min_intron_size=25 )
    for i in 1:length(sg.nodecoord)
-      left, right = sg.nodecoord[i], sg.nodecoord[i]+sg.nodelen[i]-1
-      int = GenomicFeatures.Interval(refname, left, right, )
+      sg.nodelen[i] <= 0 && continue
+      left     = sg.nodecoord[i]
+      right    = sg.nodecoord[i]+sg.nodelen[i]-1
+      exon = GenomicFeatures.Interval(info.name, 
+                                      left, 
+                                      right, 
+                                      info.strand ? '+' : '-', 
+                                      SGNodeIsExon(gene, i, true))
+      push!( ic, exon )
+
+      i < length(sg.nodecoord) || break
+      nextleft = sg.nodecoord[i+1]
+
+      if sg.edgetype[i+1] == EDGETYPE_LR &&
+         right + min_intron_size < nextleft
+ 
+         intron = GenomicFeatures.Interval(info.name, 
+                                           right+1, 
+                                           nextleft-1, 
+                                           info.strand ? '+' : '-', 
+                                           SGNodeIsExon(gene, i, false))
+         push!( ic, intron )
+      end
    end
+   ic
 end
 
 function interval_index( graphs::Vector{SpliceGraph},
-                         info::Vector{GeneInfo} )
+                         infos::Vector{GeneInfo};
+                         min_intron_size=25 )
    
-   retic = IntervalCollection{SGNodeAnno}()
+   ic = IntervalCollection{SGNodeIsExon}()
 
    for i in 1:length(graphs)
-      refname = info[i].name
-      add_nodes_to_collection!(retic, refname, graphs[i], i)
+      add_nodes_to_collection!(ic, infos[i], graphs[i], i, min_intron_size=min_intron_size)
    end
-end=#
+   ic
+end

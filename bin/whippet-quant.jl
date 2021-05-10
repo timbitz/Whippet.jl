@@ -6,7 +6,7 @@ using Pkg
 const dir = abspath( splitdir(@__FILE__)[1] )
 const ver = readline(open(dir * "/VERSION"))
 
-const minversion = v"1.6"
+const minversion = v"1.7"
 
 start = time_ns()
 println( stderr, "Whippet $ver loading... " )

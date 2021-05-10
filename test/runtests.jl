@@ -122,6 +122,19 @@ chr0\tTEST\texon\t21\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss
 chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss\";
 ")
 
+#1         11        21        31        41        51        61        71        81        91
+#|.........|.........|.........|.........|.........|.........|.........|.........|.........|
+#     [             ]----------[        ]-------------[       ]-------------[        ]       + def
+#     [             .          .        ]----------[  .       ]-------------[        ]       + int1_alt3
+#     [             ]----------[        ]-------------[       .  ]----------[        .    ]  + apa_alt5
+#
+#          [        ] + ex1_single
+#
+#          [        ] - single_rev
+#
+#          [        ][        ] - def_kiss
+#          [                  ] - ret_kiss
+
 #=   flat = IOBuffer("# refflat file test (gtfToGenePred -genePredExt test.gtf test.flat)
 def\tchr0\t+\t5\t85\t85\t85\t4\t5,30,53,75,\t20,40,62,85,\t0\tone\tnone\tnone\t-1,-1,-1,-1,
 int1_alt3\tchr0\t+\t5\t85\t85\t85\t3\t5,50,75,\t40,62,85,\t0\tone\tnone\tnone\t-1,-1,-1,
@@ -237,6 +250,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
    #println(edges.right)
 
    lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size, true, v"1.6" )
+   @test checkversion(lib, v"1.6.1", v"1.6")
 
    @testset "Kmer Edges" begin
       left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA"]
@@ -278,6 +292,12 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
       println(stderr, lib)
    end
 
+   @testset "Building IntervalCollection for BAM" begin
+      ic = interval_index(lib.graphs, lib.info, min_intron_size=1)
+      @test length(collect(ic)) == 14 # total nodes of len >= 1
+      @test sum(map(x->isexonic(x.metadata), collect(ic))) == 12 # two are introns
+   end
+
    # store general data structures outside of testset
    score_range = 0.05
    param = AlignParam( 1, 2, 4, 4, 4, 5, 1, 2, 1000, score_range, 0.7,
@@ -287,7 +307,7 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    @testset "Alignment, SAM Format, Equivalence Classes" begin
       # reads
-      fastq = IOBuffer("@1S10M%11,20%exon1
+      fastq_str = "@1S10M%11,20%exon1
 NGCGGATTACA
 +
 #BBBBBBBBBB
@@ -327,12 +347,14 @@ NGCGGATTACATTAG
 TCTTGTCTAATG
 +
 IIIIIIIIIIII
-")
-
+"
+      fastq = IOBuffer(fastq_str)
       DNASeqType = BioSequences.BioSequence{BioSequences.DNAAlphabet{2}}
       fqparse = FASTQ.Reader( BufferedInputStream(fastq), fill_ambiguous=DNA_C )
       reads  = allocate_fastq_records( 10 )
       read_chunk!( reads, fqparse )
+      sambuf = BufferedOutputStream( open("test_out.sam", "w") )
+      write_sam_header( sambuf, lib )
 
       @test length(reads) == 10
       for r in reads
@@ -379,6 +401,14 @@ IIIIIIIIIIII
          # test readlength = number of M and S entries in cigar
          # test SAM offset is correct for both '+' and '-' genes.
          # test that cigar reversal works for '-' strand genes.
+         
+         write_sam( sambuf, r, align.value[best_ind], lib, qualoffset=33 )
+      end
+      close(sambuf)
+
+      @testset "Aligning SAM/BAM files" begin
+          parser = open(SAM.Reader, "test_out.sam")
+          
       end
 
       @testset "SGAlignContainer Hashing" begin
