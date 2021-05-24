@@ -148,9 +148,18 @@ end
 
 
 # Write single SAM entry for one SGAlignment
-function write_sam( io::BufOut, read::FASTQRecord, align::SGAlignment, lib::GraphLib;
-                    mapq::Int=0, paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33,
-                    supplemental::Bool=false, tagstr::String="" )
+function write_sam( io::BufOut, 
+                  read::FASTQRecord, 
+                  align::SGAlignment, 
+                  lib::GraphLib;
+                     mapq::Int=0, 
+                     paired::Bool=false, 
+                     fwd_mate::Bool=true, 
+                     is_pair_rc::Bool=true, 
+                     qualoffset::Int=33,
+                     supplemental::Bool=false, 
+                     tagstr::String="" )
+
    (align.isvalid && length(align.path) >= 1) || return
    geneind = align.path[1].gene
    strand  = lib.info[geneind].strand
@@ -214,8 +223,14 @@ end
 
 # Write multiple SAM entries for a Vector of SGAlignment, highest score gets regular entry
 # others get supplementary entries.
-function write_sam( io::BufOut, read::FASTQRecord, alignvec::Vector{SGAlignment}, lib::GraphLib;
-                    paired::Bool=false, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33 )
+function write_sam( io::BufOut, 
+                  read::FASTQRecord, 
+                  alignvec::Vector{SGAlignment}, 
+                  lib::GraphLib;
+                     paired::Bool=false, 
+                     fwd_mate::Bool=true, 
+                     is_pair_rc::Bool=true, 
+                     qualoffset::Int=33 )
 
    best = indmax_score( alignvec )
    mapq_val = 10 * length(alignvec)
@@ -231,9 +246,16 @@ function write_sam( io::BufOut, read::FASTQRecord, alignvec::Vector{SGAlignment}
 end
 
 # Write multiple SAM entries for two vectors of SGAlignments for paired-end reads
-function write_sam( io::BufOut, fwd::FASTQRecord, rev::FASTQRecord,
-                    fwd_vec::Vector{SGAlignment}, rev_vec::Vector{SGAlignment}, lib::GraphLib;
-                    paired::Bool=true, fwd_mate::Bool=true, is_pair_rc::Bool=true, qualoffset::Int=33 )
+function write_sam( io::BufOut, 
+                  fwd::FASTQRecord, 
+                  rev::FASTQRecord,
+                  fwd_vec::Vector{SGAlignment}, 
+                  rev_vec::Vector{SGAlignment}, 
+                  lib::GraphLib;
+                     paired::Bool=true, 
+                     fwd_mate::Bool=true, 
+                     is_pair_rc::Bool=true, 
+                     qualoffset::Int=33 )
 
    best = indmax_score( fwd_vec, rev_vec )
    mapq_val = 10 * length(fwd_vec)
@@ -276,9 +298,16 @@ end
 #
 =#
 
-function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph},
-                     total_reads::Float64, motif::EdgeMotif, sg::SpliceGraph, node::Int,
-                     info::GeneMeta; empty=false )
+function output_utr( io::BufOut, 
+                     psi::Vector{Float64}, 
+                     pgraph::Nullable{PsiGraph},
+                     total_reads::Float64, 
+                     motif::EdgeMotif, 
+                     sg::SpliceGraph, 
+                     node::Int,
+                     info::GeneMeta; 
+                        empty=false )
+
    st = motif == TXST_MOTIF ? node : node - 1
    en = st + length(psi) - 1
    if en < st
@@ -315,10 +344,18 @@ function output_utr( io::BufOut, psi::Vector{Float64}, pgraph::Nullable{PsiGraph
    en
 end
 
-function output_psi( io::BufOut, psi::Float64, inc::Nullable{PsiGraph}, exc::Nullable{PsiGraph},
-                     total_reads::Float64, conf_int::Tuple, motif::EdgeMotif,
-                     sg::SpliceGraph, edges::IntervalMap{ExonInt,C},
-                     node::Int, info::GeneMeta, bias ) where C <: ReadCounter
+function output_psi( io::BufOut, 
+                     psi::Float64, 
+                     inc::Nullable{PsiGraph}, 
+                     exc::Nullable{PsiGraph},
+                     total_reads::Float64, 
+                     conf_int::Tuple, 
+                     motif::EdgeMotif,
+                     sg::SpliceGraph, 
+                     edges::IntervalMap{ExonInt,C},
+                     node::Int, 
+                     info::GeneMeta, 
+                     bias ) where C <: ReadCounter
 
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene
@@ -451,8 +488,16 @@ function output_diff_header( io::BufOut )
    write( io, "Type\tPsi_A\tPsi_B\tDeltaPsi\tProbability\tComplexity\tEntropy\n" )
 end
 
-function output_diff( io::BufOut, event, complex::Int, entropy::Float64,
-                      psi_a::Float64, psi_b::Float64, deltapsi::Float64, prob::Float64, sig=5 )
+function output_diff( io::BufOut, 
+                     event, 
+                     complex::Int, 
+                     entropy::Float64,
+                     psi_a::Float64, 
+                     psi_b::Float64, 
+                     deltapsi::Float64, 
+                     prob::Float64, 
+                     sig=5 )
+
    for i in 1:length(event)
       tab_write( io, event[i] )
    end
@@ -505,8 +550,17 @@ function count_read_types( lib::GraphLib, graphq::GraphLibQuant )
    Int(round(bodyreads)),Int(round(juncreads)),Int(round(annoreads)),junccnt,annocnt
 end
 
-function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
-                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int, ver::String )
+function output_stats( filename::String, 
+                       lib::GraphLib, 
+                       graphq::GraphLibQuant, 
+                       param::AlignParam,
+                       index::String, 
+                       total::Int, 
+                       mapped::Int, 
+                       multi::Int, 
+                       readlen::Int, 
+                       ver::String )
+
    io = open( filename, "w" )
    stream = ZlibDeflateOutputStream( io )
 
@@ -516,8 +570,17 @@ function output_stats( filename::String, lib::GraphLib, graphq::GraphLibQuant, p
    close(io)
 end
 
-function output_stats( io::BufOut, lib::GraphLib, graphq::GraphLibQuant, param::AlignParam,
-                       index::String, total::Int, mapped::Int, multi::Int, readlen::Int, ver::String )
+function output_stats( io::BufOut, 
+                       lib::GraphLib, 
+                       graphq::GraphLibQuant, 
+                       param::AlignParam,
+                       index::String, 
+                       total::Int, 
+                       mapped::Int, 
+                       multi::Int, 
+                       readlen::Int, 
+                       ver::String )
+
    write( io, "# -------- Whippet $ver ---------\n" )
    write( io, "Mapped_Index\t$index\n" )
    write( io, "Read_Length\t$readlen\n" )
@@ -599,7 +662,8 @@ end
 
 function output_exons( nodecoord::Vector{CoordInt},
                        nodelen::Vector{CoordInt},
-                       tx::RefTx, strand::Bool )
+                       tx::RefTx, 
+                       strand::Bool )
    path = BitSet()
    # this may be `poor form`, but 256 is too big for default!
    # resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)

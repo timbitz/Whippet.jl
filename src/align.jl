@@ -57,19 +57,22 @@ end
 
 @inline Base.zero(t::Type{SGAlignScore}) = SGAlignScore(0x0000,zero(MismatchInt),zero(MismatchFloat))
 @inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
-@inline match(t::Type{SGAlignScore}, val::I) where {I <: Integer} = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
+@inline match(t::Type{SGAlignScore}, val::I) where I <: Integer = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
 
 const SGAlignNode = SGNodeMeta{SGAlignScore}
 
-Base.hash( sgn::SGAlignNode ) = hash( sgn.gene, hash(sgn.node) )
-Base.hash( sgn::SGAlignNode, h::UInt64 ) = hash( sgn.gene, hash(sgn.node, h) )
-Base.isequal( a::SGAlignNode, b::SGAlignNode ) = a.gene == b.gene && a.node == b.node
-Base.:(==)( a::SGAlignNode, b::SGAlignNode ) = a.gene == b.gene && a.node == b.node
+Base.hash( sgn::SGNodeMeta{A} ) where A <: Any = hash( sgn.gene, hash(sgn.node) )
+Base.hash( sgn::SGNodeMeta{A}, h::UInt64 ) where A <: Any = hash( sgn.gene, hash(sgn.node, h) )
+Base.isequal( a::SGNodeMeta{A}, b::SGNodeMeta{B} ) where {A <: Any, B <: Any} = a.gene == b.gene && 
+                                                                                a.node == b.node
+Base.:(==)( a::SGNodeMeta{A}, b::SGNodeMeta{B} ) where {A <: Any, B <: Any} = a.gene == b.gene && 
+                                                                              a.node == b.node
+
 
 const SGAlignPath = Vector{SGNodeMeta{A}} where A <: Any
 
 @inline SGAlignNode(sgn::SGNode) = SGAlignNode(sgn.gene, sgn.node, zero(SGAlignScore))
-@inline Base.push!( v::Vector{SGAlignNode}, sgn::SGNode ) = push!( v, SGAlignNode(sgn) )
+@inline Base.push!( v::Vector{SGNodeMeta{A}}, sgn::SGNode ) where A <: Any = push!( v, SGAlignNode(sgn) )
 
 const ReadLengthInt = UInt8
 
@@ -142,7 +145,11 @@ end
    end
 end
 
-@inline function seed_locate( p::AlignParam, index::FMIndex, read::FASTQRecord; offset_left::Bool=true, both_strands::Bool=true )
+@inline function seed_locate( p::AlignParam, 
+                              index::FMIndex, 
+                              read::FASTQRecord; 
+                              offset_left::Bool=true, 
+                              both_strands::Bool=true )
    def_sa = 2:1
    readlen = convert(ReadLengthInt, length(read.sequence))
    ctry = 1
@@ -206,8 +213,13 @@ end
    end
 end
 
-@inline function _ungapped_align( p::AlignParam, lib::GraphLib, read::FASTQRecord, indx::Int, readloc::Int;
-                                  ispos::Bool=true, geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
+@inline function _ungapped_align( p::AlignParam, 
+                                  lib::GraphLib, 
+                                  read::FASTQRecord, 
+                                  indx::Int, 
+                                  readloc::Int;
+                                  ispos::Bool=true, 
+                                  geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
 
    sgidx       = indx - lib.offset[geneind]
    offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,convert(CoordInt, sgidx + 1)))
@@ -222,8 +234,11 @@ end
    align
 end
 
-@inline function ungapped_align( p::AlignParam, lib::GraphLib, read::FASTQRecord;
-                         ispos::Bool=true, anchor_left::Bool=true )
+@inline function ungapped_align( p::AlignParam, 
+                                 lib::GraphLib, 
+                                 read::FASTQRecord;
+                                 ispos::Bool=true, 
+                                 anchor_left::Bool=true )
 
    seed,readloc,pos = seed_locate( p, lib.index, read, offset_left=anchor_left, both_strands=!p.is_stranded )
    readlen = convert(ReadLengthInt, length(read.sequence))
@@ -272,10 +287,15 @@ end
 
 # This is the main ungapped alignment extension function in the --> direction
 # Returns: SGAlignment
-@inbounds function ungapped_fwd_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sgidx::Int,
-                                read::FASTQRecord, ridx::Int; ispos::Bool=true,
-                                align::SGAlignment=SGAlignment(sgidx, ridx, SGAlignNode[],ispos,false),
-                                nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
+@inbounds function ungapped_fwd_extend( p::AlignParam, 
+                                        lib::GraphLib, 
+                                        geneind::NodeInt, 
+                                        sgidx::Int,
+                                        read::FASTQRecord, 
+                                        ridx::Int; 
+                                        ispos::Bool=true,
+                                        align::SGAlignment=SGAlignment(sgidx, ridx, SGAlignNode[],ispos,false),
+                                        nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
    sg       = lib.graphs[geneind]
    readlen  = convert(ReadLengthInt, length(read.sequence))
 
@@ -284,8 +304,11 @@ end
 
    push!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) ) # starting node
 
-   @inline function spliced_fwd_extend( geneind::CoordInt, edgeind::UInt32,
-                                        ridx::Int, right_kmer_ind::Int, align::SGAlignment )
+   @inline function spliced_fwd_extend( geneind::CoordInt, 
+                                        edgeind::UInt32,
+                                        ridx::Int, 
+                                        right_kmer_ind::Int, 
+                                        align::SGAlignment )
       # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
       # returns right nodes with matching genes
       isassigned( lib.edges.right, right_kmer_ind ) || return align
@@ -420,10 +443,15 @@ end
 
 # This is the main ungapped alignment extension function in the <-- direction
 # Returns: SGAlignment
-@inbounds function ungapped_rev_extend( p::AlignParam, lib::GraphLib, geneind::NodeInt, sgidx::Int,
-                                read::FASTQRecord, ridx::Int; ispos::Bool=true,
-                                align::SGAlignment=SGAlignment(sgidx, ridx, SGAlignNode[], ispos, false),
-                                nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
+@inbounds function ungapped_rev_extend( p::AlignParam, 
+                                        lib::GraphLib, 
+                                        geneind::NodeInt, 
+                                        sgidx::Int,
+                                        read::FASTQRecord, 
+                                        ridx::Int; 
+                                        ispos::Bool=true,
+                                        align::SGAlignment=SGAlignment(sgidx, ridx, SGAlignNode[], ispos, false),
+                                        nodeidx::NodeInt=convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,CoordInt(sgidx))) )
    sg       = lib.graphs[geneind]
    readlen  = convert(ReadLengthInt,length(read.sequence))
 
@@ -434,8 +462,11 @@ end
       pushfirst!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) ) # starting node if not already there
    end
 
-   @inline function spliced_rev_extend( geneind::NodeInt, edgeind::CoordInt,
-                                        ridx::Int, left_kmer_index::Int, align::SGAlignment )
+   @inline function spliced_rev_extend( geneind::NodeInt, 
+                                        edgeind::CoordInt,
+                                        ridx::Int, 
+                                        left_kmer_index::Int, 
+                                        align::SGAlignment )
       # Choose extending node through intersection of lib.edges.left ∩ lib.edges.right
       # returns right nodes with matching genes
       isassigned( lib.edges.left, left_kmer_index ) || return align

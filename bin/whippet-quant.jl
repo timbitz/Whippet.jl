@@ -108,12 +108,16 @@ function main()
    checkversion( lib, ver, minversion )
 
    inputfile  = fixpath( args["filename.fastq[.gz]--OR--pre-aligned.bam"] )
-   isbaminput = hasextension(inputfile, "bam")
+   isbaminput = hasextension(inputfile, ".bam")
 
-   ispaired = args["paired_mate.fastq[.gz]"] != nothing
-    if ispaired
-       args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
-    end
+   if isbaminput
+      ispaired = ispaired_bamfile(inputfile)
+   else
+      ispaired = args["paired_mate.fastq[.gz]"] != nothing
+      if ispaired
+         args["paired_mate.fastq[.gz]"] = fixpath(args["paired_mate.fastq[.gz]"])
+      end
+   end
 
    ContainerType = ispaired ? SGAlignPaired : SGAlignSingle
 
@@ -134,13 +138,21 @@ function main()
 
    println(stderr, "Processing reads from file...")   
    if isbaminput
-      parser = make_bamparser( inputfile )
+      parser = make_collated_parser( inputfile )
       println(stderr, "BAM: " * inputfile)
 
-      @timer mapped,totreads,readlen = process_reads!( parser, param, lib, quant, multi, mod,
-                                                       sam=args["sam"], qualoffset=enc_offset )
-      readlen = Int(floor(readlen))
-      println(stderr, "Finished loading $mapped alignments of length $readlen out of a total of $totreads reads...")
+      @timer concordant,nonconcordant,singletons,readlen = read_collated_bam( parser, lib, quant, mod )
+      if ispaired
+         println(stderr, "Finished loading $(concordant+nonconcordant+singletons) total alignments")
+         println(stderr, "Concordant: $concordant")
+         println(stderr, "Non-concordant: $nonconcordant")
+         println(stderr, "Single-mapping: $singletons")
+      else
+         println(stderr, "Finished loading $singletons valid alignments")
+      end
+      readlen  = Int(floor(readlen))
+      mapped   = concordant + singletons
+      totreads = concordant + nonconcordant + singletons
 
    else  # default fastq input
       parser = make_fqparser( inputfile, forcegzip=args["force-gz"] )

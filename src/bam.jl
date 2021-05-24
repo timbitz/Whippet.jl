@@ -40,6 +40,8 @@ leftposition( rec::SAM.Record ) = SAM.leftposition(rec)
 leftposition( rec::BAM.Record ) = BAM.leftposition(rec)
 rightposition( rec::SAM.Record ) = SAM.rightposition(rec)
 rightposition( rec::BAM.Record ) = BAM.rightposition(rec)
+sequence( rec::SAM.Record ) = SAM.sequence(rec)
+sequence( rec::BAM.Record ) = BAM.sequence(rec)
 
 ismapped( rec::SAM.Record ) = SAM.ismapped(rec)
 ismapped( rec::BAM.Record ) = BAM.ismapped(rec)
@@ -127,7 +129,7 @@ function extract_junctions( rec::R ) where R <: Union{SAM.Record, BAM.Record}
 end=#
 
 function unstranded_overlap( i_a::I, i_b::I,
-                             j_a::J, j_b::J) where {I <: Integer, J <: Integer}
+                             j_a::J, j_b::J ) where {I <: Integer, J <: Integer}
    max(0, min(i_b, j_b) - max(i_a, j_a))
 end
 
@@ -272,6 +274,16 @@ function make_bamparser( bamfile )
    bamreadr
 end
 
+function ispaired_bamfile( bamfile, max_reads=100 )
+   parser = open(BAM.Reader, bamfile)
+   i = 0
+   while !eof(parser) && i < max_reads
+      ispaired(first(parser)) && return true
+      i += 1
+   end
+   return false
+end
+
 function has_collated_header( parser, so_value="unsorted", go_value="query" )
    fhead = findall(SAM.header(parser), "HD")
    if length(fhead) == 1
@@ -284,7 +296,22 @@ function has_collated_header( parser, so_value="unsorted", go_value="query" )
    end
 end
 
+function check_samtools()
+   hndl = open(`samtools --version`, "r")
+   readline(hndl)[1:8] == "samtools" || (close(hndl) && return false)
+   close(hndl)
+   hndl = open(pipeline(`samtools --help`, `grep collate`), "r")
+   collate = readlines(hndl)
+   close(hndl)
+   if length(collate) == 1
+      return true
+   else
+      return false
+   end
+end
+
 function make_collated_parser( filename; flag="-f", force_collated=true )
+   check_samtools() || error("Samtools is not properly installed, but is a dependency of BAM input!")
    prefix = splitext(basename(filename))[1]
    head = SAM.Reader(open(`samtools view -H $filename`, "r"))
    iscollated = has_collated_header(head)
@@ -303,27 +330,34 @@ function make_collated_parser( filename; flag="-f", force_collated=true )
       end
       @time parser = open(BAM.Reader, filename)
    end
-   parser, iscollated
+   parser #, iscollated
 end
 
 
-function read_collated_bam( parser, lib; paired_mode=true, niter=100000 )
-   concordant = 0
-   singletons = 0
-   numintrons = 0
 
+function read_collated_bam( parser, 
+                            lib,
+                            quant,
+                            mod )
+   concordant    = 0
+   nonconcordant = 0
+   singletons    = 0
+   numintrons    = 0
+
+   mean_readlen  = 0.0
+  
    leftmate  = eltype(parser)()
    rightmate = eltype(parser)()
 
-   maxdist = 1000000
+   maxdist = 5000000
    # go through all reads, add multi mapping reads
    # after 100K reads calculate ratio and resize multi_reads
    # assuming a 10M library size
-   i = 0
+   i = 1
 
    data = AlignData()
 
-   while !eof( parser ) && i < niter
+   while !eof( parser )
 
       read!( parser, leftmate )
       read!( parser, rightmate )
@@ -332,9 +366,17 @@ function read_collated_bam( parser, lib; paired_mode=true, niter=100000 )
          # Process leftmate as singleton
          #align and count
          leftpath, leftvalid = align_bam( lib.coords, data, leftmate )
+         if leftvalid
+            seq_fwd = isstrandfwd(leftmate) ? 
+                         sequence(leftmate) : 
+                         reverse_complement(sequence(leftmate))
+            biasval = count!( mod, seq_fwd )
+            count!( quant, leftpath, biasval )
+            @fastmath mean_readlen += (length(seq_fwd) - mean_readlen) / i
+            i += 1
+         end
 
          singletons += 1
-         i += 1
 
          # Now shift
          leftmate,rightmate = rightmate,leftmate
@@ -344,34 +386,44 @@ function read_collated_bam( parser, lib; paired_mode=true, niter=100000 )
          #println("shifting singleton at $i")
       end
 
-      absdist = abs(rightposition(leftmate) - leftposition(rightmate))
+      dist = leftposition(rightmate) - rightposition(leftmate)
       if !isleftmate(leftmate) || 
          !isrightmate(rightmate) ||
          refname(leftmate) != refname(rightmate) ||
-         absdist > maxdist
+         abs(dist) > maxdist ||
+         isstrandfwd(leftmate) != isstrandfwd(rightmate)
 
          # Non-concordant reads
-         #println("non-concordant pair at $i")
+         nonconcordant += 1
+
       else
 
-      # Process left/right first_mates
+         @assert dist > 0
+         # Process left/right first_mates
          leftpath, leftvalid   = align_bam( lib.coords, data, leftmate )
          rightpath, rightvalid = align_bam( lib.coords, data, rightmate )
-      
-         #=if introncount(leftmate) > 0
-            introns = extract_introns(leftmate)
-            numintrons += length(introns)
-         end
 
-         if introncount(rightmate) > 0
-            introns = extract_introns(rightmate)
-            numintrons += length(introns)
-         end=#
+         leftseq  = sequence(leftmate)
+         rightseq = sequence(rightmate)
+
+         if isstrandfwd(leftmate)
+            biasval = count!( mod, leftseq, rightseq )
+         else
+            reverse_complement!(leftseq)
+            reverse_complement!(rightseq)
+            biasval = count!( mod, rightseq, leftseq )
+            leftpath, rightpath = reverse(rightpath), reverse(leftpath)
+         end
+         count!( quant, leftpath, rightpath, biasval )
+
+         @fastmath mean_readlen += (length(leftseq) - mean_readlen) / i
+         i += 1
+         @fastmath mean_readlen += (length(rightseq) - mean_readlen) / i
+         i += 1
 
          concordant += 1
       end
 
-      i += 1
       if i % 10000000 == 0
          println(i)
       end
@@ -379,7 +431,7 @@ function read_collated_bam( parser, lib; paired_mode=true, niter=100000 )
       empty!(leftmate)
       empty!(rightmate)
    end
-   concordant, singletons, numintrons
+   concordant, nonconcordant, singletons, mean_readlen
 end
 
 # for graph.jl:  TODO (not yet implemented for additional RI)
@@ -398,9 +450,15 @@ end
 
 
 
-function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange{Int64}, strand::Bool,
-                           exons::CoordTree, known, oneknown::Bool,
-                           novelacc::Dict{K,V}, noveldon::Dict{K,V} ) where {K,V}
+function process_records!( reader::BAM.Reader, 
+                           seqname::String, 
+                           range::UnitRange{Int64}, 
+                           strand::Bool,
+                           exons::CoordTree, 
+                           known, 
+                           oneknown::Bool,
+                           novelacc::Dict{K,V}, 
+                           noveldon::Dict{K,V} ) where {K,V}
    exoncount = 0
    try
       for rec in GenomicFeatures.eachoverlap( reader, seqname, range )
@@ -420,8 +478,11 @@ function process_records!( reader::BAM.Reader, seqname::String, range::UnitRange
    exoncount
 end
 
-function process_spliced_record!( novelacc::Dict{K,V}, noveldon::Dict{K,V}, rec::BAM.Record,
-                                  known, oneknown::Bool ) where {K,V}
+function process_spliced_record!( novelacc::Dict{K,V}, 
+                                  noveldon::Dict{K,V}, 
+                                  rec::BAM.Record,
+                                  known, 
+                                  oneknown::Bool ) where {K,V}
    op,len = BAM.cigar_rle( rec )
    refpos = BAM.position( rec )
    for i in 1:length(op)

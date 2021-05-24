@@ -123,8 +123,15 @@ struct JointBiasMod <: BiasModel
 
    temp::JointBiasTemp
 
-   function JointBiasMod( ksize::Int=6, backoff::Int=23, backn::Int=10, foreoff::Int=1, foren::Int=2,
-                          gcoffset::Int=5, gcincrement::Int=10; gc_param = GCBiasParams(50, 0.05) )
+   function JointBiasMod( ksize::Int=6, 
+                          backoff::Int=23, 
+                          backn::Int=10, 
+                          foreoff::Int=1, 
+                          foren::Int=2,
+                          gcoffset::Int=5, 
+                          gcincrement::Int=10; 
+                          gc_param = GCBiasParams(50, 0.05) )
+
       fore = zeros( 4^ksize )
       back = zeros( 4^ksize )
       primer_temp = zeros(UInt16, foren)

@@ -236,7 +236,7 @@ end
 #  where x and y are >= 0
 # Returns: bool
 function issubinterval( itree::T, subint::I ) where {T <: IntervalTree,
-                                         I <: AbstractInterval}
+                                                     I <: AbstractInterval}
    for i in intersect(itree, subint)
       if i.first <= subint.first && i.last >= subint.last
          return true
@@ -260,7 +260,8 @@ end
 # returns: BitSet
 function build_annotated_path( nodecoord::Vector{CoordInt},
                                nodelen::Vector{CoordInt},
-                               tx::RefTx, strand::Bool )
+                               tx::RefTx, 
+                               strand::Bool )
    path = BitSet()
    # this may be `poor form`, but 256 is too big for default!
    # resize!(path.bits, 64) # Deprecated:  = zeros(UInt32,64>>>5)
@@ -288,7 +289,9 @@ function build_paths_edges( nodecoord::Vector{CoordInt},
    paths
 end
 
-function path_to_seq( path::BitSet, nodeoffset::Vector{CoordInt},
-                      nodelen::Vector{CoordInt}, seq::SGSequence )
+function path_to_seq( path::BitSet, 
+                      nodeoffset::Vector{CoordInt},
+                      nodelen::Vector{CoordInt}, 
+                      seq::SGSequence )
    SGSequence(join( map( x->seq[nodeoffset[x]:(nodeoffset[x]+nodelen[x]-1)], collect(path) ) ))
 end

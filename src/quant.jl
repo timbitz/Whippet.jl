@@ -27,6 +27,8 @@ struct SGAlignPaired <: SGAlignContainer
    rev::SGAlignPath
 end
 
+SGAlignPaired( single_path::SGAlignPath ) = SGAlignPaired( single_path, single_path )
+
 # Store unique path's for gene/node but ignore
 # SGAlignScore which is irrelevant at this stage
 Base.isequal( a::SGAlignSingle, b::SGAlignSingle ) = a.fwd == b.fwd
@@ -37,8 +39,12 @@ Base.:(==)( a::SGAlignPaired, b::SGAlignPaired ) = a.fwd == b.fwd && a.rev == b.
 
 Base.hash( v::SGAlignSingle ) = hash( v.fwd )
 Base.hash( v::SGAlignSingle, h::UInt64 ) = hash( v.fwd, h )
-Base.hash( v::SGAlignPaired ) = hash( v.fwd, hash( v.rev ) )
-Base.hash( v::SGAlignPaired, h::UInt64 ) = hash( v.fwd, hash( v.rev, h ) )
+Base.hash( v::SGAlignPaired ) = v.fwd == v.rev ? 
+                                 hash( v.fwd ) : 
+                                 hash( v.fwd, hash( v.rev ) )
+Base.hash( v::SGAlignPaired, h::UInt64 ) = v.fwd == v.rev ? 
+                                 hash( v.fwd, h ) : 
+                                 hash( v.fwd, hash( v.rev, h ) )
 
 ispaired( cont::SGAlignSingle ) = false
 ispaired( cont::SGAlignPaired ) = true
@@ -262,18 +268,24 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle},
               temp_iset::BitSet ) = assign_path!( graphq, path, value )
 
 # This function re-count!'s SGAlignPaths which were not count!'ed originally
+function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
+                       path::SGAlignSingle, 
+                       value )
+   assign_path!( graphq, path.fwd, value )
+end
+
 @inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
-                                 path::SGAlignSingle, 
+                                 path::SGAlignPath, 
                                  value )
-   init_gene = path.fwd[1].gene
+   init_gene = path[1].gene
    sgquant = graphq.quant[ init_gene ]
 
-   if length(path.fwd) == 1
-      push!( sgquant.node[ path.fwd[1].node ], value )
+   if length(path) == 1
+      push!( sgquant.node[ path[1].node ], value )
    else
-      for i in 1:length(path.fwd)-1
-         lnode = path.fwd[i].node
-         rnode = path.fwd[i+1].node
+      for i in 1:length(path)-1
+         lnode = path[i].node
+         rnode = path[i+1].node
          if lnode < rnode
             interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
@@ -289,6 +301,11 @@ end
                                  path::SGAlignPaired, 
                                  value, 
                                  temp_iset::BitSet=BitSet() )
+   if path.fwd == path.rev
+      assign_path!( graphq, path.fwd, value )
+      return
+   end
+
    init_gene = path.fwd[1].gene
    sgquant = graphq.quant[ init_gene ]
 
@@ -498,7 +515,11 @@ function Base.push!( ambig::MultiMapping{SGAlignPaired,R},
 end
 
 # Adjust each MultiCompat raw value and assign its adjusted to .count
-function adjust!( multi::MultiMapping{C,R}, mod::B, func=adjust! ) where {C <: SGAlignContainer, R <: ReadCounter, B <: BiasModel}
+function adjust!( multi::MultiMapping{C,R}, 
+                  mod::B, 
+                  func=adjust! ) where {C <: SGAlignContainer, 
+                                        R <: ReadCounter, 
+                                        B <: BiasModel}
    for mc in values(multi.map)
       func( mc.raw, mod )
       mc.count = get(mc.raw)
@@ -574,26 +595,34 @@ end
 function count!( graphq::GraphLibQuant{C,R}, 
                  align::SGAlignment, 
                  value ) where {C <: SGAlignContainer, R <: ReadCounter}
+
    align.isvalid == true || return
-   init_gene = align.path[1].gene
+   count!( graphq, align.path, value )
+end
+
+function count!( graphq::GraphLibQuant{C,R}, 
+                 path::SGAlignPath, 
+                 value ) where {C <: SGAlignContainer, R <: ReadCounter}
+
+   init_gene = path[1].gene
    sgquant   = graphq.quant[ init_gene ]
 
    # single node support
-   if length(align.path) == 1
+   if length(path) == 1
       # access node -> [ SGNode( gene, *node* ) ]
-      push!( sgquant.node[ align.path[1].node ], value )
+      push!( sgquant.node[ path[1].node ], value )
    else # multi-node mapping read
       # if any node in path maps to other gene, ignore read
-      for n in 1:length(align.path)
-         if align.path[n].gene != init_gene
+      for n in 1:length(path)
+         if path[n].gene != init_gene
             return
          end
       end
 
       # add a single edge support
-      if length(align.path) == 2
-         lnode = align.path[1].node
-         rnode = align.path[2].node
+      if length(path) == 2
+         lnode = path[1].node
+         rnode = path[2].node
          if lnode < rnode
             interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
             pushzero!( sgquant.edge, interv, value )
@@ -601,7 +630,7 @@ function count!( graphq::GraphLibQuant{C,R},
             pushzero!( sgquant.circ, (lnode,rnode), value )
          end
       else # or we have long path, add long count
-         curkey = SGAlignSingle(align.path)
+         curkey = C(path)
          if haskey(sgquant.long, curkey)
             push!( sgquant.long[curkey], value )
          else
@@ -618,53 +647,40 @@ function count!( graphq::GraphLibQuant{C,R},
                  fwd::SGAlignment, 
                  rev::SGAlignment, 
                  value ) where {C <: SGAlignContainer, R <: ReadCounter}
+   
    (fwd.isvalid == true && rev.isvalid == true) || return
-   init_gene = fwd.path[1].gene
-   rev_gene  = rev.path[1].gene
+   count!( graphq, fwd.path, rev.path, value )
+end
+
+function count!( graphq::GraphLibQuant{C,R}, 
+                 fwd::SGAlignPath, 
+                 rev::SGAlignPath, 
+                 value ) where {C <: SGAlignContainer, R <: ReadCounter}
+
+   init_gene = fwd[1].gene
+   rev_gene  = rev[1].gene
    (init_gene == rev_gene) || return
    sgquant = graphq.quant[ init_gene ]
    singlebool = false
 
-   if length(fwd.path) <= length(rev.path)
-      if fwd.path in rev.path
+   if length(fwd) <= length(rev)
+      if fwd in rev
          singlebool = true
-         single = rev.path
+         single = rev
       end
    else
-      if rev.path in fwd.path
+      if rev in fwd
          singlebool = true
-         single = fwd.path
+         single = fwd
       end
    end
 
    # single node support
    if singlebool
-      if length(single) == 1
-         # access node -> [ SGNode( gene, *node* ) ]
-         push!( sgquant.node[ single[1].node ], value )
-      else # multi-node mapping read
-         # if any node in path maps to other gene, ignore read
-         for n in 1:length(single)
-            if single[n].gene != init_gene
-               return
-            end
-         end
-
-         # add a single edge support
-         if length(single) == 2
-            lnode = single[1].node
-            rnode = single[2].node
-            if lnode < rnode
-               interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
-               pushzero!( sgquant.edge, interv, value )
-            elseif lnode >= rnode
-               pushzero!( sgquant.circ, (lnode,rnode), value )
-            end
-         end
-      end
+       count!( graphq, single, value )
    else
        # or we have two paths, add long count
-       curkey = SGAlignPaired(fwd.path, rev.path)
+       curkey = SGAlignPaired(fwd, rev)
        if haskey(sgquant.long, curkey)
           push!( sgquant.long[curkey], value )
        else
@@ -799,6 +815,7 @@ end
 
 
 function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
+
    geneio = open( file * ".gene.tpm.gz", "w" )
    genestream = ZlibDeflateOutputStream( geneio )
    isoio = open( file * ".isoform.tpm.gz", "w" )

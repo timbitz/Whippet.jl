@@ -38,9 +38,15 @@ function allocate_fastq_records( size::Int=10000 )
    chunk
 end
 
-function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphLibQuant,
-                         multi::MultiMapping{SGAlignSingle}, mod::B;
-                         bufsize=150, sam=false, qualoffset=33 ) where B <: BiasModel
+function process_reads!( parser, 
+                        param::AlignParam, 
+                        lib::GraphLib, 
+                        quant::GraphLibQuant,
+                        multi::MultiMapping{SGAlignSingle}, 
+                        mod::B;
+                        bufsize=150, 
+                        sam=false, 
+                        qualoffset=33 ) where B <: BiasModel
 
    reads  = allocate_fastq_records( bufsize )
    mean_readlen = 0.0
@@ -80,10 +86,16 @@ function process_reads!( parser, param::AlignParam, lib::GraphLib, quant::GraphL
 end
 
 
-function process_paired_reads!( fwd_parser, rev_parser, param::AlignParam,
-                                lib::GraphLib, quant::GraphLibQuant,
-                                multi::MultiMapping{SGAlignPaired}, mod::B;
-                                bufsize=50, sam=false, qualoffset=33 ) where B <: BiasModel
+function process_paired_reads!( fwd_parser, 
+                                rev_parser, 
+                                param::AlignParam,
+                                lib::GraphLib, 
+                                quant::GraphLibQuant,
+                                multi::MultiMapping{SGAlignPaired}, 
+                                mod::B;
+                                bufsize=50, 
+                                sam=false, 
+                                qualoffset=33 ) where B <: BiasModel
 
    fwd_reads  = allocate_fastq_records( bufsize )
    rev_reads  = allocate_fastq_records( bufsize )

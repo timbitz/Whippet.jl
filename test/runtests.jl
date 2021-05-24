@@ -135,15 +135,8 @@ chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss
 #          [        ][        ] - def_kiss
 #          [                  ] - ret_kiss
 
-#=   flat = IOBuffer("# refflat file test (gtfToGenePred -genePredExt test.gtf test.flat)
-def\tchr0\t+\t5\t85\t85\t85\t4\t5,30,53,75,\t20,40,62,85,\t0\tone\tnone\tnone\t-1,-1,-1,-1,
-int1_alt3\tchr0\t+\t5\t85\t85\t85\t3\t5,50,75,\t40,62,85,\t0\tone\tnone\tnone\t-1,-1,-1,
-apa_alt5\tchr0\t+\t5\t90\t90\t90\t4\t5,30,53,75,\t20,40,65,90,\t0\tone\tnone\tnone\t-1,-1,-1,-1,
-ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
-")=#
 
    gtfref  = load_gtf( gtf )
-   #flatref = load_refflat( flat )
 
    @testset "Gene Annotations" begin
 
@@ -248,9 +241,10 @@ ex1_single\tchr0\t+\t10\t20\t10\t20\t1\t10,\t20,\t0\tsingle\tnone\tnone\t-1,
 
    #println(edges.left)
    #println(edges.right)
+   @time ic = interval_index( xgraph, xinfo, min_intron_size=1 )
 
-   lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, edges, fm, true, kmer_size, true, v"1.6" )
-   @test checkversion(lib, v"1.6.1", v"1.6")
+   lib = GraphLib( xoffset, xgenes, xinfo, xlength, xgraph, ic, edges, fm, true, kmer_size, true, v"1.7" )
+   @test checkversion(lib, v"1.7", v"1.7")
 
    @testset "Kmer Edges" begin
       left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA"]
@@ -356,6 +350,8 @@ IIIIIIIIIIII
       sambuf = BufferedOutputStream( open("test_out.sam", "w") )
       write_sam_header( sambuf, lib )
 
+      aligns = Vector{SGAlignment}()
+
       @test length(reads) == 10
       for r in reads
          fill!( r, 33 )
@@ -383,7 +379,7 @@ IIIIIIIIIIII
          ex_num = length(split(readname, '-', keepempty=false))
          @test length(align.value[best_ind].path) == ex_num
 
-         count!( gquant, align.value[best_ind], 1.0 )
+         count!( gquant, align.value[best_ind], 0.5 )
 
          curgene   = align.value[best_ind].path[1].gene
          firstnode = align.value[best_ind].path[1].node
@@ -401,14 +397,31 @@ IIIIIIIIIIII
          # test readlength = number of M and S entries in cigar
          # test SAM offset is correct for both '+' and '-' genes.
          # test that cigar reversal works for '-' strand genes.
-         
+         push!(aligns, align.value[best_ind])
+
          write_sam( sambuf, r, align.value[best_ind], lib, qualoffset=33 )
       end
       close(sambuf)
 
       @testset "Aligning SAM/BAM files" begin
-          parser = open(SAM.Reader, "test_out.sam")
-          
+         parser = open(SAM.Reader, "test_out.sam")
+         data = AlignData() 
+         mod = DefaultBiasMod()
+         for r in parser
+            path, valid = align_bam( lib.coords, data, r )
+            println(stderr, path)
+            cur_sam = popfirst!( aligns )
+            @test valid
+            @test path == cur_sam.path
+            @test hash(path) == hash(cur_sam.path)
+            count!( gquant, path, 0.5 )
+            seq_fwd = isstrandfwd(r) ? sequence(r) : reverse_complement(sequence(r))
+            biasval = count!( mod, seq_fwd )
+            count!( gquant, path, biasval )
+         end
+         @test length(aligns) == 0
+         close(parser)
+         @test ispaired_bamfile( "test.sort.bam" ) == false
       end
 
       @testset "SGAlignContainer Hashing" begin
@@ -421,6 +434,11 @@ IIIIIIIIIIII
 
          @test SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) == SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))])
          @test hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) ) == hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]) )
+     
+         path = SGNodeMeta{Nothing}[SGNodeMeta(UInt32(1),UInt32(1),nothing)]
+
+         @test SGAlignPaired( path ) == SGAlignPaired( path, path )
+         @test hash(SGAlignSingle(path)) == hash(SGAlignPaired(path))
 
          a = map( x->SGAlignSingle(SGAlignNode[SGAlignNode(x,x,zero(SGAlignScore))]), collect(1:5))
          ab = map( x->SGAlignSingle(SGAlignNode[SGAlignNode(x,x,one(SGAlignScore))]), collect(1:5))
@@ -627,5 +645,10 @@ IIIIIIIIIIII
             println(stderr,l)
          end
       end
+   end
+
+   @testset "Executable testing" begin
+
+       #run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
    end
 end
