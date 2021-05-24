@@ -2,7 +2,7 @@
 const AlignBlocks = Vector{Tuple{CoordInt,CoordInt}}
 const AlignNodes  = Vector{GenomicFeatures.Interval{SGNodeIsExon}}
 
-const emptypath   = Vector{SGNodeIsExon}()
+const EMPTY_PATH   = Vector{SGNodeIsExon}()
 
 # reuse temporary data
 struct AlignData
@@ -263,7 +263,7 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    if all_introns_valid( data, gene )
       return path, true
    end
-   empty_path, false
+   EMPTY_PATH, false
 end
 
 function make_bamparser( bamfile )
@@ -308,6 +308,13 @@ function check_samtools()
    else
       return false
    end
+end
+
+function make_single_parser( bamfile )
+   isfile(bamfile) || error("ERROR: --bam parameter used, but cannot find .bam file at $bamfile !")
+   println(stderr, "Loading BAM file single-end reads...")
+   parser = open( BAM.Reader, bamfile )
+   parser
 end
 
 function make_collated_parser( filename; flag="-f", force_collated=true )
@@ -367,12 +374,14 @@ function read_collated_bam( parser,
          #align and count
          leftpath, leftvalid = align_bam( lib.coords, data, leftmate )
          if leftvalid
-            seq_fwd = isstrandfwd(leftmate) ? 
-                         sequence(leftmate) : 
-                         reverse_complement(sequence(leftmate))
-            biasval = count!( mod, seq_fwd )
+            leftseq = sequence(leftmate) 
+            if !isstrandfwd(leftmate)
+               BioSequences.reverse_complement!(leftseq)
+               reverse!(leftpath)
+            end
+            biasval = count!( mod, leftseq )
             count!( quant, leftpath, biasval )
-            @fastmath mean_readlen += (length(seq_fwd) - mean_readlen) / i
+            @fastmath mean_readlen += (length(leftseq) - mean_readlen) / i
             i += 1
          end
 
@@ -385,6 +394,7 @@ function read_collated_bam( parser,
          read!(parser, rightmate)
          #println("shifting singleton at $i")
       end
+      eof(parser) && break
 
       dist = leftposition(rightmate) - rightposition(leftmate)
       if !isleftmate(leftmate) || 
@@ -409,8 +419,8 @@ function read_collated_bam( parser,
          if isstrandfwd(leftmate)
             biasval = count!( mod, leftseq, rightseq )
          else
-            reverse_complement!(leftseq)
-            reverse_complement!(rightseq)
+            BioSequences.reverse_complement!(leftseq)
+            BioSequences.reverse_complement!(rightseq)
             biasval = count!( mod, rightseq, leftseq )
             leftpath, rightpath = reverse(rightpath), reverse(leftpath)
          end

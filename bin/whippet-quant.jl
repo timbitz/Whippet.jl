@@ -138,7 +138,7 @@ function main()
 
    println(stderr, "Processing reads from file...")   
    if isbaminput
-      parser = make_collated_parser( inputfile )
+      parser = ispaired ? make_collated_parser( inputfile ) : make_single_parser( inputfile )
       println(stderr, "BAM: " * inputfile)
 
       @timer concordant,nonconcordant,singletons,readlen = read_collated_bam( parser, lib, quant, mod )
