@@ -1,5 +1,6 @@
 using Test
 using Serialization
+using Pkg
 
 import BioSymbols
 import BioSequences
@@ -649,6 +650,6 @@ IIIIIIIIIIII
 
    @testset "Executable testing" begin
 
-       #run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
+       run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
    end
 end
