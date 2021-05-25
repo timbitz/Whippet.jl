@@ -260,7 +260,7 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    empty!(data) 
    fill_alignment_blocks!( data.blocks, rec )
    path,gene = overlapping_nodes(ic, data, rec)
-   if all_introns_valid( data, gene )
+   if length(path) > 0 && all_introns_valid( data, gene )
       return path, true
    end
    EMPTY_PATH, false
