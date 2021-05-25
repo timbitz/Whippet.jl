@@ -163,7 +163,7 @@ function overlapping_nodes( ic::IntervalCollection{SGNodeIsExon},
          end
       end
    end
-   length(data.overlaps) > 0 || return emptypath, 0
+   length(data.overlaps) > 0 || return EMPTY_PATH, 0
 
    bestgene = max_value_key(data.overlaps)
    path     = Vector{SGNodeIsExon}()
