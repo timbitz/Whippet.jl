@@ -247,8 +247,6 @@ function load_gtf( fh; txbool=true,
       strand   = gninfo[gene].strand
       bamwasused = false
 
-      annot_ss += length(gndon[gene]) + length(gnacc[gene])
-
       generange = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
 
       if usebam && seqname in bamnames
@@ -278,6 +276,8 @@ function load_gtf( fh; txbool=true,
 
       gndon[gene]  = filter(x->x in generange, gndon[gene])
       gnacc[gene]  = filter(x->x in generange, gnacc[gene])
+
+      annot_ss += length(gndon[gene]) + length(gnacc[gene])
 
       geneset[gene] = RefGene( gninfo[gene],
                                gndon[gene],

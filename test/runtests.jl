@@ -581,6 +581,22 @@ IIIIIIIIIIII
          (parse(Int, String(s[1])), parse(Int, String(s[2])), parse(Float64, String(s[3])))
       end
 
+      function psigraph_from_string( edgestr::String )
+         edgespl  = split( edgestr, ',' )
+         edges    = IntervalMap{Int,Float64}()
+         psigraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
+                                 Vector{Float64}(), Vector{BitSet}(), 1, 10 )
+         for s in split( edgestr, ',' )
+            f,l,v = parse_edge( s )
+            edges[(f,l)] = v
+            push!( psigraph.psi, 0.0 )
+            push!( psigraph.length, 1.0 )
+            push!( psigraph.count, v )
+            push!( psigraph.nodes, BitSet([f,l]) )
+         end
+         psigraph
+      end
+
       @testset "Graph Enumeration" begin
          #= Real Test based on node 23 (here annotated as 1) in ENSMUSG00000038685
          inclusion edges:
@@ -608,24 +624,28 @@ IIIIIIIIIIII
          BitSet([1,3,4,6,7,8,10])     # (8-10)
          BitSet([1,2,4,6,7,8,10])]    # (8-10)
          edgestr = "1-2:616.0,1-3:4.0,2-3:569.0,2-4:20.0,3-4:629.0,3-6:1.0,3-10:3.0,4-5:1.0,4-6:664.0,5-6:5.0,6-7:789.0,7-8:790.0,8-9:2.0,8-10:606.0,9-10:15.0"
-         edgespl  = split( edgestr, ',' )
-         edges    = IntervalMap{Int,Float64}()
-         psigraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                              Vector{Float64}(), Vector{BitSet}(), 1, 10 )
-         for s in split( edgestr, ',' )
-            f,l,v = parse_edge( s )
-            edges[(f,l)] = v
-            push!( psigraph.psi, 0.0 )
-            push!( psigraph.length, 1.0 )
-            push!( psigraph.count, v )
-            push!( psigraph.nodes, BitSet([f,l]) )
+         psigraph = psigraph_from_string( edgestr )
+         res = reduce_graph( psigraph )
+         for p in expected_paths
+            @test p in res.nodes
          end
+         @test length(expected_paths) == length(res.nodes)
+
+         expected_paths = [BitSet([6,14,15,16])
+         BitSet([6,14,17])
+         BitSet([6,17])
+         BitSet([7,8,9,10,11,12,13,14,15,16])
+         BitSet([7,8,9,10,11,12,13,14,17])
+         BitSet([7,8,9,10,11,12,13,17])]
+         nrf2test = "6-14:129.0,6-17:3.0,7-8:2.0,8-9:5.0,9-10:8.0,10-11:4.0,11-12:26.0,12-13:22.0,13-14:36.0,13-17:11.0,14-15:3.0,14-17:382.0,15-16:7.0"
+         psigraph = psigraph_from_string( nrf2test )
 
          res = reduce_graph( psigraph )
          for p in expected_paths
             @test p in res.nodes
          end
          @test length(expected_paths) == length(res.nodes)
+
       end
 
       @testset "Event Building" begin
