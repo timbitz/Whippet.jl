@@ -249,17 +249,18 @@ function load_gtf( fh; txbool=true,
 
       annot_ss += length(gndon[gene]) + length(gnacc[gene])
 
+      generange = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
+
       if usebam && seqname in bamnames
          bamwasused = true
-         range   = Int64(minimum(gntxst[gene])):Int64(maximum(gntxen[gene]))
-         exoncount = process_records!( get(bamreader), seqname, range, strand,
+         exoncount = process_records!( get(bamreader), seqname, generange, strand,
                                        gnexons[gene], union(gnacc[gene], gndon[gene]), bamoneknown,
                                        novelacc, noveldon )
          exonexpr  = exoncount / (meanleng - 100)
 
          # clean up cryptic splice-sites
-         minimum_threshold!( novelacc, bamreads, range )
-         minimum_threshold!( noveldon, bamreads, range )
+         minimum_threshold!( novelacc, bamreads, generange )
+         minimum_threshold!( noveldon, bamreads, generange )
          novelacctup = map(CoordInt, Tuple(collect(keys(novelacc))))
          noveldontup = map(CoordInt, Tuple(collect(keys(noveldon))))
 
@@ -274,6 +275,9 @@ function load_gtf( fh; txbool=true,
       # clean up any txst or txen that match a splice site
       gntxst[gene] = Tuple( setdiff( gntxst[gene], gnacc[gene] ) )
       gntxen[gene] = Tuple( setdiff( gntxen[gene], gndon[gene] ) )
+
+      gndon[gene]  = filter(x->x in generange, gndon[gene])
+      gnacc[gene]  = filter(x->x in generange, gnacc[gene])
 
       geneset[gene] = RefGene( gninfo[gene],
                                gndon[gene],
