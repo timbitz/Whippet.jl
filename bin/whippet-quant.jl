@@ -142,11 +142,12 @@ function main()
       println(stderr, "BAM: " * inputfile)
 
       @timer concordant,nonconcordant,singletons,readlen = read_collated_bam( parser, lib, quant, mod )
+      
       if ispaired
          println(stderr, "Finished loading $(concordant+nonconcordant+singletons) total alignments")
-         println(stderr, "Concordant: $concordant")
-         println(stderr, "Non-concordant: $nonconcordant")
-         println(stderr, "Single-mapping: $singletons")
+         println(stderr, "\tConcordant reads: $concordant")
+         println(stderr, "\tNon-concordant reads: $nonconcordant")
+         println(stderr, "\tSingle-mapping reads: $singletons")
       else
          println(stderr, "Finished loading $singletons valid alignments")
       end
@@ -176,6 +177,7 @@ function main()
          println(stderr, "Finished mapping $mapped single-end reads of length $readlen out of a total of $totreads reads...")
       end
    end
+   close(parser)
 
    # TPM_EM
    println(stderr, "Calculating expression values and MLE of equivalence classes with EM:")

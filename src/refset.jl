@@ -65,7 +65,13 @@ function fetch_meta( var::String, meta; off=1 )
    val,0
 end
 
-function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Nullable{BAM.Reader}(), bamreads=2, bamoneknown=false )
+function load_gtf( fh; txbool=true, 
+                       suppress=false,
+                       basic_or_ssonly=false,
+                       usebam=false, 
+                       bamreader=Nullable{BAM.Reader}(), 
+                       bamreads=2, 
+                       bamoneknown=false )
 
    # Temporary variables
    gninfo   = Dict{GeneName,GeneInfo}()
@@ -85,6 +91,7 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
    used_txn = Dict{GeneName,Bool}()
    warning  = false
    warning_num = 0
+   ssonly   = false
 
    txnum = 75000
    sizehint!(geneset, txnum >> 1)
@@ -93,12 +100,14 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
    curgene = ""
    curchrom = ""
    curstran = '+'
+   curbasic = false
 
    trandon = Vector{CoordInt}()
    tranacc = Vector{CoordInt}()
    txlen   = 0
 
-   function private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
+   function private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen;
+                                     splice_sites_only=false )
       sort!(trandon)
       sort!(tranacc)
 
@@ -114,20 +123,24 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          curchrom == gninfo[curgene].name || return # can have only one chrom
          gndon[curgene]  = unique_tuple(gndon[curgene], don)
          gnacc[curgene]  = unique_tuple(gnacc[curgene], acc)
-         gntxst[curgene] = unique_tuple(gntxst[curgene], tuple(txS))
-         gntxen[curgene] = unique_tuple(gntxen[curgene], tuple(txE))
-         gnlen[curgene] += txlen
-         gncnt[curgene] += 1
-         push!( gnreftx[curgene], RefTx( txinfo, tuple(trandon...), tuple(tranacc...), txlen ) )
+         if !splice_sites_only
+            gntxst[curgene] = unique_tuple(gntxst[curgene], tuple(txS))
+            gntxen[curgene] = unique_tuple(gntxen[curgene], tuple(txE))
+            gnlen[curgene] += txlen
+            gncnt[curgene] += 1
+            push!( gnreftx[curgene], RefTx( txinfo, tuple(trandon...), tuple(tranacc...), txlen ) )
+         end
       else
          gndon[curgene]  = don
          gnacc[curgene]  = acc
-         gninfo[curgene] = GeneInfo(curgene, string(curchrom), curstran)
-         gntxst[curgene] = tuple(txS)
-         gntxen[curgene] = tuple(txE)
-         gnlen[curgene]  = txlen
-         gncnt[curgene]  = 1
-         gnreftx[curgene]  = RefTx[ RefTx( txinfo, tuple(trandon...), tuple(tranacc...), txlen ) ]
+         if !splice_sites_only
+            gninfo[curgene] = GeneInfo(curgene, string(curchrom), curstran)
+            gntxst[curgene] = tuple(txS)
+            gntxen[curgene] = tuple(txE)
+            gnlen[curgene]  = txlen
+            gncnt[curgene]  = 1
+            gnreftx[curgene]  = RefTx[ RefTx( txinfo, tuple(trandon...), tuple(tranacc...), txlen ) ]
+         end
       end
    end
 
@@ -148,9 +161,13 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       tranid,pos  = fetch_meta( "transcript_id", metaspl )
       genesym     = fetch_meta( "gene_name", metaspl )
       support,val = fetch_meta( "transcript_support_level", metaspl )
+      tag,val     = fetch_meta( "tag", metaspl )
 
       # if we observe low transcript support levels, we will warn the user
-      if (support != "_" && support != "1" && support != "2" &&  support != "NA")
+      # unless we are using gencode system of basic tx for txS and txE and others
+      # only for splice site support
+      if !basic_or_ssonly && 
+         (support != "_" && support != "1" && support != "2" &&  support != "NA")
 
          if suppress
             continue
@@ -174,7 +191,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
 
       if tranid != curtran
          # add transcript and clean up
-         curtran != "" && private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
+         ssonly = basic_or_ssonly && !curbasic ? true : false
+         curtran != "" && private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen, splice_sites_only=ssonly )
 
          used_txn[curtran] = true
 
@@ -182,11 +200,11 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
          curgene = geneid
          curchrom = chrom
          curstran = strand[1]
+         curbasic = tag == "basic" ? true : false
 
          empty!(trandon)
          empty!(tranacc)
          txlen = 0
-
       end
 
       sval = parse_coordint(st)
@@ -208,7 +226,8 @@ function load_gtf( fh; txbool=true, suppress=false, usebam=false, bamreader=Null
       end
    end
 
-   private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen )
+   ssonly = basic_or_ssonly && !curbasic ? true : false
+   private_add_transcript!( curtran, curgene, curchrom, curstran, trandon, tranacc, txlen, splice_sites_only=ssonly )
 
    if usebam
       bamnames = map(x->values(x)[1], findall(BAM.header(get(bamreader)), "SQ"))

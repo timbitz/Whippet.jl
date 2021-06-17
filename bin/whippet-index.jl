@@ -41,6 +41,9 @@ function parse_cmd()
       help = "Output prefix for saving index 'dir/prefix' (default Whippet/index/graph)"
       arg_type = String
       default  = "$dir/../index/graph"
+    "--basic-or-ss-only"
+      help     = "If GENCODE gtf file, only restrict transcripts to tag 'basic', but still use others to inform splice-sites (Recommended!)"
+      action   = :store_true
     "--suppress-low-tsl"
       help = "Ignore low quality transcript annotations with TSL2+"
       action   = :store_true
@@ -83,12 +86,14 @@ function main()
       println(stderr, "Loading BAM file for random-access: $bam")
       bamreadr = open(BAM.Reader, bam, index=bam * ".bai")
       @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"],
+                                basic_or_ssonly=args["basic-or-ss-only"],
                                 usebam=true,
                                 bamreader=Nullable(bamreadr),
                                 bamreads=args["bam-min-reads"],
                                 bamoneknown=!args["bam-both-novel"])
    else
-      @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"])
+      @timer ref = load_gtf(fh, suppress=args["suppress-low-tsl"], 
+                                basic_or_ssonly=args["basic-or-ss-only"])
    end
 
    println(stderr, "Indexing transcriptome...")

@@ -274,9 +274,9 @@ function assign_path!( graphq::GraphLibQuant{SGAlignSingle},
    assign_path!( graphq, path.fwd, value )
 end
 
-@inbounds function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
+@inbounds function assign_path!( graphq::GraphLibQuant{A}, 
                                  path::SGAlignPath, 
-                                 value )
+                                 value ) where A <: Union{SGAlignSingle, SGAlignPaired}
    init_gene = path[1].gene
    sgquant = graphq.quant[ init_gene ]
 

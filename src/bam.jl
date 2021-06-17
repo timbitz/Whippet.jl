@@ -8,22 +8,18 @@ const EMPTY_PATH   = Vector{SGNodeIsExon}()
 struct AlignData
    blocks::AlignBlocks
    nodes::AlignNodes
-   overlaps::Dict{NodeInt, Int}
 end
 
 function AlignData()
    blocks   = AlignBlocks()
    nodes    = AlignNodes()
-   overlaps = Dict{NodeInt,Int}()
    sizehint!(blocks, 100)
    sizehint!(nodes,  100)
-   sizehint!(overlaps, 25)
-   AlignData(blocks, nodes, overlaps)
+   AlignData(blocks, nodes)
 end
 
 function Base.empty!( data::AlignData )
    empty!( data.blocks )
-   empty!( data.overlaps )
    empty!( data.nodes )
    data
 end
@@ -42,6 +38,10 @@ rightposition( rec::SAM.Record ) = SAM.rightposition(rec)
 rightposition( rec::BAM.Record ) = BAM.rightposition(rec)
 sequence( rec::SAM.Record ) = SAM.sequence(rec)
 sequence( rec::BAM.Record ) = BAM.sequence(rec)
+hasalignment( rec::SAM.Record ) = SAM.hasalignment(rec)
+hasalignment( rec::BAM.Record ) = BAM.hasalignment(rec)
+hasposition( rec::SAM.Record ) = SAM.hasposition(rec)
+hasposition( rec::BAM.Record ) = BAM.hasposition(rec)
 
 ismapped( rec::SAM.Record ) = SAM.ismapped(rec)
 ismapped( rec::BAM.Record ) = BAM.ismapped(rec)
@@ -65,6 +65,7 @@ function cigar_rle( rec::SAM.Record )
 end
 
 strandchar( rec::R ) where R <: Union{SAM.Record, BAM.Record} = isstrandfwd(rec) ? '+' : '-'
+revstrandchar( rec::R ) where R <: Union{SAM.Record, BAM.Record} = isstrandfwd(rec) ? '-' : '+'
 isskipchar( c::Char ) = c == 'N'
 introncount( rec::R ) where R <: Union{SAM.Record, BAM.Record} = count(isskipchar, cigar(rec))
 isspliced( rec::R ) where R <: Union{SAM.Record, BAM.Record} = introncount(rec) > 0
@@ -146,9 +147,12 @@ function max_value_key( d::Dict{K,V} ) where {K,V}
    bestkey
 end
 
-function overlapping_nodes( ic::IntervalCollection{SGNodeIsExon}, 
-                            data::AlignData,
-                            rec::R ) where R <: Union{SAM.Record, BAM.Record}
+function overlapping_nodes!( ic::IntervalCollection{SGNodeIsExon}, 
+                             data::AlignData,
+                             overlaps::Dict{NodeInt, Int},
+                             rec::R;
+                             stranded=false,
+                             flipstrand=false, ) where R <: Union{SAM.Record, BAM.Record}
    
    refn   = refname(rec)
 
@@ -156,16 +160,18 @@ function overlapping_nodes( ic::IntervalCollection{SGNodeIsExon},
       l,r = data.blocks[i]
       
       for n in eachoverlap( ic, GenomicFeatures.Interval(refn, l, r))
-         if strandchar(rec) == convert(Char, n.strand)
-            overlap = unstranded_overlap(n.first, n.last, l, r)
-            increment!( data.overlaps, n.metadata.gene, overlap )
+         strand = flipstrand ? revstrandchar(rec) : strandchar(rec)
+         if !stranded || strand == convert(Char, n.strand)
+            over = unstranded_overlap(n.first, n.last, l, r)
+            increment!( overlaps, n.metadata.gene, over )
             push!( data.nodes, n)
          end
       end
    end
-   length(data.overlaps) > 0 || return EMPTY_PATH, zero(NodeInt)
+end
 
-   bestgene = max_value_key(data.overlaps)
+function best_path( data::AlignData, bestgene::NodeInt )
+
    path     = Vector{SGNodeIsExon}()
    sizehint!(path, length(data.nodes))
 
@@ -175,7 +181,7 @@ function overlapping_nodes( ic::IntervalCollection{SGNodeIsExon},
       end
    end
 
-   path, bestgene
+   path
 end
 
 function check_introns( data )
@@ -256,13 +262,54 @@ end
 
 function align_bam( ic::IntervalCollection{SGNodeIsExon}, 
                     data::AlignData,
+                    overlaps::Dict{NodeInt, Int},
                     rec::R ) where R <: Union{SAM.Record, BAM.Record}
    empty!(data) 
+   empty!(overlaps)
    fill_alignment_blocks!( data.blocks, rec )
-   path,gene = overlapping_nodes(ic, data, rec)
-   if length(path) > 0 && all_introns_valid( data, gene )
-      return path, true
+   overlapping_nodes!(ic, data, overlaps, rec)
+   if length(overlaps) > 0 
+      gene = max_value_key(overlaps)
+      path = best_path( data, gene )
+      if length(path) > 0
+         return path, all_introns_valid( data, gene )
+      end
    end
+   EMPTY_PATH, false
+end
+
+function align_bam( ic::IntervalCollection{SGNodeIsExon}, 
+                    leftdata::AlignData,
+                    rightdata::AlignData,
+                    overlaps::Dict{NodeInt, Int},
+                    leftmate::R,
+                    rightmate::R, lib ) where R <: Union{SAM.Record, BAM.Record}
+   empty!(leftdata) 
+   empty!(rightdata)
+   empty!(overlaps)
+   fill_alignment_blocks!( leftdata.blocks, leftmate )
+   fill_alignment_blocks!( rightdata.blocks, rightmate )
+   overlapping_nodes!(ic, leftdata, overlaps, leftmate)
+   overlapping_nodes!(ic, rightdata, overlaps, rightmate, flipstrand=true)
+   if length(overlaps) > 0 
+      gene      = max_value_key(overlaps)
+      leftpath  = best_path( leftdata, gene )
+      rightpath = best_path( rightdata, gene )
+      #println(stderr, "left strand: $(isstrandfwd(leftmate))")
+      #println(stderr, leftpath)
+      #println(stderr, all_introns_valid( leftdata, gene ))
+      #println(stderr, "right strand: $(isstrandfwd(rightmate))")
+      #println(stderr, rightpath)
+      #println(stderr, all_introns_valid( rightdata, gene ))
+      #println(stderr, "gene: $gene")
+      #println(stderr, lib.info[gene])
+      if length(leftpath) > 0 && 
+         length(rightpath) > 0 
+         return leftpath, all_introns_valid( leftdata, gene ), 
+                rightpath, all_introns_valid( rightdata, gene )
+      end
+   end
+   EMPTY_PATH, false, 
    EMPTY_PATH, false
 end
 
@@ -274,13 +321,14 @@ function make_bamparser( bamfile )
    bamreadr
 end
 
-function ispaired_bamfile( bamfile, max_reads=100 )
+function ispaired_bamfile( bamfile, max_reads=1000 )
    parser = open(BAM.Reader, bamfile)
    i = 0
    while !eof(parser) && i < max_reads
-      ispaired(first(parser)) && return true
+      ispaired(first(parser)) && (close(parser); return true)
       i += 1
    end
+   close(parser)
    return false
 end
 
@@ -317,14 +365,15 @@ function make_single_parser( bamfile )
    parser
 end
 
-function make_collated_parser( filename; flag="-f", force_collated=true )
+function make_collated_parser( filename; tmpdir=ENV["TMPDIR"], flag="-f", force_collated=true )
    check_samtools() || error("Samtools is not properly installed, but is a dependency of BAM input!")
-   prefix = splitext(basename(filename))[1]
+   prefix = rstrip(tmpdir, ['/']) * "/" * splitext(basename(filename))[1]
    head = SAM.Reader(open(`samtools view -H $filename`, "r"))
    iscollated = has_collated_header(head)
 
    if !iscollated || force_collated
       println(stderr, "Loading BAM file and collating with samtools...")
+      println(stderr, "TMPDIR: " * tmpdir)
       @time parser = SAM.Reader(open(`samtools collate $filename $prefix --output-fmt SAM -O $flag`, "r"))
       has_collated_header(parser) || error("samtools collate failed to produce a proper input file!")
       iscollated = true
@@ -345,7 +394,9 @@ end
 function read_collated_bam( parser, 
                             lib,
                             quant,
-                            mod )
+                            mod;
+                            stranded=false,
+                            fr_oriented=true )
    concordant    = 0
    nonconcordant = 0
    singletons    = 0
@@ -362,7 +413,10 @@ function read_collated_bam( parser,
    # assuming a 10M library size
    i = 1
 
-   data = AlignData()
+   leftdata  = AlignData()
+   rightdata = AlignData()
+   overlaps  = Dict{NodeInt, Int}()
+   sizehint!(overlaps, 16)
 
    while !eof( parser )
 
@@ -372,17 +426,25 @@ function read_collated_bam( parser,
       while tempname(leftmate) != tempname(rightmate)
          # Process leftmate as singleton
          #align and count
-         leftpath, leftvalid = align_bam( lib.coords, data, leftmate )
-         if leftvalid
-            leftseq = sequence(leftmate) 
-            if !isstrandfwd(leftmate)
-               BioSequences.reverse_complement!(leftseq)
-               reverse!(leftpath)
+
+         if hasalignment(leftmate)
+            leftpath, leftvalid = align_bam( lib.coords, leftdata, overlaps, leftmate )
+            if length(leftpath) > 0 && leftvalid
+
+               leftseq = sequence(leftmate) 
+               if !isstrandfwd(leftmate)
+                  BioSequences.reverse_complement!(leftseq)
+               end
+               biasval = count!( mod, leftseq )
+
+               if !lib.info[leftpath[1].gene].strand
+                  reverse!(leftpath)
+               end
+
+               count!( quant, leftpath, biasval )
+               @fastmath mean_readlen += (length(leftseq) - mean_readlen) / i
+               i += 1
             end
-            biasval = count!( mod, leftseq )
-            count!( quant, leftpath, biasval )
-            @fastmath mean_readlen += (length(leftseq) - mean_readlen) / i
-            i += 1
          end
 
          singletons += 1
@@ -396,46 +458,87 @@ function read_collated_bam( parser,
       end
       eof(parser) && break
 
-      dist = leftposition(rightmate) - rightposition(leftmate)
+      hasalignment(leftmate) && hasalignment(rightmate) || continue
+
+      dist = leftposition(rightmate) - leftposition(leftmate)
       if !isleftmate(leftmate) || 
          !isrightmate(rightmate) ||
          refname(leftmate) != refname(rightmate) ||
          abs(dist) > maxdist ||
-         isstrandfwd(leftmate) != isstrandfwd(rightmate)
+         (isstrandfwd(leftmate) && dist < 0) ||
+         (!isstrandfwd(leftmate) && dist > 0)
+
 
          # Non-concordant reads
-         nonconcordant += 1
+         nonconcordant += 2
 
       else
 
-         @assert dist > 0
+         #println(stderr, "dist is: $dist > 0? && left: $(strandchar(leftmate))")
          # Process left/right first_mates
-         leftpath, leftvalid   = align_bam( lib.coords, data, leftmate )
-         rightpath, rightvalid = align_bam( lib.coords, data, rightmate )
+         leftpath, leftvalid, rightpath, rightvalid  = align_bam( lib.coords, 
+                                                                  leftdata, 
+                                                                  rightdata,
+                                                                  overlaps,
+                                                                  leftmate,
+                                                                  rightmate, lib )
 
-         leftseq  = sequence(leftmate)
-         rightseq = sequence(rightmate)
+         #println(stderr, "left: $leftvalid, right: $rightvalid")
 
-         if isstrandfwd(leftmate)
-            biasval = count!( mod, leftseq, rightseq )
-         else
-            BioSequences.reverse_complement!(leftseq)
-            BioSequences.reverse_complement!(rightseq)
-            biasval = count!( mod, rightseq, leftseq )
-            leftpath, rightpath = reverse(rightpath), reverse(leftpath)
+         if length(leftpath) > 0  && leftvalid &&
+            length(rightpath) > 0 && rightvalid
+
+            leftseq  = sequence(leftmate)
+            rightseq = sequence(rightmate)
+
+            if isstrandfwd(leftmate)
+               biasval = count!( mod, leftseq, rightseq )
+            else
+               BioSequences.reverse_complement!(leftseq)
+               BioSequences.reverse_complement!(rightseq)
+               biasval = count!( mod, leftseq, rightseq )
+            end
+
+            if !lib.info[leftpath[1].gene].strand
+               reverse!(leftpath)
+               reverse!(rightpath)
+            end
+
+            if (dist < 0 && lib.info[leftpath[1].gene].strand) ||
+               (dist > 0 && !lib.info[leftpath[1].gene].strand)
+               leftpath, rightpath = rightpath, leftpath
+            end
+
+            #if length(leftpath) > 1 || length(rightpath) > 1
+                  #println(stderr, "$(isstrandfwd(leftmate)) != $(lib.info[leftpath[1].gene].strand)")
+                  #println(stderr, leftpath)
+                  #println(stderr, rightpath)
+            #end
+
+            count!( quant, leftpath, rightpath, biasval )
+
+            @fastmath mean_readlen += (length(leftseq) - mean_readlen) / i
+            i += 1
+            @fastmath mean_readlen += (length(rightseq) - mean_readlen) / i
+            i += 1
+
+            #println(stderr, leftmate)
+            #println(stderr, isstrandfwd(leftmate))
+            #println(stderr, isleftmate(leftmate))
+            #println(stderr, leftpath)
+            #println(stderr, "")
+            #println(stderr, rightmate)
+            #println(stderr, isstrandfwd(rightmate))
+            #println(stderr, isrightmate(rightmate))
+            #println(stderr, rightpath)
+            #error()
          end
-         count!( quant, leftpath, rightpath, biasval )
 
-         @fastmath mean_readlen += (length(leftseq) - mean_readlen) / i
-         i += 1
-         @fastmath mean_readlen += (length(rightseq) - mean_readlen) / i
-         i += 1
-
-         concordant += 1
+         concordant += 2
       end
 
       if i % 10000000 == 0
-         println(i)
+         GC.gc()
       end
 
       empty!(leftmate)
