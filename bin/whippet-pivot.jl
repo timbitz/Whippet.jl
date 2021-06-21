@@ -34,6 +34,10 @@ function parse_cmd()
     "--gene-centric"
     	help		= "Pivot sample_centric .psi[.gz] files into gene_centric .gpsi.gz files"
     	action   = :store_true
+    "--bufsize"
+      help     = "Buffer size"
+      arg_type = Int64
+      default  = 128_000
   end
   return parse_args(s)
 end
@@ -43,7 +47,7 @@ function retrievefilelist( pattern::String, dir::String )
    if something(findfirst(isequal(','), pattern), 0) > 0
       tmp = split( pattern, ',', keepempty=false )
    else
-        pat = length(pattern) > 0 ? "*" * pattern : pattern
+      pat = length(pattern) > 0 ? "*" * pattern : pattern
       tmp = glob( pat * "*.psi*", dir )
    end
    # now clean the return
@@ -70,6 +74,7 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    curgene = curline[1][1]
    ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi.gz", "w"))
    write(ostream, "Sample\t" * header * "\n")
+   println(stderr, "Pivoting into " * curgene * ".gpsi.gz")
 
    while !eof(streams[1])
    	for (i,s) in enumerate(streams)
@@ -103,7 +108,7 @@ function main()
       error("Unable to find any files! length(files) == $(length(files))")
    end
 
-   fstreams = open_streams( files )
+   fstreams = open_streams( files, bufsize=args["bufsize"] )
 
    if args["gene-centric"]
    	println(stderr, "Pivoting to gene-centric psi files...")
