@@ -66,7 +66,7 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    end
    curgene = curline[1][1]
    ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi.gz", "w"))
-   write(ostream, "Sample\t" * header)
+   write(ostream, "Sample\t" * header * "\n")
 
    while !eof(streams[1])
    	for (i,s) in enumerate(streams)
@@ -80,7 +80,7 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
       close(ostream)
       curgene = curline[1][1]
    	ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi.gz", "w"))
-      write(ostream, "Sample\t" * header)
+      write(ostream, "Sample\t" * header * "\n")
       println(stderr, "Pivoting into " * curgene * ".gpsi.gz")
    end
 end
