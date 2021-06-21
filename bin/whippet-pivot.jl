@@ -37,7 +37,7 @@ function parse_cmd()
     "--bufsize"
       help     = "Buffer size"
       arg_type = Int64
-      default  = 128_000
+      default  = 1_024*8
   end
   return parse_args(s)
 end
