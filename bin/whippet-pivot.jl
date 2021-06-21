@@ -31,6 +31,9 @@ function parse_cmd()
       help     = "Directory to search for file patterns or list in -a and -b"
       arg_type = String
       default  = "."
+    "--gene-centric"
+    	help		= "Pivot sample_centric .psi[.gz] files into gene_centric .gpsi.gz files"
+    	action   = :store_true
   end
   return parse_args(s)
 end
@@ -102,9 +105,10 @@ function main()
 
    fstreams = open_streams( files )
 
-   println(stderr, "Pivoting to gene-centric psi files...")
- 
-   gene_centric(fstreams, fnames)
+   if args["gene-centric"]
+   	println(stderr, "Pivoting to gene-centric psi files...")
+   	gene_centric(fstreams, fnames)
+   end
 
    println(stderr, "Whippet $ver done." )
 end
