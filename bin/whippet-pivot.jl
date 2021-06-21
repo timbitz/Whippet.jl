@@ -91,8 +91,8 @@ function main()
 
    dir   = fixpath( args["directory"] )
    files = retrievefilelist( args["files"], dir )
-	fnames = map(x->first(split(x, ".psi")), files)
-	
+	fnames = map(x->String(first(split(x, ".psi"))), files)
+
    println(stderr, "Loading files to pivot: $(join(map(basename, files), '\n'))")
 
    if length(files) <= 0
