@@ -15,6 +15,7 @@ using Whippet
 using Random
 using ArgParse
 using Glob
+using BufferedStreams
 using Libz
 
 
