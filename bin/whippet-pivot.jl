@@ -65,7 +65,7 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    	curline[i] = readlinesplit(s) # first psi line
    end
    curgene = curline[1][1]
-   ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi", "w"))
+   ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi.gz", "w"))
    write(ostream, "Sample\t" * header)
 
    while !eof(streams[1])
@@ -81,7 +81,7 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
       curgene = curline[1][1]
    	ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi", "w"))
       write(ostream, "Sample\t" * header)
-      println(stderr, "Pivoting into " * curgene * ".gpsi")
+      println(stderr, "Pivoting into " * curgene * ".gpsi.gz")
    end
 end
 
@@ -91,7 +91,8 @@ function main()
 
    dir   = fixpath( args["directory"] )
    files = retrievefilelist( args["files"], dir )
-	fnames = map(x->String(first(split(x, ".psi"))), files)
+	fnames = map(x->last(splitdir(x)), files) |>
+	      x->map(y->String(first(split(y, ".psi"))), x)
 
    println(stderr, "Loading files to pivot: $(join(map(basename, files), '\n'))")
 
