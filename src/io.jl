@@ -14,6 +14,13 @@ tab_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\t' )
 end_write( io::BufOut, str::S ) where {S <: AbstractString} = plug_write( io, str, plug='\n' )
 end_write( io::BufOut, str::Char ) = plug_write( io, str, plug='\n' )
 
+function tab_write( io::BufOut, vs::Vector{SubString{String}} )
+   for i in 1:length(vs)-1
+      tab_write( io, vs[i] )
+   end
+   end_write( io, vs[length(vs)] )
+end
+
 function coord_write( io::BufOut, chr, first, last; tab=false )
    write( io, chr   )
    write( io, ':'   )

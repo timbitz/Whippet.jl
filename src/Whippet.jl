@@ -124,5 +124,6 @@ export SpliceGraph,
        @timer,
        timer_print,
        open_streams,
-       process_psi_files
+       process_psi_files,
+       tab_write
 end
