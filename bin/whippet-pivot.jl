@@ -91,6 +91,8 @@ function main()
 
    dir   = fixpath( args["directory"] )
    files = retrievefilelist( args["files"], dir )
+   fnames = map(files, x->first(strsplit(x, ".psi")))
+
    println(stderr, "Loading files to pivot: $(join(map(basename, files), '\n'))")
 
    if length(files) <= 0
@@ -101,7 +103,7 @@ function main()
 
    println(stderr, "Pivoting to gene-centric psi files...")
  
-   gene_centric(fstreams)
+   gene_centric(fstreams, fnames)
 
    println(stderr, "Whippet $ver done." )
 end
