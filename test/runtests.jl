@@ -407,9 +407,10 @@ IIIIIIIIIIII
       @testset "Aligning SAM/BAM files" begin
          parser = open(SAM.Reader, "test_out.sam")
          data = AlignData() 
+         overlaps  = Dict{NodeInt, Int}()
          mod = DefaultBiasMod()
          for r in parser
-            path, valid = align_bam( lib.coords, data, r )
+            path, valid = align_bam( lib.coords, data, overlaps, r )
             println(stderr, path)
             cur_sam = popfirst!( aligns )
             @test valid

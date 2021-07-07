@@ -34,10 +34,13 @@ function parse_cmd()
     "--gene-centric"
     	help		= "Pivot sample_centric .psi[.gz] files into gene_centric .gpsi.gz files"
     	action   = :store_true
+    "--matrix"
+      help     = "Make a matrix of nodes vs. samples for a particular value type (psi, entropy)"
+      arg_type = String
     "--bufsize"
       help     = "Buffer size"
       arg_type = Int64
-      default  = 1_024*8
+      default  = 1_048_576 #1_024*8
   end
   return parse_args(s)
 end

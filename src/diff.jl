@@ -41,7 +41,7 @@ function probability( a::PosteriorPsi, b::PosteriorPsi; amt=0.0 )
    @fastmath success / total
 end
 
-function open_stream( filename::String; bufsize::Int=6_000_000 )
+function open_stream( filename::String; bufsize::Int=4_194_304 )
    fopen = open( filename, "r" )
    if isgzipped( filename )
       stream = ZlibInflateInputStream( fopen, reset_on_end=true, bufsize=bufsize )
@@ -51,7 +51,7 @@ function open_stream( filename::String; bufsize::Int=6_000_000 )
    stream
 end
 
-function open_streams( files::Vector{String}; bufsize::Int=6_000_000 )
+function open_streams( files::Vector{String}; bufsize::Int=4_194_304 )
    buf = Vector{BufferedStreams.BufferedInputStream}(undef, length(files))
    for i in 1:length(files)
       buf[i] = open_stream( files[i], bufsize=bufsize )

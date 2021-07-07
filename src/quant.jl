@@ -49,6 +49,9 @@ Base.hash( v::SGAlignPaired, h::UInt64 ) = v.fwd == v.rev ?
 ispaired( cont::SGAlignSingle ) = false
 ispaired( cont::SGAlignPaired ) = true
 
+isexonic( node::SGAlignNode ) = true
+isexonic( node::SGNodeIsExon ) = node.meta
+
 # check if one alignment path is a subset of another
 function Base.in( first::SGAlignPath, last::SGAlignPath )
    for i in 1:(length(last)-length(first))+1
@@ -137,6 +140,8 @@ mutable struct SpliceGraphQuant{C <: SGAlignContainer, R <: ReadCounter}
    edge::IntervalMap{ExonInt,R}
    long::Dict{C,R}
    circ::Dict{Tuple{ExonInt,ExonInt},R}
+   iret::Dict{ExonInt,R}
+   #aber::IntervalMap{Float64,R}
    leng::Vector{Float64}
    bias::Float64
 
@@ -145,7 +150,9 @@ mutable struct SpliceGraphQuant{C <: SGAlignContainer, R <: ReadCounter}
              IntervalMap{ExonInt,R}(),
              Dict{C,R}(),
              Dict{Tuple{ExonInt,ExonInt},R}(),
-             zeros( length(sg.nodelen) ), 1.0 )
+             Dict{ExonInt,R}(),
+             zeros( length(sg.nodelen) ), 
+             1.0 )
    end
 end
 
@@ -262,6 +269,24 @@ end
    end
 end
 
+function countedge!( sgquant::SpliceGraphQuant{C,R}, 
+                     a::SGNodeMeta{A}, 
+                     b::SGNodeMeta{A},
+                     value ) where {A <: Any, C <: SGAlignContainer, R <: ReadCounter}
+
+   lnode = a.node
+   rnode = b.node
+   if (!isexonic(a) && lnode+1 == rnode) || # intron retention
+      (!isexonic(b) && lnode == rnode)
+      pushzero!( sgquant.iret, lnode, value )
+   elseif lnode < rnode # canonical splicing
+      interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
+      pushzero!( sgquant.edge, interv, value )
+   elseif lnode >= rnode # back splicing
+      pushzero!( sgquant.circ, (lnode,rnode), value )
+   end
+end
+
 assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
               path::SGAlignSingle,
               value, 
@@ -284,14 +309,7 @@ end
       push!( sgquant.node[ path[1].node ], value )
    else
       for i in 1:length(path)-1
-         lnode = path[i].node
-         rnode = path[i+1].node
-         if lnode < rnode
-            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
-            pushzero!( sgquant.edge, interv, value )
-         elseif lnode >= rnode
-            pushzero!( sgquant.circ, (lnode,rnode), value )
-         end
+         countedge!( sgquant, path[i], path[i+1], value )
       end
    end
 end
@@ -318,12 +336,8 @@ end
          rnode = path.fwd[i+1].node
          push!(temp_iset, lnode)
          push!(temp_iset, rnode)
-         if lnode < rnode
-            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
-            pushzero!( sgquant.edge, interv, value )
-         elseif lnode >= rnode
-            pushzero!( sgquant.circ, (lnode,rnode), value )
-         end
+
+         countedge!( sgquant, path.fwd[i], path.fwd[i+1], value )
       end
    end
 
@@ -336,12 +350,8 @@ end
          lnode = path.rev[i].node
          rnode = path.rev[i+1].node
          (lnode in temp_iset && rnode in temp_iset) && continue
-         if lnode < rnode
-            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
-            pushzero!( sgquant.edge, interv, value )
-         elseif lnode >= rnode
-            pushzero!( sgquant.circ, (lnode,rnode), value )
-         end
+
+         countedge!( sgquant, path.rev[i], path.rev[i+1], value )
       end
    end
    empty!(temp_iset)
@@ -621,14 +631,7 @@ function count!( graphq::GraphLibQuant{C,R},
 
       # add a single edge support
       if length(path) == 2
-         lnode = path[1].node
-         rnode = path[2].node
-         if lnode < rnode
-            interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
-            pushzero!( sgquant.edge, interv, value )
-         elseif lnode >= rnode
-            pushzero!( sgquant.circ, (lnode,rnode), value )
-         end
+         countedge!( sgquant, path[1], path[2], value )
       else # or we have long path, add long count
          curkey = C(path)
          if haskey(sgquant.long, curkey)

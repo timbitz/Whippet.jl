@@ -22,12 +22,12 @@ const CoordSet   = Set{Tuple{CoordInt,CoordInt}}
 const NodeInt = UInt32
 
 struct SGNode
-   gene::NodeInt
+   gene::UInt32
    node::NodeInt
 end
 
 struct SGNodeMeta{A <: Any}
-   gene::NodeInt
+   gene::UInt32
    node::NodeInt
    meta::A
 end
