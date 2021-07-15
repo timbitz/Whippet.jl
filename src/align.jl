@@ -59,20 +59,19 @@ end
 @inline Base.one(t::Type{SGAlignScore}) = SGAlignScore(0x0001,one(MismatchInt),one(MismatchFloat))
 @inline match(t::Type{SGAlignScore}, val::I) where I <: Integer = SGAlignScore(convert(MatchesInt, val),zero(MismatchInt),zero(MismatchFloat))
 
-const SGAlignNode = SGNodeMeta{SGAlignScore}
+const SGAlignNode = SGNodeMeta{NodeInt, SGAlignScore}
 
-Base.hash( sgn::SGNodeMeta{A} ) where A <: Any = hash( sgn.gene, hash(sgn.node) )
-Base.hash( sgn::SGNodeMeta{A}, h::UInt64 ) where A <: Any = hash( sgn.gene, hash(sgn.node, h) )
-Base.isequal( a::SGNodeMeta{A}, b::SGNodeMeta{B} ) where {A <: Any, B <: Any} = a.gene == b.gene && 
-                                                                                a.node == b.node
-Base.:(==)( a::SGNodeMeta{A}, b::SGNodeMeta{B} ) where {A <: Any, B <: Any} = a.gene == b.gene && 
-                                                                              a.node == b.node
+Base.hash( sgn::SGNodeMeta{J, A} ) where {J <: NodeNum, A <: Any} = hash( sgn.gene, hash(sgn.node) )
+Base.hash( sgn::SGNodeMeta{J, A}, h::UInt64 ) where {J <: NodeNum, A <: Any} = hash( sgn.gene, hash(sgn.node, h) )
+Base.isequal( a::SGNodeMeta{J, A}, b::SGNodeMeta{K, B} ) where {J <: NodeNum, A <: Any, K <: NodeNum, B <: Any} = a.gene == b.gene && 
+                                                                                                                  a.node == b.node
+Base.:(==)( a::SGNodeMeta{J, A}, b::SGNodeMeta{K, B} ) where {J <: NodeNum, A <: Any, K <: NodeNum, B <: Any} = a.gene == b.gene && 
+                                                                                                                a.node == b.node
 
-
-const SGAlignPath = Vector{SGNodeMeta{A}} where A <: Any
+const SGAlignPath = Vector{SGNodeMeta{N, A}} where {N <: NodeNum, A <: Any}
 
 @inline SGAlignNode(sgn::SGNode) = SGAlignNode(sgn.gene, sgn.node, zero(SGAlignScore))
-@inline Base.push!( v::Vector{SGNodeMeta{A}}, sgn::SGNode ) where A <: Any = push!( v, SGAlignNode(sgn) )
+@inline Base.push!( v::Vector{SGNodeMeta{N, A}}, sgn::SGNode ) where {N <: NodeNum, A <: Any} = push!( v, SGAlignNode(sgn) )
 
 const ReadLengthInt = UInt8
 
@@ -219,7 +218,7 @@ end
                                   indx::Int, 
                                   readloc::Int;
                                   ispos::Bool=true, 
-                                  geneind::NodeInt=convert(NodeInt,searchsortedlast( lib.offset, indx )) )
+                                  geneind::GeneInt=convert(GeneInt,searchsortedlast( lib.offset, indx )) )
 
    sgidx       = indx - lib.offset[geneind]
    offset_node = convert(NodeInt,searchsortedlast(lib.graphs[geneind].nodeoffset,convert(CoordInt, sgidx + 1)))
@@ -289,7 +288,7 @@ end
 # Returns: SGAlignment
 @inbounds function ungapped_fwd_extend( p::AlignParam, 
                                         lib::GraphLib, 
-                                        geneind::NodeInt, 
+                                        geneind::GeneInt, 
                                         sgidx::Int,
                                         read::FASTQRecord, 
                                         ridx::Int; 
@@ -305,7 +304,7 @@ end
    push!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) ) # starting node
 
    @inline function spliced_fwd_extend( geneind::CoordInt, 
-                                        edgeind::UInt32,
+                                        edgeind::NodeInt,
                                         ridx::Int, 
                                         right_kmer_ind::Int, 
                                         align::SGAlignment )
@@ -410,7 +409,7 @@ end
             align.isvalid = true
             break
          else
-            cur_edge = align.path[cval].node + one(UInt32)
+            cur_edge = align.path[cval].node + one(NodeInt)
             splice!( align.path, (cval+1):length(align.path) ) # extension into current node failed
 
             cur_ridx = ridx - (sgidx - sg.nodeoffset[ cur_edge ])
@@ -445,7 +444,7 @@ end
 # Returns: SGAlignment
 @inbounds function ungapped_rev_extend( p::AlignParam, 
                                         lib::GraphLib, 
-                                        geneind::NodeInt, 
+                                        geneind::GeneInt, 
                                         sgidx::Int,
                                         read::FASTQRecord, 
                                         ridx::Int; 
@@ -462,8 +461,8 @@ end
       pushfirst!( align.path, SGAlignNode( geneind, nodeidx, zero(SGAlignScore) ) ) # starting node if not already there
    end
 
-   @inline function spliced_rev_extend( geneind::NodeInt, 
-                                        edgeind::CoordInt,
+   @inline function spliced_rev_extend( geneind::GeneInt, 
+                                        edgeind::NodeInt,
                                         ridx::Int, 
                                         left_kmer_index::Int, 
                                         align::SGAlignment )
@@ -583,7 +582,7 @@ end
       align.isvalid = true
    end
    if sgidx < align.offset
-      align.offset = convert(UInt32, cur_sgidx)
+      align.offset = convert(NodeInt, cur_sgidx)
    end
    if cur_ridx < align.offsetread
       align.offsetread = convert(ReadLengthInt, cur_ridx)

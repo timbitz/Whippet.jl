@@ -55,19 +55,34 @@ function conf_int_write( io::BufOut, conf_int::Tuple; tab=false, width=false, si
    tab && write( io, '\t' )
 end
 
-function edges_write( io::BufOut, edges::IntervalMap{ExonInt,C}, range::UnitRange ) where C <: ReadCounter
+format_edge_string( var::I ) where I <: Integer = string(Int(var))
+
+function format_edge_string( var::NodeFloat )
+   (root, node, pos) = decode_aberrant(var)
+   core_str = string(Int(root))
+   core_str = root == node ? core_str : core_str * "I"
+   if pos > 0
+      return core_str * ">" * string(pos)
+   else
+      return core_str
+   end
+end
+
+function edges_write( io::BufOut, edges::IntervalMap{N,C}, range ) where {N <: NodeNum, C <: ReadCounter}
    first = true
    for i in edges
-      if i.first in range && i.last in range
+      if i.first >= minimum(range) && i.last <= maximum(range)
          !first && write( io, ',' )
-         write( io, string(i.first) )
+         write( io, format_edge_string(i.first) )
          write( io, '-' )
-         write( io, string(i.last) )
+         write( io, format_edge_string(i.last) )
          write( io, ':' )
          write( io, string(round(get(i.value), digits=1)) )
          first = false
       end
    end
+   #println(stderr, range)
+   #println(stderr, edges)
 end
 
 #=
@@ -307,13 +322,13 @@ end
 
 function output_utr( io::BufOut, 
                      psi::Vector{Float64}, 
-                     pgraph::Nullable{PsiGraph},
+                     pgraph::Nullable{PsiGraph{S}},
                      total_reads::Float64, 
                      motif::EdgeMotif, 
                      sg::SpliceGraph, 
                      node::Int,
                      info::GeneMeta; 
-                        empty=false )
+                        empty=false ) where {S <: MonotonicSet}
 
    st = motif == TXST_MOTIF ? node : node - 1
    en = st + length(psi) - 1
@@ -353,16 +368,16 @@ end
 
 function output_psi( io::BufOut, 
                      psi::Float64, 
-                     inc::Nullable{PsiGraph}, 
-                     exc::Nullable{PsiGraph},
+                     inc::Nullable{PsiGraph{S}}, 
+                     exc::Nullable{PsiGraph{S}},
                      total_reads::Float64, 
                      conf_int::Tuple, 
                      motif::EdgeMotif,
                      sg::SpliceGraph, 
-                     edges::IntervalMap{ExonInt,C},
+                     edges::IntervalMap{N,C},
                      node::Int, 
                      info::GeneMeta, 
-                     bias ) where C <: ReadCounter
+                     bias ) where {N <: NodeNum, C <: ReadCounter, S <: MonotonicSet}
 
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] ) # gene
@@ -382,7 +397,7 @@ function output_psi( io::BufOut,
       write( io, "K0\t0.0\t" )
    end
 
-   min,max = Inf,0
+   min,max = 10000000,0
    if !isnull( inc )
       count_write( io, get(inc), psi, tab=true )
       min,max = get(inc).min,get(inc).max
@@ -430,6 +445,8 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
    end
 end
 
+
+
 function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int, info::GeneMeta )
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] )
@@ -440,10 +457,10 @@ function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int,
    write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 
-function Base.string( is::BitSet )
+function Base.string( is::S ) where S <: MonotonicSet
    str = ""
    for n in is
-      str *= string(n) * "-"
+      str *= format_edge_string(n) * "-"
    end
    str[1:end-1]
 end
@@ -687,7 +704,7 @@ function output_exons( nodecoord::Vector{CoordInt},
    path
 end
 
-function Base.in( nodes::UnitRange, is::BitSet )
+function Base.in( nodes::UnitRange, is::S ) where S <: MonotonicSet
    for i in nodes
       if !(i in is)
          return false
@@ -696,7 +713,7 @@ function Base.in( nodes::UnitRange, is::BitSet )
    return true
 end
 
-function Base.in( nodes::UnitRange, v::Vector{BitSet} )
+function Base.in( nodes::UnitRange, v::Vector{S} ) where S <: MonotonicSet
    for is in v
       if nodes in is
          return true

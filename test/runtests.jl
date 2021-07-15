@@ -360,7 +360,7 @@ IIIIIIIIIIII
          readname = string(r)
 
          align = ungapped_align( param, lib, r )
-         println(stderr, align)
+         #println(stderr, align)
 
          flush(stderr)
          @test !isnull( align )
@@ -380,7 +380,8 @@ IIIIIIIIIIII
          ex_num = length(split(readname, '-', keepempty=false))
          @test length(align.value[best_ind].path) == ex_num
 
-         count!( gquant, align.value[best_ind], 0.5 )
+         println(stderr, align.value[best_ind])
+         count!( gquant, align.value[best_ind], 1.0 )
 
          curgene   = align.value[best_ind].path[1].gene
          firstnode = align.value[best_ind].path[1].node
@@ -404,6 +405,9 @@ IIIIIIIIIIII
       end
       close(sambuf)
 
+      align_quant = deepcopy(gquant)
+      bam_quant = GraphLibQuant{SGAlignSingle,DefaultCounter}( lib )
+
       @testset "Aligning SAM/BAM files" begin
          parser = open(SAM.Reader, "test_out.sam")
          data = AlignData() 
@@ -416,14 +420,32 @@ IIIIIIIIIIII
             @test valid
             @test path == cur_sam.path
             @test hash(path) == hash(cur_sam.path)
-            count!( gquant, path, 0.5 )
+            println(stderr, path)
+            count!( bam_quant, path, 0.0 )
             seq_fwd = isstrandfwd(r) ? sequence(r) : reverse_complement(sequence(r))
             biasval = count!( mod, seq_fwd )
-            count!( gquant, path, biasval )
+            count!( bam_quant, path, biasval )
          end
          @test length(aligns) == 0
          close(parser)
          @test ispaired_bamfile( "test.sort.bam" ) == false
+      end
+
+      @testset "Aberrant Reads" begin
+
+         for i in 1:99999
+            enc = encode_aberrant(i, i)
+            root, node, pos = decode_aberrant( enc )
+            @test i == root
+            @test i == pos
+         end
+         for i in 1:0.5:99999
+            enc = encode_aberrant(i, 12345)
+            root, node, pos = decode_aberrant( enc )
+            @test i == node
+            @test pos == 12345
+         end
+
       end
 
       @testset "SGAlignContainer Hashing" begin
@@ -437,7 +459,7 @@ IIIIIIIIIIII
          @test SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) == SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))])
          @test hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,zero(SGAlignScore))]) ) == hash( SGAlignSingle(SGAlignNode[SGAlignNode(1,1,one(SGAlignScore))]) )
      
-         path = SGNodeMeta{Nothing}[SGNodeMeta(UInt32(1),UInt32(1),nothing)]
+         path = SGNodeMeta{NodeInt,Nothing}[SGNodeMeta(NodeInt(1),NodeInt(1),nothing)]
 
          @test SGAlignPaired( path ) == SGAlignPaired( path, path )
          @test hash(SGAlignSingle(path)) == hash(SGAlignPaired(path))
@@ -547,7 +569,7 @@ IIIIIIIIIIII
          compats[1].count = 10.0
          prev_node = get(gquant.quant[2].node[1])
          println(stderr, "prev_quant = $(gquant.quant[2])")
-         interv = IntervalTrees.Interval{ExonInt}( 1, 2 )
+         interv = IntervalTrees.Interval{NodeInt}( 1, 2 )
          prev_edge = get(get( gquant.quant[2].edge, interv, IntervalValue(0,0,zero(DefaultCounter)) ).value)
 
          println(gquant.quant[2].edge)
@@ -585,8 +607,8 @@ IIIIIIIIIIII
       function psigraph_from_string( edgestr::String )
          edgespl  = split( edgestr, ',' )
          edges    = IntervalMap{Int,Float64}()
-         psigraph = PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                                 Vector{Float64}(), Vector{BitSet}(), 1, 10 )
+         psigraph = PsiGraph{BitSet}( Vector{Float64}(), Vector{Float64}(),
+                                      Vector{Float64}(), Vector{BitSet}(), 1, 10 )
          for s in split( edgestr, ',' )
             f,l,v = parse_edge( s )
             edges[(f,l)] = v
@@ -657,20 +679,66 @@ IIIIIIIIIIII
             name = lib.names[g]
             chr  = lib.info[g].name
             strand = lib.info[g].strand ? '+' : '-'
-            _process_events( bs, lib.graphs[g], gquant.quant[g], (name,chr,strand), readlen=20, isnodeok=false )
+            _process_events( bs, lib.graphs[g], gquant.quant[g], (name,chr,strand), readlen=20 )
          end
          flush(bs)
          seek(out,0)
          for l in eachline(out)
+            println(stderr,l)
             spl = split( l, '\t' )
             @test length(spl) == 14
+         end
+         println(stderr,"")
+
+         psi_vals = []
+         conf_vals = []
+         out = IOBuffer(read=true,write=true)
+         bs  = BufferedOutputStream(out)
+         output_psi_header( bs )
+         for g in 1:length(lib.graphs)
+            name = lib.names[g]
+            chr  = lib.info[g].name
+            strand = lib.info[g].strand ? '+' : '-'
+            _process_events( bs, lib.graphs[g], align_quant.quant[g], (name,chr,strand), readlen=20 )
+         end
+         flush(bs)
+         seek(out,0)
+         for l in eachline(out)
             println(stderr,l)
+            spl = split( l, '\t' )
+            @test length(spl) == 14
+            push!(psi_vals, spl[6])
+            push!(conf_vals, spl[7])
+         end
+         println(stderr,"")
+
+
+         out = IOBuffer(read=true,write=true)
+         bs  = BufferedOutputStream(out)
+         output_psi_header( bs )
+         for g in 1:length(lib.graphs)
+            name = lib.names[g]
+            chr  = lib.info[g].name
+            strand = lib.info[g].strand ? '+' : '-'
+            _process_events( bs, lib.graphs[g], bam_quant.quant[g], (name,chr,strand), readlen=20 )
+         end
+         flush(bs)
+         seek(out,0)
+         i = 1
+         for l in eachline(out)
+            println(stderr,l)
+            spl = split( l, '\t' )
+            @test spl[6] == psi_vals[i]
+            @test spl[7] == conf_vals[i]
+            i += 1
          end
       end
    end
 
    @testset "Executable testing" begin
 
-       run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
+      run(`julia ../bin/whippet-quant.jl test_out.bam -x test_index.jls`)
+      run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
+       ## CHECK test.sort.bam, make 
    end
 end

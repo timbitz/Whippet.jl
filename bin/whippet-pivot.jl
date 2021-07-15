@@ -63,11 +63,13 @@ end
 readlinesplit( stream ) = readline(stream) |> x->split( x, '\t' )
 
 function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
-                       names::Vector{String} )
+                       names::Vector{String};
+                       var_column::Int64=0 )
    
    curline  = Vector{Vector{SubString{String}}}(undef, length(streams))
    metadata = Vector{String}()
    header   = ""
+   outmat   = DataFrame()
 
    # initialize header lines
    for (i,s) in enumerate(streams)

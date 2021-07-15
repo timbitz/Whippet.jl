@@ -19,8 +19,6 @@ struct GraphLib <: SeqLibrary
 end
 
 
-isexonic( node::SGNodeIsExon ) = node.meta
-
 function checkversion( lib::GraphLib, currentver, minversion::VersionNumber )
    try
       if lib.version < minversion
@@ -153,7 +151,7 @@ function add_nodes_to_collection!( ic::IntervalCollection{SGNodeIsExon},
                                       left, 
                                       right, 
                                       info.strand ? '+' : '-', 
-                                      SGNodeIsExon(gene, i, true))
+                                      SGNodeIsExon(gene, NodeInt(i) :: NodeNum, true))
       push!( ic, exon )
 
       i < length(sg.nodecoord) || break
@@ -166,7 +164,7 @@ function add_nodes_to_collection!( ic::IntervalCollection{SGNodeIsExon},
                                            right+1, 
                                            nextleft-1, 
                                            info.strand ? '+' : '-', 
-                                           SGNodeIsExon(gene, i, false))
+                                           SGNodeIsExon(gene, NodeFloat(i+0.5) :: NodeNum, false))
          push!( ic, intron )
       end
    end

@@ -19,22 +19,28 @@ const CoordArray = Vector{CoordInt}
 const CoordTree  = IntervalTree{CoordInt,IntervalTrees.Interval{CoordInt}}
 const CoordSet   = Set{Tuple{CoordInt,CoordInt}}
 
-const NodeInt = UInt32
+const GeneInt   = UInt32
+const NodeInt   = UInt32
+const NodeFloat = Float64
+const NodeNum   = Union{NodeInt, NodeFloat}
+
+const MonotonicSet = Union{BitSet,SortedSet{NodeFloat}}
 
 struct SGNode
-   gene::UInt32
+   gene::GeneInt
    node::NodeInt
 end
 
-struct SGNodeMeta{A <: Any}
-   gene::UInt32
-   node::NodeInt
+struct SGNodeMeta{N <: NodeNum, A <: Any}
+   gene::GeneInt
+   node::N
    meta::A
 end
 
-const SGNodeIsExon = SGNodeMeta{Bool} # Bool true if exonic, false if intronic
+const SGNodeAny = SGNodeMeta{N,A} where {N <: NodeNum, A <: Any}
+const SGNodeIsExon = SGNodeMeta{NodeNum, Bool} # Bool true if exonic, false if intronic
 
-const ExonInt    = UInt16
+const ExonInt    = NodeInt
 const ExonTree   = IntervalTree{ExonInt,IntervalTrees.Interval{ExonInt}}
 
 const SGSequence = BioSequences.BioSequence{DNAAlphabet{4}}

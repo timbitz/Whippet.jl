@@ -25,14 +25,14 @@ function _push!(t::IntervalTrees.LeafNode{K, V, B}, key::AbstractInterval{K}, va
     return false
 end
 
-function pushzero!( collection::Dict{K,V}, key, value ) where {K, V <: ReadCounter}
+function pushzero!( collection::Dict{K,V}, key::K, value ) where {K, V}
    if !haskey( collection, key )
       collection[key] = zero(V)
    end
    push!( collection[key], value )
 end
 
-function pushzero!( collection::IntervalMap{K,V}, key, value ) where {K <: Integer, V <: ReadCounter}
+function pushzero!( collection::IntervalMap{K,V}, key, value ) where {K <: NodeNum, V}
    if !haskey( collection, (key.first,key.last) )
       collection[key] = zero(V)
    end
@@ -77,12 +77,13 @@ const DEFAULTCOUNTER_ONE  = DefaultCounter(1.0)
 Base.zero( ::Type{DefaultCounter} ) = DefaultCounter(0.0) #DEFAULTCOUNTER_ZERO
 Base.one( ::Type{DefaultCounter} )  = DefaultCounter(1.0) #DEFAULTCOUNTER_ONE
 Base.push!( cnt::DefaultCounter, value::Float64 ) = (cnt.count += value)
+Base.push!( cnt::DefaultCounter, value::DefaultCounter ) = (cnt.count += get(value))
 
 primer_adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
 gc_adjust!( cnt::DefaultCounter, m::B ) where B <: BiasModel = (cnt.isadjusted = true)
 
-count!( mod::DefaultBiasMod, _ ) = 1.0
-count!( mod::DefaultBiasMod, x, y ) = 1.0
+count!( mod::DefaultBiasMod, _ ) = DEFAULTCOUNTER_ONE
+count!( mod::DefaultBiasMod, x, y ) = DEFAULTCOUNTER_ONE
 
 # 5' Sequence bias model
 # Implementation of Hansen et al, NAR 2010 

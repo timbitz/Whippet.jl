@@ -49,8 +49,18 @@ Base.hash( v::SGAlignPaired, h::UInt64 ) = v.fwd == v.rev ?
 ispaired( cont::SGAlignSingle ) = false
 ispaired( cont::SGAlignPaired ) = true
 
-isexonic( node::SGAlignNode ) = true
+isexonic( node::SGAlignNode )  = true
 isexonic( node::SGNodeIsExon ) = node.meta
+
+isaberrant( node::NodeFloat ) = true
+isaberrant( node::NodeInt )   = false
+
+function unique_push!( arr::Vector{T}, el::K ) where {T,K}
+   tel = convert(T, el)
+   if !( tel in arr )
+      push!( arr, tel )
+   end
+end
 
 # check if one alignment path is a subset of another
 function Base.in( first::SGAlignPath, last::SGAlignPath )
@@ -74,7 +84,7 @@ end
 # reimplementation of to edge code in events.jl
 # we require not just the nodes to exist in the intset
 # but also that they are adjacent in the intset
-function Base.in( first, last, is::BitSet )
+function Base.in( first, last, is::S ) where S <: MonotonicSet
    if first in is &&
       last in is
       for i in first+1:last-1
@@ -88,9 +98,11 @@ function Base.in( first, last, is::BitSet )
 end
 
 Base.in( edge::I, is::BitSet ) where I <: IntervalValue = in( edge.first, edge.last, is )
+Base.in( edge::IntervalValue{K,V}, is::SortedSet{K, O} ) where {K <: NodeFloat, V, O <: Base.Ordering} = in( edge.first, edge.last, is )
+
 
 # This looks for an edge in a Vector of BitSets using ^
-function Base.in( edge::I, viset::Vector{BitSet} ) where I <: IntervalValue
+function Base.in( edge::I, viset::Vector{S} ) where {I <: IntervalValue, S <: MonotonicSet}
    for iset in viset
       if edge in iset
          return true
@@ -100,7 +112,7 @@ function Base.in( edge::I, viset::Vector{BitSet} ) where I <: IntervalValue
 end
 
 # For events.jl:
-function inall( edge::I, viset::Vector{BitSet} ) where I <: IntervalValue
+function inall( edge::I, viset::Vector{S} ) where {I <: IntervalValue, S <: MonotonicSet}
    inone = false
    for iset in viset
       if edge.first >= first(iset) && edge.last <= last(iset)
@@ -114,7 +126,7 @@ function inall( edge::I, viset::Vector{BitSet} ) where I <: IntervalValue
 end
 
 # each edge in the path must exist in the int set to be true
-function Base.in( path::SGAlignPath, is::BitSet )
+function Base.in( path::SGAlignPath, is::S ) where S <: MonotonicSet
    if length(path) == 1
       if !(path[1].node in is)
          return false
@@ -129,28 +141,31 @@ function Base.in( path::SGAlignPath, is::BitSet )
    return true
 end
 
-Base.in( aln::SGAlignSingle, is::BitSet ) = in( aln.fwd, is )
-Base.in( aln::SGAlignPaired, is::BitSet ) = in( aln.fwd, is ) && in( aln.rev, is )
+Base.in( aln::SGAlignSingle, is::S ) where S <: MonotonicSet = in( aln.fwd, is )
+Base.in( aln::SGAlignPaired, is::S ) where S <: MonotonicSet = in( aln.fwd, is ) && in( aln.rev, is )
 
 # This is where we count reads for nodes/edges/circular-edges/effective_lengths
 # bias is an adjusting multiplier for nodecounts to bring them to the same level
 # as junction counts, which should always be at a lower level
 mutable struct SpliceGraphQuant{C <: SGAlignContainer, R <: ReadCounter}
    node::Vector{R}
-   edge::IntervalMap{ExonInt,R}
+   edge::IntervalMap{NodeInt,R}
+   aber::IntervalMap{NodeFloat,R}
+   lnod::Vector{NodeFloat}
+   rnod::Vector{NodeFloat}
    long::Dict{C,R}
    circ::Dict{Tuple{ExonInt,ExonInt},R}
-   iret::Dict{ExonInt,R}
-   #aber::IntervalMap{Float64,R}
    leng::Vector{Float64}
    bias::Float64
 
    function SpliceGraphQuant{C,R}( sg::SpliceGraph ) where {C <: SGAlignContainer, R <: ReadCounter}
       return new( R[zero(R) for x in 1:length(sg.nodelen)],
-             IntervalMap{ExonInt,R}(),
+             IntervalMap{NodeInt,R}(),
+             IntervalMap{NodeFloat,R}(),
+             Vector{NodeFloat}(),
+             Vector{NodeFloat}(),
              Dict{C,R}(),
              Dict{Tuple{ExonInt,ExonInt},R}(),
-             Dict{ExonInt,R}(),
              zeros( length(sg.nodelen) ), 
              1.0 )
    end
@@ -218,6 +233,9 @@ function adjust!( sgquant::SpliceGraphQuant{C,R}, mod::B, func=adjust! ) where {
    for edg in sgquant.edge
       func( edg.value, mod )
    end
+   for edg in sgquant.aber
+      func( edg.value, mod )
+   end
    for lng in values(sgquant.long)
       func( lng, mod )
    end
@@ -270,17 +288,19 @@ end
 end
 
 function countedge!( sgquant::SpliceGraphQuant{C,R}, 
-                     a::SGNodeMeta{A}, 
-                     b::SGNodeMeta{A},
-                     value ) where {A <: Any, C <: SGAlignContainer, R <: ReadCounter}
+                     a::SGNodeMeta{N,A}, 
+                     b::SGNodeMeta{M,A},
+                     value ) where {N <: NodeNum, M <: NodeNum, A <: Any, C <: SGAlignContainer, R <: ReadCounter}
 
    lnode = a.node
    rnode = b.node
-   if (!isexonic(a) && lnode+1 == rnode) || # intron retention
-      (!isexonic(b) && lnode == rnode)
-      pushzero!( sgquant.iret, lnode, value )
+   if isaberrant(lnode) || isaberrant(rnode)
+      interv = IntervalTrees.Interval{NodeFloat}( lnode, rnode )
+      pushzero!( sgquant.aber, interv, value )
+      isaberrant(lnode) && unique_push!( sgquant.lnod, lnode )
+      isaberrant(rnode) && unique_push!( sgquant.rnod, rnode )
    elseif lnode < rnode # canonical splicing
-      interv = IntervalTrees.Interval{ExonInt}( lnode, rnode )
+      interv = IntervalTrees.Interval{NodeInt}( lnode, rnode )
       pushzero!( sgquant.edge, interv, value )
    elseif lnode >= rnode # back splicing
       pushzero!( sgquant.circ, (lnode,rnode), value )

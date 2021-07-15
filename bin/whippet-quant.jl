@@ -205,7 +205,7 @@ function main()
 
    effective_lengths!( lib, quant, 1, 0)
    println(stderr, "Calculating maximum likelihood estimate of events..." )
-   @timer process_events( args["out"] * ".psi.gz" , lib, quant, isnodeok=false, iscircok=args["circ"], readlen=readlen )
+   @timer process_events( args["out"] * ".psi.gz" , lib, quant, iscircok=args["circ"], readlen=readlen )
    println(stderr, "Whippet $ver done." )
 end
 

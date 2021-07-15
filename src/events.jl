@@ -111,18 +111,31 @@ Base.convert(::Type{S}, edg::EdgeMotif ) where {S <: AbstractString} = MOTIF_STR
 isobligate( motif::EdgeMotif ) = (0 <= UInt8(motif) <= 1)
 isaltsplice( motif::EdgeMotif ) = (UInt8(motif) & 0b110) == 0b110
 
-isspanning( edge::I, node::T ) where {I <: AbstractInterval, T <: Integer} = edge.first < node < edge.last ? true : false
-isconnecting( edge::I, node::T ) where {I <: AbstractInterval, T <: Integer} = edge.first == node || edge.last == node ? true : false
+isspanning( edge::I, node::T ) where {I <: AbstractInterval, T <: Number} = edge.first < node < edge.last ? true : false
+isconnecting( edge::I, node::T ) where {I <: AbstractInterval, T <: Number} = edge.first == node || edge.last == node ? true : false
 
-# this is meant for short arrays when it is faster
-# than using the overhead of a set
-# DEPRECATED, BitSet is very efficient
-function unique_push!( arr::Vector{T}, el::T ) where T
-   if !( el in arr )
-      push!( arr, el )
-   end
+struct SubNode
+   node::NodeNum
+   left::Bool
+
+   SubNode( i::I ) where I <: Integer = SubNode( NodeInt(i), false )
 end
 
+Base.isless( a::SubNode, b::SubNode ) = a.node < b.node
+
+sub_nodes( v::Vector{I} ) where I <: Integer = map(x->SubNode(x), v)
+sub_nodes( v::Vector{I},  ) where I <: Integer = map(x->SubNode(x), v)
+sub_nodes( v::Vector{NodeFloat}, left::Bool ) = map(x->SubNode(x, left), v)
+
+function motif( a::SubNode, ae::EdgeType, b::SubNode, be::EdgeType )
+   if !isaberrant(a.node)
+      return( convert(EdgeMotif, ae, be) )
+   elseif isaberrant(a) && isaberrant(b)
+
+   else
+
+   end
+end
 
 # This holds one or many sets of connected
 # nodes + the count of the reads and the eff_len
@@ -131,20 +144,20 @@ end
 # is PsiGraph holding paths::Vector{PsiPath} (deprecated)
 # but the current implementation was choosen for
 # faster memory access w.r.t. stride.
-mutable struct PsiGraph
+mutable struct PsiGraph{S <: MonotonicSet}
    psi::Vector{Float64}
    count::Vector{Float64}
    length::Vector{Float64}
-   nodes::Vector{BitSet}
-   min::NodeInt
-   max::NodeInt
+   nodes::Vector{S}
+   min::NodeFloat
+   max::NodeFloat
 end
 
 Base.sum( pgraph::PsiGraph ) = sum( pgraph.count )
 Base.sum( ngraph::Nullable{PsiGraph} ) = isnull( ngraph ) ?
                                          0.0 : convert(Float64, sum( ngraph.value ))
 
-function hasintersect( a::BitSet, b::BitSet )
+function hasintersect( a::S, b::S ) where {S <: MonotonicSet}
    seta,setb = length(a) > length(b) ? (b,a) : (a,b)
    for elem in seta
       if elem in setb
@@ -154,7 +167,7 @@ function hasintersect( a::BitSet, b::BitSet )
    false
 end
 
-function hasintersect_terminal( a::BitSet, b::BitSet )
+function hasintersect_terminal( a::S, b::S ) where {S <: MonotonicSet}
    if first(a) == last(b) || first(b) == last(a)
       return true
    else
@@ -170,11 +183,24 @@ function hasintersect_terminal( a, b )
    end
 end
 
-function Base.in( i::T, pgraph::PsiGraph ) where T <: Integer
+function Base.in( i::T, pgraph::PsiGraph ) where T <: NodeNum
    for nodeset in pgraph.nodes
       (i in nodeset) && return true
    end
    return false
+end
+
+function left_join!( mapa::IntervalMap{J,V}, mapb::IntervalMap{K,V} ) where {J, K, V}
+   for ival in mapb
+      nval = IntervalValue{J,V}( ival.first, ival.last, ival.value )
+      push!( mapa, nval )
+   end
+   mapa
+end
+
+# divrem(trunc( 10.50001443, digits=1 ), 1) == (10.0, 0.5)
+function expand_nodes( nodelst::Vector{N}, edges::IntervalMap{K,V}, leftside=true ) where {N, K, V}
+   
 end
 
 complexity( one::PsiGraph, two::PsiGraph ) = complexity(length(one.nodes) + length(two.nodes))
@@ -220,14 +246,14 @@ end
 # works.. these graph paths are then assigned unambiguous counts, while
 # ambiguous counts are then assigned to each graph path using the EM algorithm
 
-function reduce_graph( edges::PsiGraph, 
-                       graph::PsiGraph=deepcopy(edges), 
+function reduce_graph( edges::PsiGraph{S}, 
+                       graph::PsiGraph{S}=deepcopy(edges), 
                        maxit::Int=100, 
-                       maxiso::Int=1024 )
+                       maxiso::Int=1024 ) where S <: MonotonicSet
 
-   newgraph = PsiGraph( Vector{BitSet}(),  Vector{Float64}(),
-                        Vector{Float64}(), Vector{Float64}(),
-                        graph.min, graph.max )
+   newgraph = PsiGraph{S}( Vector{Float64}(), Vector{Float64}(), 
+                           Vector{Float64}(), Vector{S}(),  
+                           graph.min, graph.max )
    it = 1
    while (newgraph.nodes != graph.nodes || it == 1) && it <= maxit
       if it > 1
@@ -286,11 +312,11 @@ end
 end
 
 
-function Base.push!( pgraph::PsiGraph, edg::I;
-                     value_bool=true, length=1.0 ) where I <: AbstractInterval
+function Base.push!( pgraph::PsiGraph{S}, edg::I;
+                     value_bool=true, length=1.0 ) where {I <: AbstractInterval, S <: MonotonicSet}
    push!( pgraph.count, value_bool ? get(edg.value) : 0.0 )
    push!( pgraph.length, value_bool ? length : 0.0 )
-   push!( pgraph.nodes, BitSet([edg.first, edg.last]) )
+   push!( pgraph.nodes, S([edg.first, edg.last]) )
    #reduce_graph_terminal!( pgraph )
    if edg.first < pgraph.min
       pgraph.min = edg.first
@@ -309,10 +335,10 @@ mutable struct AmbigCounts
 end
 
 Base.:(==)( a::AmbigCounts, b::AmbigCounts ) = a.paths == b.paths
-Base.:(==)( a::AmbigCounts, b::BitSet ) = ( a.paths == b )
-Base.:(==)( a::BitSet, b::AmbigCounts ) = ( a == b.paths )
-Base.:(==)( a::Vector{I}, b::BitSet ) where {I <: Integer} = ( b == a )
-function Base.:(==)( iset::BitSet, ivec::Vector{I} ) where I <: Integer
+Base.:(==)( a::AmbigCounts, b::S ) where {S <: MonotonicSet} = ( a.paths == b )
+Base.:(==)( a::S, b::AmbigCounts ) where {S <: MonotonicSet} = ( a == b.paths )
+Base.:(==)( a::Vector{I}, b::S ) where {I <: Integer, S <: MonotonicSet} = ( b == a )
+function Base.:(==)( iset::S, ivec::Vector{I} ) where {I <: Number, S <: MonotonicSet}
    length(iset) != length(ivec) && return false
    for intv in ivec
       !(intv in iset) && return false
@@ -334,7 +360,7 @@ function extend_edges!( edges::IntervalMap{K,V},
                         pgraph::PsiGraph, 
                         igraph::PsiGraph,
                         ambig_edge::Nullable{Vector{IntervalValue}}, 
-                        node::NodeInt ) where {K,V}
+                        node::K ) where {K,V}
 
    minv = min( pgraph.min, igraph.min )
    maxv = max( pgraph.max, igraph.max )
@@ -398,103 +424,6 @@ function extend_edges!( edges::IntervalMap{K,V},
    end
 
    ambig_edge
-end
-
-# add_node_counts! for single pgraph (used in tandem_utrs)
-function add_node_counts!( ambig::Vector{AmbigCounts}, 
-                           pgraph::PsiGraph,
-                           sgquant::SpliceGraphQuant, 
-                           bias::Float64 )
-
-   iset = BitSet()
-   for n in pgraph.min:pgraph.max # lets go through all possible nodes
-      for i in 1:length(pgraph.nodes)
-         if n in pgraph.nodes[i]
-            push!( iset, i )
-            pgraph.length[i] += sgquant.leng[n]
-         end
-      end
-
-      #=                                            =#
-      length( iset ) == 0 && continue # unspliced node
-      if length( iset ) == 1 # non-ambiguous node
-         if first( iset ) <= length(pgraph.nodes) # belongs to inclusion
-            idx = first( iset )
-            @fastmath pgraph.count[idx] += get(sgquant.node[n]) #* bias / sgquant.leng[n]
-         end
-      else
-         #check if there is already an entry for this set of paths
-         # if so, just increment multiplier, if not, make new one
-         exists = false
-         for am in ambig
-            if iset == am
-               @fastmath am.multiplier += get(sgquant.node[n]) #* bias / sgquant.leng[n]
-               exists = true
-               break
-            end
-         end
-         if !exists && get(sgquant.node[n]) > 0
-            push!( ambig, AmbigCounts( collect(iset),
-                                       ones( length(iset) ) / length(iset),
-                                       1.0, get(sgquant.node[n]) ) ) #* bias / sgquant.leng[n] ) )
-         end
-      end
-      empty!( iset ) # clean up
-   end
-end
-
-# add_node_counts! for two graphs, inc_graph and exc_graph (used in spliced events)
-function add_node_counts!( ambig::Vector{AmbigCounts}, 
-                           igraph::PsiGraph,
-                           egraph::PsiGraph, 
-                           sgquant::SpliceGraphQuant,
-                           bias::Float64 )
-
-   minv = min( egraph.min, igraph.min )
-   maxv = max( egraph.max, igraph.max )
-   iset = BitSet()
-   for n in minv:maxv # lets go through all possible nodes
-      for i in 1:length(igraph.nodes)
-         if n in igraph.nodes[i]
-            push!( iset, i )
-            igraph.length[i] += 1 # sgquant.leng[n]
-         end
-      end
-      for i in 1:length(egraph.nodes)
-         if n in egraph.nodes[i]
-            push!( iset, i+length(igraph.nodes) )
-            egraph.length[i] += 1 # sgquant.leng[n]
-         end
-      end
-      #=                                            =#
-      length( iset ) == 0 && continue # unspliced node
-      if length( iset ) == 1 # non-ambiguous node
-         if first( iset ) <= length(igraph.nodes) # belongs to inclusion
-            idx = first( iset )
-            @fastmath igraph.count[idx] += get(sgquant.node[n]) * bias / sgquant.leng[n]
-         else # belongs to exclusion
-            idx = first( iset ) - length(igraph.nodes)
-            @fastmath egraph.count[idx] += get(sgquant.node[n]) * bias / sgquant.leng[n]
-         end
-      else
-         #check if there is already an entry for this set of paths
-         # if so, just increment multiplier, if not, make new one
-         exists = false
-         for am in ambig
-            if iset == am
-               @fastmath am.multiplier += get(sgquant.node[n]) * bias / sgquant.leng[n]
-               exists = true
-               break
-            end
-         end
-         if !exists && get(sgquant.node[n]) > 0
-            push!( ambig, AmbigCounts( collect(iset),
-                                       ones( length(iset) ) / length(iset),
-                                       1.0, get(sgquant.node[n]) * bias / sgquant.leng[n] ) )
-         end
-      end
-      empty!( iset ) # clean up
-   end
 end
 
 # add_edge_counts! for one psigraph, (used in tandem utr)
@@ -585,9 +514,9 @@ function build_utr_graph( nodes::BitSet,
                           motif::EdgeMotif, 
                           sgquant::SpliceGraphQuant )
 
-   utr_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                                  Vector{Float64}(), Vector{BitSet}(),
-                                  first(nodes), last(nodes) ))
+   utr_graph = Nullable(PsiGraph{BitSet}( Vector{Float64}(), Vector{Float64}(),
+                                          Vector{Float64}(), Vector{BitSet}(),
+                                          first(nodes), last(nodes) ))
    curset = BitSet()
 
    while length(nodes) > 0
@@ -606,13 +535,13 @@ function build_utr_graph( nodes::BitSet,
    utr_graph
 end
 
-function _process_tandem_utr( sg::SpliceGraph, 
+function process_tandem_utr( sg::SpliceGraph, 
                               sgquant::SpliceGraphQuant{C,R},
                               node::NodeInt, 
                               motif::EdgeMotif, 
                               readlen::Int ) where {C <: SGAlignContainer, R <: ReadCounter}
 
-   utr_graph  = Nullable{PsiGraph}()
+   utr_graph  = Nullable{PsiGraph{BitSet}}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
 
    used_node  = BitSet()
@@ -663,33 +592,51 @@ function _process_tandem_utr( sg::SpliceGraph,
    psi,utr_graph,ambig_cnt,len
 end
 
-function _process_spliced( sg::SpliceGraph, 
-                           sgquant::SpliceGraphQuant,
-                           node::NodeInt, 
-                           motif::EdgeMotif, 
-                           bias::Float64, 
-                           isnodeok::Bool,
-                           minedgeweight::Float64=0.0001 )
+function process_spliced( sg::SpliceGraph, 
+                          edges::IntervalMap{NodeInt,R},
+                          node::NodeInt, 
+                          motif::EdgeMotif, 
+                          bias::Float64,
+                          minedgeweight::Float64=0.0001 ) where {R}
+   _process_spliced(sg, edges, node, BitSet, motif, bias, minedgeweight )
+end
 
-   inc_graph  = Nullable{PsiGraph}()
-   exc_graph  = Nullable{PsiGraph}()
+function process_spliced( sg::SpliceGraph, 
+                          edges::IntervalMap{NodeFloat,R},
+                          node::NodeFloat, 
+                          motif::EdgeMotif, 
+                          bias::Float64,
+                          minedgeweight::Float64=0.0001 ) where {R}
+   _process_spliced(sg, edges, node, SortedSet{NodeFloat}, motif, bias, minedgeweight )
+end
+
+function _process_spliced( sg::SpliceGraph, 
+                           edges::IntervalMap{K,R},
+                           node::K,
+                           settype, 
+                           motif::EdgeMotif, 
+                           bias::Float64,
+                           minedgeweight::Float64=0.0001 ) where {K, R}
+
+   inc_graph  = Nullable{PsiGraph{settype}}()
+   exc_graph  = Nullable{PsiGraph{settype}}()
    ambig_edge = Nullable{Vector{IntervalValue}}()
    ambig_cnt  = Nullable{Vector{AmbigCounts}}()
 
    connecting_val = 0.0
    spanning_val   = 0.0
 
-   maxvalue = length(sgquant.edge) > 0 ? get(maximum( sgquant.edge ).value) : 0.0
+   maxvalue = length(edges) > 0 ? get(maximum( edges ).value) : 0.0
 
-   for edg in intersect( sgquant.edge, (node, node) )
+   for edg in intersect( edges, (node, node) )
 
       (get(edg.value) / maxvalue < minedgeweight) && continue
 
-      if   isconnecting( edg, node )
+      if isconnecting( edg, node )
          if isnull( inc_graph )
-            inc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                                           Vector{Float64}(), Vector{BitSet}(),
-                                           edg.first, edg.last ))
+            inc_graph = Nullable(PsiGraph{settype}( Vector{Float64}(), Vector{Float64}(),
+                                                    Vector{Float64}(), Vector{settype}(),
+                                                    edg.first, edg.last ))
          end
          if isnull( ambig_edge )
             ambig_edge = Nullable( Vector{IntervalValue}() )
@@ -699,9 +646,9 @@ function _process_spliced( sg::SpliceGraph,
          connecting_val += get(edg.value)
       elseif isspanning( edg, node )
          if isnull( exc_graph ) #don't allocate unless there is alt splicing
-            exc_graph = Nullable(PsiGraph( Vector{Float64}(), Vector{Float64}(),
-                                           Vector{Float64}(), Vector{BitSet}(),
-                                           edg.first, edg.last ))
+            exc_graph = Nullable(PsiGraph{settype}( Vector{Float64}(), Vector{Float64}(),
+                                                    Vector{Float64}(), Vector{settype}(),
+                                                    edg.first, edg.last ))
          end
          if isnull( ambig_edge )
             ambig_edge = Nullable( Vector{IntervalValue}() )
@@ -718,7 +665,7 @@ function _process_spliced( sg::SpliceGraph,
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
 
       # try to bridge nodes by extending with potentially ambiguous edges
-      ambig_edge = extend_edges!( sgquant.edge, exc_graph.value, inc_graph.value, ambig_edge, node )
+      ambig_edge = extend_edges!( edges, exc_graph.value, inc_graph.value, ambig_edge, node )
 
       inc_graph = Nullable( reduce_graph( inc_graph.value ) )
       exc_graph = Nullable( reduce_graph( exc_graph.value ) )
@@ -728,9 +675,6 @@ function _process_spliced( sg::SpliceGraph,
                         exc_graph.value, 
                         get(ambig_edge) )
 
-      if isnodeok
-         add_node_counts!( ambig_cnt.value, inc_graph.value, exc_graph.value, sgquant, bias )
-      end
    else
       !isnull( inc_graph ) && (inc_graph = Nullable( reduce_graph_simple( inc_graph.value ) ))
       !isnull( exc_graph ) && (exc_graph = Nullable( reduce_graph_simple( exc_graph.value ) ))
@@ -767,8 +711,7 @@ end
 
 function process_events( outfile, 
                          lib::GraphLib, 
-                         graphq::GraphLibQuant;
-                         isnodeok=false, 
+                         graphq::GraphLibQuant; 
                          iscircok=false, 
                          readlen::Int=50 )
 
@@ -780,7 +723,7 @@ function process_events( outfile,
       chr  = lib.info[g].name
       strand = lib.info[g].strand ? '+' : '-'
       _process_events( stream, lib.graphs[g], graphq.quant[g], (name,chr,strand),
-                       isnodeok=isnodeok, iscircok=iscircok, readlen=readlen )
+                       iscircok=iscircok, readlen=readlen )
    end
    close(stream)
    close(io)
@@ -790,9 +733,9 @@ function _process_events( io::BufOut,
                           sg::SpliceGraph, 
                           sgquant::SpliceGraphQuant, 
                           info::GeneMeta;
-                          isnodeok=false, 
                           iscircok=false, 
-                          readlen::Int=50.0 )
+                          readlen::Int=50.0,
+                          canonical_only=false )
    # Heres the plan:
    # step through sets of edges, look for edge motifs, some are obligate calculations
    # others we only calculate psi if there is an alternative edge
@@ -800,7 +743,22 @@ function _process_events( io::BufOut,
       return 0
    end
    i = 1
+
+   if length(sgquant.lnod) + length(sgquant.rnod) > 0 &&
+      !canonical_only
+      edges = left_join!(sgquant.aber, sgquant.edge)
+      CurInt = NodeFloat
+      sub_nodes = sort(union( sub_nodes(collect(1:length(sg.edgetype)-1)),
+                              sub_nodes(sgquant.lnod, true),
+                              sub_nodes(sgqaunt.rnod, false) ))
+   else
+      edges = sgquant.edge
+      CurInt = NodeInt
+      sub_nodes = sub_nodes( collect(1:length(sg.edgetype)-1) )
+   end
+
    while i < length(sg.edgetype)
+   #for i in 1:length(sub_nodes)
       motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
       next_istandem = i+1 < length(sg.edgetype) ? isobligate( convert(EdgeMotif, sg.edgetype[i+1], sg.edgetype[i+2]) ) : false
       if motif == NONE_MOTIF
@@ -808,7 +766,7 @@ function _process_events( io::BufOut,
             output_empty( io, motif, sg, i, info )
          end
       elseif isobligate( motif ) # is utr event
-         psi,utr,ambig,len = _process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif, readlen )
+         psi,utr,ambig,len = process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif, readlen )
          if !isnull( psi ) && !any( map( isnan, psi.value ) )
             total_cnt = sum(utr) + sum(ambig)
             i = output_utr( io, round.(get(psi), digits=4), utr, total_cnt, motif, sg, i , info )
@@ -818,17 +776,20 @@ function _process_events( io::BufOut,
          end
       else  # is a spliced node
          bias = calculate_bias!( sgquant )
-         psi,inc,exc,ambig,total_cnt = _process_spliced( sg, sgquant, convert(NodeInt, i), motif, bias, isnodeok )
+         psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, i), motif, bias )
          #total_cnt = sum(inc) + sum(exc) + sum(ambig)
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
-            output_psi( io, round(psi.value, sigdigits=3), inc, exc, total_cnt, conf_int, motif, sg, sgquant.edge, i, info, bias  ) # TODO bias
-         else
+            output_psi( io, round(psi.value, sigdigits=3), inc, exc, total_cnt, conf_int, motif, sg, edges, i, info, bias  ) # TODO bias
+         else #### CLEAN UP PRINTING ###
             output_empty( io, motif, sg, i, info )
          end
       end
+      # check for aberrant edges and process_spliced for entries. 
+      # !canonical_only && output_aberrant()
       i += 1
    end
+
    # process back-splicing
    iscircok && output_circular( io, sg, sgquant, info )
 end
