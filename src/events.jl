@@ -748,8 +748,8 @@ function _process_events( io::BufOut,
       edges = left_join!(sgquant.aber, sgquant.edge)
       CurInt = NodeFloat
       snodes = sort(union( sub_nodes(collect(1:length(sg.edgetype)-1)),
-                              sub_nodes(sgquant.lnod, true),
-                              sub_nodes(sgqaunt.rnod, false) ))
+                           sub_nodes(sgquant.lnod, true),
+                           sub_nodes(sgquant.rnod, false) ))
    else
       edges = sgquant.edge
       CurInt = NodeInt
