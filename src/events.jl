@@ -117,14 +117,13 @@ isconnecting( edge::I, node::T ) where {I <: AbstractInterval, T <: Number} = ed
 struct SubNode
    node::NodeNum
    left::Bool
-
-   SubNode( i::I ) where I <: Integer = SubNode( NodeInt(i), false )
 end
+
+SubNode( i::I ) where I <: Integer = SubNode( NodeInt(i), false )
 
 Base.isless( a::SubNode, b::SubNode ) = a.node < b.node
 
 sub_nodes( v::Vector{I} ) where I <: Integer = map(x->SubNode(x), v)
-sub_nodes( v::Vector{I},  ) where I <: Integer = map(x->SubNode(x), v)
 sub_nodes( v::Vector{NodeFloat}, left::Bool ) = map(x->SubNode(x, left), v)
 
 function motif( a::SubNode, ae::EdgeType, b::SubNode, be::EdgeType )
@@ -748,13 +747,13 @@ function _process_events( io::BufOut,
       !canonical_only
       edges = left_join!(sgquant.aber, sgquant.edge)
       CurInt = NodeFloat
-      sub_nodes = sort(union( sub_nodes(collect(1:length(sg.edgetype)-1)),
+      snodes = sort(union( sub_nodes(collect(1:length(sg.edgetype)-1)),
                               sub_nodes(sgquant.lnod, true),
                               sub_nodes(sgqaunt.rnod, false) ))
    else
       edges = sgquant.edge
       CurInt = NodeInt
-      sub_nodes = sub_nodes( collect(1:length(sg.edgetype)-1) )
+      snodes = sub_nodes( collect(1:length(sg.edgetype)-1) )
    end
 
    while i < length(sg.edgetype)
