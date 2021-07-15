@@ -378,13 +378,31 @@ function output_psi( io::BufOut,
                      node::Int, 
                      info::GeneMeta, 
                      bias ) where {N <: NodeNum, C <: ReadCounter, S <: MonotonicSet}
-
    sg.nodelen[node] == 0 && return
+   left  = sg.nodecoord[node]
+   right = sg.nodecoord[node]+sg.nodelen[node]-one(NodeInt)
+   output_psi( io, psi, inc, exc, total_reads, conf_int, convert(String, motif), left, right, edges, node, info, bias )
+end
+
+function output_psi( io::BufOut, 
+                     psi::Float64, 
+                     inc::Nullable{PsiGraph{S}}, 
+                     exc::Nullable{PsiGraph{S}},
+                     total_reads::Float64, 
+                     conf_int::Tuple, 
+                     motif::String,
+                     left::NodeInt,
+                     right::NodeInt,
+                     edges::IntervalMap{N,C},
+                     node, 
+                     info::GeneMeta, 
+                     bias ) where {N <: NodeNum, C <: ReadCounter, S <: MonotonicSet}
+
    tab_write( io, info[1] ) # gene
-   tab_write( io, string(node) )
-   coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true ) #coord
+   tab_write( io, format_edge_string(node) )
+   coord_write( io, info[2], left, right, tab=true ) #coord
    tab_write( io, info[3] )
-   tab_write( io, convert(String, motif) )
+   tab_write( io, motif )
    tab_write( io, string(psi) )
 
    conf_int_write( io, conf_int, tab=true, width=true )
