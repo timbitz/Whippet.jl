@@ -30,6 +30,11 @@ function coord_write( io::BufOut, chr, first, last; tab=false )
    tab && write( io, '\t' )
 end
 
+function coord_string( chr, first, last; tab::Bool=false )
+   str = chr * ":" * string(first) * "-" * string(last)
+   return tab ? str * "\t" : str
+end
+
 function coord_write( io::BufOut, chr, first, last, strand; tab=false )
    coord_write( io, chr, first, last )
    write( io, ':'    )
@@ -58,6 +63,19 @@ end
 format_edge_string( var::I ) where I <: Integer = string(Int(var))
 
 function format_edge_string( var::NodeFloat )
+   (root, node, pos) = decode_aberrant(var)
+   core_str = string(Int(root))
+   core_str = root == node ? core_str : core_str * "I"
+   if pos > 0
+      return core_str * ">" * string(pos)
+   else
+      return core_str
+   end
+end
+
+format_node_string( var::I ) where I <: Integer = string(Int(var))
+
+function format_node_string( var::NodeFloat )
    (root, node, pos) = decode_aberrant(var)
    core_str = string(Int(root))
    core_str = root == node ? core_str : core_str * "I"
@@ -324,7 +342,7 @@ function output_utr( io::BufOut,
                      psi::Vector{Float64}, 
                      pgraph::Nullable{PsiGraph{S}},
                      total_reads::Float64, 
-                     motif::EdgeMotif, 
+                     motif::String, 
                      sg::SpliceGraph, 
                      node::Int,
                      info::GeneMeta; 
@@ -341,7 +359,7 @@ function output_utr( io::BufOut,
       tab_write( io, string(n) )
       coord_write( io, info[2], sg.nodecoord[n], sg.nodecoord[n]+sg.nodelen[n]-1, tab=true )
       tab_write( io, info[3] )
-      tab_write( io, convert(String, motif) )
+      tab_write( io, motif )
       if empty # had to add this flag since we iterate through the TS/TE nodes
          write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
          i += 1
@@ -366,22 +384,23 @@ function output_utr( io::BufOut,
    en
 end
 
-function output_psi( io::BufOut, 
-                     psi::Float64, 
+function output_psi( io::BufOut,
+                     psi::Float64,
                      inc::Nullable{PsiGraph{S}}, 
                      exc::Nullable{PsiGraph{S}},
                      total_reads::Float64, 
                      conf_int::Tuple, 
-                     motif::EdgeMotif,
-                     sg::SpliceGraph, 
+                     motif::String,
+                     sg::SpliceGraph,
                      edges::IntervalMap{N,C},
-                     node::Int, 
-                     info::GeneMeta, 
+                     node::Int,
+                     info::GeneMeta,
                      bias ) where {N <: NodeNum, C <: ReadCounter, S <: MonotonicSet}
    sg.nodelen[node] == 0 && return
    left  = sg.nodecoord[node]
    right = sg.nodecoord[node]+sg.nodelen[node]-one(NodeInt)
-   output_psi( io, psi, inc, exc, total_reads, conf_int, convert(String, motif), left, right, edges, node, info, bias )
+   coordstr = coord_string( info[2], left, right, tab=false )
+   output_psi( io, psi, inc, exc, total_reads, conf_int, motif, coordstr, edges, node, info, bias )
 end
 
 function output_psi( io::BufOut, 
@@ -391,16 +410,15 @@ function output_psi( io::BufOut,
                      total_reads::Float64, 
                      conf_int::Tuple, 
                      motif::String,
-                     left::NodeInt,
-                     right::NodeInt,
+                     coord::String,
                      edges::IntervalMap{N,C},
                      node, 
                      info::GeneMeta, 
                      bias ) where {N <: NodeNum, C <: ReadCounter, S <: MonotonicSet}
 
    tab_write( io, info[1] ) # gene
-   tab_write( io, format_edge_string(node) )
-   coord_write( io, info[2], left, right, tab=true ) #coord
+   tab_write( io, format_node_string(node) )
+   tab_write( io, coord ) #coord
    tab_write( io, info[3] )
    tab_write( io, motif )
    tab_write( io, string(psi) )
@@ -465,13 +483,13 @@ end
 
 
 
-function output_empty( io::BufOut, motif::EdgeMotif, sg::SpliceGraph, node::Int, info::GeneMeta )
+function output_empty( io::BufOut, motif::String, sg::SpliceGraph, node::Int, info::GeneMeta )
    sg.nodelen[node] == 0 && return
    tab_write( io, info[1] )
    tab_write( io, string(node) )
    coord_write( io, info[2], sg.nodecoord[node], sg.nodecoord[node]+sg.nodelen[node]-1, tab=true )
    tab_write( io, info[3] )
-   tab_write( io, convert(String, motif) )
+   tab_write( io, motif )
    write( io, "NA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\tNA\n" )
 end
 

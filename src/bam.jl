@@ -89,6 +89,16 @@ function decode_aberrant( enc::NodeFloat )
    root, node, pos
 end
 
+function decode_aberrant( enc::I ) where I <: Integer
+   NodeInt(enc), NodeFloat(enc), 0
+end
+
+isexonic( node::NodeInt )   = false
+function isexonic( node::NodeFloat )
+   root, node, pos = decode_aberrant( node )
+   (root == node) ? true : false
+end
+
 function fill_alignment_blocks!( blocks::AlignBlocks, 
                                  rec::R ) where R <: Union{SAM.Record, BAM.Record}
    op,len = cigar_rle( rec )
@@ -280,10 +290,10 @@ function aberrant_path( data::AlignData, gene::GeneInt )
 
    j = 1
    for i in 1:length(data.blocks)
-      println(Int(data.blocks[i][1]))
-      println(Int(data.blocks[i][2]))
-      println("$i\n")
-      println(path)
+      #println(Int(data.blocks[i][1]))
+      #println(Int(data.blocks[i][2]))
+      #println("$i\n")
+      #println(path)
 
       if i > 1
          for k in j:length(data.nodes)

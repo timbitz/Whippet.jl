@@ -27,6 +27,8 @@ const ALTA_MOTIF = convert(EdgeMotif, 0b111)
 # NO MOTIF
 const NONE_MOTIF = convert(EdgeMotif, 0b1000)
 
+const ABER_MOTIF = convert(EdgeMotif, 0b10000)
+
 const MOTIF_STRING = fill( "", 9 )
       MOTIF_STRING[ UInt8(TXST_MOTIF) + 1 ] = "TS"
       MOTIF_STRING[ UInt8(TXEN_MOTIF) + 1 ] = "TE"
@@ -126,13 +128,43 @@ Base.isless( a::SubNode, b::SubNode ) = a.node < b.node
 sub_nodes( v::Vector{I} ) where I <: Integer = map(x->SubNode(x), v)
 sub_nodes( v::Vector{NodeFloat}, left::Bool ) = map(x->SubNode(x, left), v)
 
-function motif( a::SubNode, ae::EdgeType, b::SubNode, be::EdgeType )
-   if !isaberrant(a.node)
-      return( convert(EdgeMotif, ae, be) )
+isexonic( n::SubNode ) = isexonic( n.node )
+isaberrant( n::SubNode ) = isaberrant( n.node )
+decode_aberrant( n::SubNode ) = decode_aberrant( n.node )
+
+function aberrant_motif( a::SubNode, b::SubNode )
+   aroot, anode, apos = decode_aberrant(a)
+   broot, bnode, bpos = decode_aberrant(b)
+   amotif = aberrant_motif(a)
+   if amotif == "XRI"
+      return amotif 
    elseif isaberrant(a) && isaberrant(b)
-
+      if     aroot == anode - 0.5 && broot == bnode - 0.5 &&
+             a.left && !b.left
+         return "XCE"
+      elseif aroot == anode && broot == bnode &&
+            !a.left && b.left
+         return "XEI"
+      end
    else
+      return amotif
+   end
+end
 
+function aberrant_motif( a::SubNode )
+   aroot, anode, apos = decode_aberrant(a)
+   if isaberrant(a) && 
+      aroot == anode - 0.5 &&
+      apos == 0
+      return "XRI"
+   elseif isaberrant(a) && 
+          aroot == anode - 0.5
+      return a.left ? "XAI" : "XDI"
+   elseif isaberrant(a) &&
+          aroot == anode
+      return a.left ? "XAE" : "XDE"
+   else
+      return "XNA"
    end
 end
 
@@ -593,11 +625,11 @@ end
 
 function process_spliced( sg::SpliceGraph, 
                           edges::IntervalMap{NodeInt,R},
-                          node::NodeInt, 
+                          node::NodeInt,
                           motif::EdgeMotif, 
                           bias::Float64,
                           minedgeweight::Float64=0.0001 ) where {R}
-   _process_spliced(sg, edges, node, BitSet, motif, bias, minedgeweight )
+   _process_spliced(sg, edges, node, node, BitSet, motif, bias, minedgeweight )
 end
 
 function process_spliced( sg::SpliceGraph, 
@@ -606,12 +638,23 @@ function process_spliced( sg::SpliceGraph,
                           motif::EdgeMotif, 
                           bias::Float64,
                           minedgeweight::Float64=0.0001 ) where {R}
-   _process_spliced(sg, edges, node, SortedSet{NodeFloat}, motif, bias, minedgeweight )
+   _process_spliced(sg, edges, node, node, SortedSet{NodeFloat}, motif, bias, minedgeweight )
+end
+
+function process_spliced( sg::SpliceGraph, 
+                          edges::IntervalMap{NodeFloat,R},
+                          lnode::NodeFloat,
+                          rnode::NodeFloat,
+                          motif::EdgeMotif, 
+                          bias::Float64,
+                          minedgeweight::Float64=0.0001 ) where {R}
+   _process_spliced( sg, edges, lnode, rnode, SortedSet{NodeFloat}, motif, bias, minedgeweight )
 end
 
 function _process_spliced( sg::SpliceGraph, 
                            edges::IntervalMap{K,R},
-                           node::K,
+                           lnode::K,
+                           rnode::K,
                            settype, 
                            motif::EdgeMotif, 
                            bias::Float64,
@@ -627,11 +670,12 @@ function _process_spliced( sg::SpliceGraph,
 
    maxvalue = length(edges) > 0 ? get(maximum( edges ).value) : 0.0
 
-   for edg in intersect( edges, (node, node) )
+   for edg in intersect( edges, (lnode, rnode) )
 
       (get(edg.value) / maxvalue < minedgeweight) && continue
 
-      if isconnecting( edg, node )
+      if isconnecting( edg, lnode ) ||
+         isconnecting( edg, rnode )
          if isnull( inc_graph )
             inc_graph = Nullable(PsiGraph{settype}( Vector{Float64}(), Vector{Float64}(),
                                                     Vector{Float64}(), Vector{settype}(),
@@ -643,7 +687,8 @@ function _process_spliced( sg::SpliceGraph,
          push!( inc_graph.value, edg, value_bool=false )
          push!( ambig_edge.value, edg )
          connecting_val += get(edg.value)
-      elseif isspanning( edg, node )
+      elseif isspanning( edg, lnode ) &&
+             isspanning( edg, rnode )
          if isnull( exc_graph ) #don't allocate unless there is alt splicing
             exc_graph = Nullable(PsiGraph{settype}( Vector{Float64}(), Vector{Float64}(),
                                                     Vector{Float64}(), Vector{settype}(),
@@ -664,7 +709,8 @@ function _process_spliced( sg::SpliceGraph,
       ambig_cnt = Nullable( Vector{AmbigCounts}() )
 
       # try to bridge nodes by extending with potentially ambiguous edges
-      ambig_edge = extend_edges!( edges, exc_graph.value, inc_graph.value, ambig_edge, node )
+      lroot, __, _ = decode_aberrant( lnode )
+      ambig_edge = extend_edges!( edges, exc_graph.value, inc_graph.value, ambig_edge, K(lroot) )
 
       inc_graph = Nullable( reduce_graph( inc_graph.value ) )
       exc_graph = Nullable( reduce_graph( exc_graph.value ) )
@@ -745,45 +791,99 @@ function _process_events( io::BufOut,
 
    if length(sgquant.lnod) + length(sgquant.rnod) > 0 &&
       !canonical_only
-      edges = left_join!(sgquant.aber, sgquant.edge)
+      edges  = left_join!(sgquant.aber, sgquant.edge)
       CurInt = NodeFloat
       snodes = sort(union( sub_nodes(collect(1:length(sg.edgetype)-1)),
-                           sub_nodes(sgquant.lnod, true),
-                           sub_nodes(sgquant.rnod, false) ))
+                           sub_nodes(sgquant.lnod, false),
+                           sub_nodes(sgquant.rnod, true) ))
    else
-      edges = sgquant.edge
+      edges  = sgquant.edge
       CurInt = NodeInt
       snodes = sub_nodes( collect(1:length(sg.edgetype)-1) )
    end
 
-   while i < length(sg.edgetype)
-   #for i in 1:length(sub_nodes)
-      motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
-      next_istandem = i+1 < length(sg.edgetype) ? isobligate( convert(EdgeMotif, sg.edgetype[i+1], sg.edgetype[i+2]) ) : false
-      if motif == NONE_MOTIF
-         if !next_istandem
-            output_empty( io, motif, sg, i, info )
+   used = BitSet()
+   bias = calculate_bias!( sgquant )
+
+
+   #while i < length(sg.edgetype)
+   for (j,n) in enumerate(snodes)
+
+      n in used && continue
+      #decide if node sets are normal or aberrant
+      if !isaberrant(n) # calculate this by index node # as normal
+         i = Int(n.node)
+         motif = convert(EdgeMotif, sg.edgetype[i], sg.edgetype[i+1] )
+         motifstr = convert(String, motif)
+         next_istandem = i+1 < length(sg.edgetype) ? isobligate( convert(EdgeMotif, sg.edgetype[i+1], sg.edgetype[i+2]) ) : false
+
+         if motif == NONE_MOTIF
+            if !next_istandem
+               output_empty( io, motifstr, sg, i, info )
+            end
+         elseif isobligate( motif ) # is utr event
+            psi,utr,ambig,len = process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif, readlen )
+            if !isnull( psi ) && !any( map( isnan, psi.value ) )
+               total_cnt = sum(utr) + sum(ambig)
+               end_i = output_utr( io, round(get(psi), digits=4), utr, total_cnt, motifstr, sg, i , info )
+            else
+               # psi/utr/total_cnt ignored here.
+               end_i = output_utr( io, zeros(len), utr, 0.0, motifstr, sg, i, info, empty=true )
+            end
+            map(x->push!(used, x), collect(i:end_i))
+         elseif motif != ABER_MOTIF  # is a normal spliced node
+            psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, i), motif, bias )
+            #total_cnt = sum(inc) + sum(exc) + sum(ambig)
+            if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
+               conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
+               output_psi( io, round(psi.value, sigdigits=3), inc, exc, total_cnt, conf_int, motifstr, sg, edges, i, info, bias  ) # TODO bias
+            else #### CLEAN UP PRINTING ###
+               output_empty( io, motifstr, sg, i, info )
+            end
          end
-      elseif isobligate( motif ) # is utr event
-         psi,utr,ambig,len = process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif, readlen )
-         if !isnull( psi ) && !any( map( isnan, psi.value ) )
-            total_cnt = sum(utr) + sum(ambig)
-            i = output_utr( io, round.(get(psi), digits=4), utr, total_cnt, motif, sg, i , info )
+      # both this and the next are aberrant, check if exitron or cryptic exon
+      else
+         if isaberrant(snodes[j+1]) && 
+            aberrant_motif(snodes[j], snodes[j+1]) in ("XCE", "XEI")
+
+            #is exitron or cryptic exon
+            motif = ABER_MOTIF
+            motifstr = aberrant_motif(snodes[j], snodes[j+1])
+            lfull = n.node
+            rfull = snodes[j+1].node
+            lroot,lnode,lpos = decode_aberrant(lfull)
+            rroot,rnode,rpos = decode_aberrant(rfull)
+
+            left  = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot]) + lpos - (n.left ? 0 : 1)
+            right = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot]) + rpos - (snodes[j+1].left ? 0 : 1)
+            cstring = coord_string( info[2], left, right )
+
+            psi,inc,exc,ambig,totl_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
+
          else
-            # psi/utr/total_cnt ignored here.
-            i = output_utr( io, zeros(len), utr, 0.0, motif, sg, i, info, empty=true )
+            motif = ABER_MOTIF
+            motifstr = aberrant_motif(n)
+            root,node,pos = decode_aberrant(n)
+            if motifstr == "XRI"
+               left  = sg.nodecoord[root]+sg.nodelen[root]
+               right = sg.nodecoord[root+1] - 1
+               cstring = coord_string( info[2], left, right )
+            else
+               offset = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root]) + pos - (n.left ? 0 : 1)
+               cstring = info[2] * ":" * string(offset)
+            end
+
+            psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, n.node), motif, bias )
          end
-      else  # is a spliced node
-         bias = calculate_bias!( sgquant )
-         psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, i), motif, bias )
-         #total_cnt = sum(inc) + sum(exc) + sum(ambig)
+
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
-            output_psi( io, round(psi.value, sigdigits=3), inc, exc, total_cnt, conf_int, motif, sg, edges, i, info, bias  ) # TODO bias
+            output_psi( io, round(psi.value, sigdigits=3), inc, exc, total_cnt, conf_int, motifstr, cstring, edges, n.node, info, bias  ) # TODO bias
          else #### CLEAN UP PRINTING ###
-            output_empty( io, motif, sg, i, info )
+            output_empty( io, motifstr, sg, i, info )
          end
       end
+
       # check for aberrant edges and process_spliced for entries. 
       # !canonical_only && output_aberrant()
       i += 1
