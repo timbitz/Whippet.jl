@@ -805,8 +805,6 @@ function _process_events( io::BufOut,
    used = BitSet()
    bias = calculate_bias!( sgquant )
 
-
-   #while i < length(sg.edgetype)
    for (j,n) in enumerate(snodes)
 
       n in used && continue
