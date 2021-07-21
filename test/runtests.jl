@@ -739,6 +739,7 @@ IIIIIIIIIIII
 
       run(`julia ../bin/whippet-quant.jl test_out.bam -x test_index.jls`)
       run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
+      run(`julia ../bin/whippet-quant.jl aber_inp.bam -x test_index.jls`)
        ## CHECK test.sort.bam, make 
    end
 end

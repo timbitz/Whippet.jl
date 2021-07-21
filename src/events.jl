@@ -118,7 +118,7 @@ isconnecting( edge::I, node::T ) where {I <: AbstractInterval, T <: Number} = ed
 
 struct SubNode
    node::NodeNum
-   left::Bool
+   donor::Bool
 end
 
 SubNode( i::I ) where I <: Integer = SubNode( NodeInt(i), false )
@@ -126,7 +126,7 @@ SubNode( i::I ) where I <: Integer = SubNode( NodeInt(i), false )
 Base.isless( a::SubNode, b::SubNode ) = a.node < b.node
 
 sub_nodes( v::Vector{I} ) where I <: Integer = map(x->SubNode(x), v)
-sub_nodes( v::Vector{NodeFloat}, left::Bool ) = map(x->SubNode(x, left), v)
+sub_nodes( v::Vector{NodeFloat}, donor::Bool ) = map(x->SubNode(x, donor), v)
 
 isexonic( n::SubNode ) = isexonic( n.node )
 isaberrant( n::SubNode ) = isaberrant( n.node )
@@ -140,10 +140,10 @@ function aberrant_motif( a::SubNode, b::SubNode )
       return amotif 
    elseif isaberrant(a) && isaberrant(b)
       if     aroot == anode - 0.5 && broot == bnode - 0.5 &&
-             a.left && !b.left
+             a.donor && !b.donor
          return "XCE"
       elseif aroot == anode && broot == bnode &&
-            !a.left && b.left
+            !a.donor && b.donor
          return "XEI"
       end
    else
@@ -159,10 +159,10 @@ function aberrant_motif( a::SubNode )
       return "XRI"
    elseif isaberrant(a) && 
           aroot == anode - 0.5
-      return a.left ? "XAI" : "XDI"
+      return a.donor ? "XDI" : "XAI"
    elseif isaberrant(a) &&
           aroot == anode
-      return a.left ? "XAE" : "XDE"
+      return a.donor ? "XDE" : "XAE"
    else
       return "XNA"
    end
@@ -794,8 +794,8 @@ function _process_events( io::BufOut,
       edges  = left_join!(sgquant.aber, sgquant.edge)
       CurInt = NodeFloat
       snodes = sort(union( sub_nodes(collect(1:length(sg.edgetype)-1)),
-                           sub_nodes(sgquant.lnod, false),
-                           sub_nodes(sgquant.rnod, true) ))
+                           sub_nodes(sgquant.lnod, true),
+                           sub_nodes(sgquant.rnod, false) ))
    else
       edges  = sgquant.edge
       CurInt = NodeInt
@@ -854,11 +854,11 @@ function _process_events( io::BufOut,
             lroot,lnode,lpos = decode_aberrant(lfull)
             rroot,rnode,rpos = decode_aberrant(rfull)
 
-            left  = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot]) + lpos - (n.left ? 0 : 1)
-            right = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot]) + rpos - (snodes[j+1].left ? 0 : 1)
+            left  = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot]) + lpos - (n.donor ? 0 : 1)
+            right = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot]) + rpos - (snodes[j+1].donor ? 0 : 1)
             cstring = coord_string( info[2], left, right )
 
-            psi,inc,exc,ambig,totl_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
+            psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
 
          else
             motif = ABER_MOTIF
@@ -869,7 +869,7 @@ function _process_events( io::BufOut,
                right = sg.nodecoord[root+1] - 1
                cstring = coord_string( info[2], left, right )
             else
-               offset = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root]) + pos - (n.left ? 0 : 1)
+               offset = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root]) + pos - (n.donor ? 0 : 1)
                cstring = info[2] * ":" * string(offset)
             end
 

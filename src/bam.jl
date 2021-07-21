@@ -283,42 +283,49 @@ function all_introns_valid( data::AlignData, gene::GeneInt )
    true
 end
 
-function aberrant_path( data::AlignData, gene::GeneInt )
+function aberrant_path( data::AlignData, gene::GeneInt, verbose=true )
 
    path     = Vector{SGNodeIsExon}()
    sizehint!(path, length(data.nodes))
 
    j = 1
    for i in 1:length(data.blocks)
-      #println(Int(data.blocks[i][1]))
-      #println(Int(data.blocks[i][2]))
-      #println("$i\n")
-      #println(path)
+      verbose && println(Int(data.blocks[i][1]))
+      verbose && println(Int(data.blocks[i][2]))
+      verbose && println("^blocks 1,2, and i=$i, path and nodes>\n")
+      verbose && println(path)
+      verbose && println(data.nodes)
 
       if i > 1
+         verbose && println("i > 1")
          for k in j:length(data.nodes)
             j = k
             data.nodes[k].metadata.gene == gene || continue
+            verbose && println(first(data.nodes[k]))
+            verbose && println(Int(data.blocks[i][1]))
             if first(data.nodes[k]) == data.blocks[i][1]
                break
             elseif first(data.nodes[k]) < data.blocks[i][1] <= last(data.nodes[k])
-               aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][1] - first(data.nodes[k]) )
+               aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][1] - first(data.nodes[k]) + 1)
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, data.nodes[k].metadata.meta)
                push!( path, span )
             end
-         end
+         end 
       end
 
       if i < length(data.blocks)
+         verbose && println("i <= 1")
          for k in j:length(data.nodes)
             j = k
             data.nodes[k].metadata.gene == gene || continue
+            verbose && println(first(data.nodes[k]))
+            verbose && println(Int(data.blocks[i][1]))
             if last(data.nodes[k]) == data.blocks[i][2]
                push!( path, data.nodes[k].metadata )
                j += 1
                break
             elseif first(data.nodes[k]) <= data.blocks[i][2] < last(data.nodes[k])
-               aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][2] - first(data.nodes[k]))
+               aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][2] - first(data.nodes[k]) + 1)
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, data.nodes[k].metadata.meta)
                push!( path, span )
             else
@@ -327,6 +334,7 @@ function aberrant_path( data::AlignData, gene::GeneInt )
          end
       end
    end
+   verbose && println(stderr, path)
    path
 end
 
