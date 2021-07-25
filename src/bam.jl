@@ -309,6 +309,7 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=true )
                aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][1] - first(data.nodes[k]) + 1)
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, data.nodes[k].metadata.meta)
                push!( path, span )
+               break
             end
          end 
       end
@@ -328,8 +329,10 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=true )
                aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][2] - first(data.nodes[k]) + 1)
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, data.nodes[k].metadata.meta)
                push!( path, span )
+               break
             else
                push!( path, data.nodes[k].metadata )
+               break
             end
          end
       end

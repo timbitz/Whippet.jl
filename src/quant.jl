@@ -641,7 +641,7 @@ function count!( graphq::GraphLibQuant{C,R},
    # single node support
    if length(path) == 1
       # access node -> [ SGNode( gene, *node* ) ]
-      push!( sgquant.node[ path[1].node ], value )
+      !isaberrant(path[1].node) && push!( sgquant.node[ path[1].node ], value )
    else # multi-node mapping read
       # if any node in path maps to other gene, ignore read
       for n in 1:length(path)

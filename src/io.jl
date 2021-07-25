@@ -67,7 +67,7 @@ function format_edge_string( var::NodeFloat )
    core_str = string(Int(root))
    core_str = root == node ? core_str : core_str * "I"
    if pos > 0
-      return core_str * ">" * string(pos)
+      return core_str * ">" * string(pos-1)
    else
       return core_str
    end
@@ -80,7 +80,7 @@ function format_node_string( var::NodeFloat )
    core_str = string(Int(root))
    core_str = root == node ? core_str : core_str * "I"
    if pos > 0
-      return core_str * ">" * string(pos)
+      return core_str * ">" * string(pos-1)
    else
       return core_str
    end

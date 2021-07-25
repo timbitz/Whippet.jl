@@ -852,8 +852,8 @@ function _process_events( io::BufOut,
             lroot,lnode,lpos = decode_aberrant(lfull)
             rroot,rnode,rpos = decode_aberrant(rfull)
 
-            left  = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot]) + lpos - (n.donor ? 0 : 1)
-            right = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot]) + rpos - (snodes[j+1].donor ? 0 : 1)
+            left  = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot]) + lpos - 1 #(n.donor ? 0 : 1)
+            right = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot]) + rpos - 1 #(snodes[j+1].donor ? 0 : 1)
             cstring = coord_string( info[2], left, right )
 
             psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
@@ -867,7 +867,7 @@ function _process_events( io::BufOut,
                right = sg.nodecoord[root+1] - 1
                cstring = coord_string( info[2], left, right )
             else
-               offset = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root]) + pos - (n.donor ? 0 : 1)
+               offset = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root]) + pos - 1  # (n.donor ? 0 : 1)
                cstring = info[2] * ":" * string(offset)
             end
 
