@@ -99,6 +99,15 @@ function isexonic( node::NodeFloat )
    (root == node) ? true : false
 end
 
+function flipaberrant!( v::Vector{SGNodeIsExon} )
+   for i in 1:length(v)
+      n = v[i]
+      if isaberrant(n.node)
+         v[i] = SGNodeIsExon(n.gene, n.node, !n.meta)
+      end
+   end
+end
+
 function fill_alignment_blocks!( blocks::AlignBlocks, 
                                  rec::R ) where R <: Union{SAM.Record, BAM.Record}
    op,len = cigar_rle( rec )
@@ -208,49 +217,6 @@ function best_path( data::AlignData, bestgene::GeneInt )
    path
 end
 
-function check_introns( data )
-   j = 1
-   badsplice = Vector{eltype(eltype(data.blocks))}()
-   for i in 1:length(data.blocks)
-      println(Int(data.blocks[i][1]))
-      println(Int(data.blocks[i][2]))
-      println("$i\n")
-      if i > 1
-         for k in j:length(data.nodes)
-            println(k)
-            println(data.nodes[k])
-            j = k
-            if first(data.nodes[k]) == data.blocks[i][1]
-               println(first(data.nodes[k]))
-               println(Int(data.blocks[i][1]))
-               break
-            elseif first(data.nodes[k]) > data.blocks[i][1]
-               push!(badsplice, data.blocks[i][1])
-               break
-            end
-         end
-      end
-      println()
-      if i < length(data.blocks)
-         for k in j:length(data.nodes)
-            println(k)
-            println(data.nodes[k])
-            j = k
-            if last(data.nodes[k]) == data.blocks[i][2]
-               println(last(data.nodes[k]))
-               println(Int(data.blocks[i][2]))
-               j += 1
-               break
-            elseif last(data.nodes[k]) > data.blocks[i][2]
-               push!(badsplice, data.blocks[i][2])
-               break
-            end
-         end
-      end
-      println()
-   end
-   badsplice
-end
 
 function all_introns_valid( data::AlignData, gene::GeneInt )
    j = 1
@@ -283,7 +249,7 @@ function all_introns_valid( data::AlignData, gene::GeneInt )
    true
 end
 
-function aberrant_path( data::AlignData, gene::GeneInt, verbose=true )
+function aberrant_path( data::AlignData, gene::GeneInt, verbose=false )
 
    path     = Vector{SGNodeIsExon}()
    sizehint!(path, length(data.nodes))
@@ -304,10 +270,11 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=true )
             verbose && println(first(data.nodes[k]))
             verbose && println(Int(data.blocks[i][1]))
             if first(data.nodes[k]) == data.blocks[i][1]
+               push!( path, data.nodes[k].metadata )
                break
             elseif first(data.nodes[k]) < data.blocks[i][1] <= last(data.nodes[k])
                aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][1] - first(data.nodes[k]) + 1)
-               span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, data.nodes[k].metadata.meta)
+               span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, false)
                push!( path, span )
                break
             end
@@ -320,19 +287,19 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=true )
             j = k
             data.nodes[k].metadata.gene == gene || continue
             verbose && println(first(data.nodes[k]))
-            verbose && println(Int(data.blocks[i][1]))
+            verbose && println(Int(data.blocks[i][2]))
             if last(data.nodes[k]) == data.blocks[i][2]
-               push!( path, data.nodes[k].metadata )
+               data.nodes[k].metadata in path || push!( path, data.nodes[k].metadata )
                j += 1
                break
             elseif first(data.nodes[k]) <= data.blocks[i][2] < last(data.nodes[k])
                aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][2] - first(data.nodes[k]) + 1)
-               span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, data.nodes[k].metadata.meta)
+               span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, true)
                push!( path, span )
                break
-            else
+            elseif first(data.nodes[k]) >= data.blocks[i][1] &&
+                   last(data.nodes[k])  <  data.blocks[i][2]
                push!( path, data.nodes[k].metadata )
-               break
             end
          end
       end
@@ -343,11 +310,10 @@ end
 
 function choose_path( data::AlignData, gene::GeneInt, allow_aberrant::Bool=true )
    if allow_aberrant && !all_introns_valid( data, gene )
-      path = aberrant_path( data, gene )
+      return aberrant_path( data, gene ), false
    else
-      path = best_path( data, gene )
+      return best_path( data, gene ), true
    end
-   path
 end
 
 function align_bam( ic::IntervalCollection{SGNodeIsExon}, 
@@ -361,10 +327,10 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    overlapping_nodes!(ic, data, overlaps, rec)
    if length(overlaps) > 0 
       gene = max_value_key(overlaps)
-      path = choose_path( data, gene, allow_aberrant )
+      path, aber = choose_path( data, gene, allow_aberrant )
 
       if length(path) > 0
-         return path, true
+         return path, aber
       end
    end
    EMPTY_PATH, false
@@ -386,8 +352,8 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    overlapping_nodes!(ic, rightdata, overlaps, rightmate, flipstrand=true)
    if length(overlaps) > 0 
       gene      = max_value_key(overlaps)
-      leftpath  = choose_path( leftdata, gene, allow_aberrant )
-      rightpath = choose_path( rightdata, gene, allow_aberrant )
+      leftpath, laber  = choose_path( leftdata, gene, allow_aberrant )
+      rightpath, raber = choose_path( rightdata, gene, allow_aberrant )
       #println(stderr, "left strand: $(isstrandfwd(leftmate))")
       #println(stderr, leftpath)
       #println(stderr, all_introns_valid( leftdata, gene ))
@@ -398,8 +364,8 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
       #println(stderr, lib.info[gene])
       if length(leftpath) > 0 && 
          length(rightpath) > 0 
-         return leftpath, true, 
-                rightpath, true
+         return leftpath, laber, 
+                rightpath, raber
       end
    end
    EMPTY_PATH, false, 
@@ -521,7 +487,7 @@ function read_collated_bam( parser,
 
          if hasalignment(leftmate)
             leftpath, leftvalid = align_bam( lib.coords, leftdata, overlaps, leftmate, allow_aberrant )
-            if length(leftpath) > 0 && leftvalid
+            if length(leftpath) > 0 
 
                leftseq = sequence(leftmate) 
                if !isstrandfwd(leftmate)
@@ -531,6 +497,7 @@ function read_collated_bam( parser,
 
                if !lib.info[leftpath[1].gene].strand
                   reverse!(leftpath)
+                  !leftvalid && flipaberrant!(leftpath)
                end
 
                count!( quant, leftpath, biasval )
@@ -578,8 +545,8 @@ function read_collated_bam( parser,
 
          #println(stderr, "left: $leftvalid, right: $rightvalid")
 
-         if length(leftpath) > 0  && leftvalid &&
-            length(rightpath) > 0 && rightvalid
+         if length(leftpath) > 0  &&
+            length(rightpath) > 0 
 
             leftseq  = sequence(leftmate)
             rightseq = sequence(rightmate)
@@ -595,6 +562,8 @@ function read_collated_bam( parser,
             if !lib.info[leftpath[1].gene].strand
                reverse!(leftpath)
                reverse!(rightpath)
+               !leftvalid && flipaberrant!(leftpath)
+               !rightvalid && flipaberrant!(rightpath)
             end
 
             if (dist < 0 && lib.info[leftpath[1].gene].strand) ||

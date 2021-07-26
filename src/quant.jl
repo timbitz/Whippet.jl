@@ -55,7 +55,6 @@ isexonic( node::SGNodeIsExon ) = node.meta
 isaberrant( node::NodeFloat ) = true
 isaberrant( node::NodeInt )   = false
 
-
 function unique_push!( arr::Vector{T}, el::K ) where {T,K}
    tel = convert(T, el)
    if !( tel in arr )
@@ -298,8 +297,8 @@ function countedge!( sgquant::SpliceGraphQuant{C,R},
    if isaberrant(lnode) || isaberrant(rnode)
       interv = IntervalTrees.Interval{NodeFloat}( lnode, rnode )
       pushzero!( sgquant.aber, interv, value )
-      isaberrant(lnode) && unique_push!( sgquant.lnod, lnode )
-      isaberrant(rnode) && unique_push!( sgquant.rnod, rnode )
+      isaberrant(lnode) && unique_push!( a.meta ? sgquant.lnod : sgquant.rnod, lnode )
+      isaberrant(rnode) && unique_push!( b.meta ? sgquant.lnod : sgquant.rnod, rnode )
    elseif lnode < rnode # canonical splicing
       interv = IntervalTrees.Interval{NodeInt}( lnode, rnode )
       pushzero!( sgquant.edge, interv, value )

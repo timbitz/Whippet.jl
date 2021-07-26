@@ -140,10 +140,10 @@ function aberrant_motif( a::SubNode, b::SubNode )
       return amotif 
    elseif isaberrant(a) && isaberrant(b)
       if     aroot == anode - 0.5 && broot == bnode - 0.5 &&
-             a.donor && !b.donor
+             !a.donor && b.donor
          return "XCE"
       elseif aroot == anode && broot == bnode &&
-            !a.donor && b.donor
+             a.donor && !b.donor
          return "XEI"
       end
    else
@@ -802,12 +802,12 @@ function _process_events( io::BufOut,
       snodes = sub_nodes( collect(1:length(sg.edgetype)-1) )
    end
 
-   used = BitSet()
+   used = Set{NodeNum}()
    bias = calculate_bias!( sgquant )
 
    for (j,n) in enumerate(snodes)
 
-      n in used && continue
+      n.node in used && continue
       #decide if node sets are normal or aberrant
       if !isaberrant(n) # calculate this by index node # as normal
          i = Int(n.node)
@@ -828,7 +828,7 @@ function _process_events( io::BufOut,
                # psi/utr/total_cnt ignored here.
                end_i = output_utr( io, zeros(len), utr, 0.0, motifstr, sg, i, info, empty=true )
             end
-            map(x->push!(used, x), collect(i:end_i))
+            map(x->push!(used, NodeInt(x)), collect(i:end_i))
          elseif motif != ABER_MOTIF  # is a normal spliced node
             psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, i), motif, bias )
             #total_cnt = sum(inc) + sum(exc) + sum(ambig)
@@ -839,10 +839,12 @@ function _process_events( io::BufOut,
                output_empty( io, motifstr, sg, i, info )
             end
          end
-      # both this and the next are aberrant, check if exitron or cryptic exon
-      else
+      
+      else # both this and the next are aberrant, check if exitron or cryptic exon
          if isaberrant(snodes[j+1]) && 
-            aberrant_motif(snodes[j], snodes[j+1]) in ("XCE", "XEI")
+            aberrant_motif(snodes[j], snodes[j+1]) == "XCE" ||
+            (aberrant_motif(snodes[j], snodes[j+1]) == "XEI" &&
+             get(edges, (snodes[j].node, snodes[j+1].node), nothing) != nothing)
 
             #is exitron or cryptic exon
             motif = ABER_MOTIF
@@ -857,7 +859,8 @@ function _process_events( io::BufOut,
             cstring = coord_string( info[2], left, right )
 
             psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
-
+            
+            push!(used, rfull)
          else
             motif = ABER_MOTIF
             motifstr = aberrant_motif(n)
