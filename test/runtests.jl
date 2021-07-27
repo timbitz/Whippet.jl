@@ -121,10 +121,13 @@ chr0\tTEST\texon\t11\t20\t.\t-\t.\tgene_id \"single_rev\"; transcript_id \"singl
 chr0\tTEST\texon\t11\t20\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss\";
 chr0\tTEST\texon\t21\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"def_kiss\";
 chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss\";
+chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"spl_neg\"; transcript_id \"spl_negative\";
+chr0\tTEST\texon\t92\t97\t.\t-\t.\tgene_id \"spl_neg\"; transcript_id \"spl_negative\";
 ")
 
-#1         11        21        31        41        51        61        71        81        91
-#|.........|.........|.........|.........|.........|.........|.........|.........|.........|
+
+#1         11        21        31        41        51        61        71        81        91         101
+#|.........|.........|.........|.........|.........|.........|.........|.........|.........|..........|
 #     [             ]----------[        ]-------------[       ]-------------[        ]       + def
 #     [             .          .        ]----------[  .       ]-------------[        ]       + int1_alt3
 #     [             ]----------[        ]-------------[       .  ]----------[        .    ]  + apa_alt5
@@ -135,7 +138,9 @@ chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss
 #
 #          [        ][        ] - def_kiss
 #          [                  ] - ret_kiss
-
+#          [                  ]-------------------------------------------------------------[     ] - spl_negative
+#            
+#
 
    gtfref  = load_gtf( gtf )
 
@@ -248,8 +253,8 @@ chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss
    @test checkversion(lib, v"1.7", v"1.7")
 
    @testset "Kmer Edges" begin
-      left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA"]
-      right = [dna"GC", dna"CC", dna"CT", dna"TT", dna"TG"]
+      left  = [dna"CA", dna"AG", dna"AG", dna"TC", dna"AA", dna"TT"]
+      right = [dna"GC", dna"CC", dna"CT", dna"TT", dna"TG", dna"AA"]
       lkmer = map( x->kmer_index(SGKmer(x)), left )
       rkmer = map( x->kmer_index(SGKmer(x)), right )
       #println(lkmer[1])
@@ -289,8 +294,8 @@ chr0\tTEST\texon\t11\t30\t.\t-\t.\tgene_id \"kissing\"; transcript_id \"ret_kiss
 
    @testset "Building IntervalCollection for BAM" begin
       ic = interval_index(lib.graphs, lib.info, min_intron_size=1)
-      @test length(collect(ic)) == 14 # total nodes of len >= 1
-      @test sum(map(x->isexonic(x.metadata), collect(ic))) == 12 # two are introns
+      @test length(collect(ic)) == 17 # total nodes of len >= 1
+      @test sum(map(x->isexonic(x.metadata), collect(ic))) == 14 # two are introns
    end
 
    # store general data structures outside of testset
@@ -531,10 +536,10 @@ IIIIIIIIIIII
          path = SGAlignNode[SGAlignNode(0x00000002, 0x00000001, SGAlignScore(0x02, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000002, SGAlignScore(0x0a, 0x00, 0.0)), SGAlignNode(0x00000002, 0x00000005, SGAlignScore(0x0a, 0x00, 0.0))]
          @test (path in is) == true
 
-         @test length(gquant.tpm) == 7
-         @test length(gquant.count) == 7
-         @test length(gquant.length) == 7
-         @test gquant.geneidx == [0, 2, 5, 6]
+         @test length(gquant.tpm) == 8
+         @test length(gquant.count) == 8
+         @test length(gquant.length) == 8
+         @test gquant.geneidx == [0, 2, 5, 6, 7] 
          build_equivalence_classes!( gquant, lib, assign_long=true )
          println(stderr, gquant)
          println(stderr, gquant.classes)
@@ -738,7 +743,6 @@ IIIIIIIIIIII
    @testset "Executable testing" begin
 
       run(`julia ../bin/whippet-quant.jl test_out.bam -x test_index.jls`)
-      run(`julia ../bin/whippet-quant.jl test.sort.bam -x test_index.jls`)
       run(`julia ../bin/whippet-quant.jl aber_inp.bam -x test_index.jls`)
        ## CHECK test.sort.bam, make 
    end

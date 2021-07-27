@@ -315,7 +315,14 @@ assign_path!( graphq::GraphLibQuant{SGAlignSingle},
 # This function re-count!'s SGAlignPaths which were not count!'ed originally
 function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
                        path::SGAlignSingle, 
-                       value )
+                       value,
+                       temp_iset::S ) where S <: MonotonicSet
+   assign_path!( graphq, path.fwd, value )
+end
+
+function assign_path!( graphq::GraphLibQuant{SGAlignSingle}, 
+                       path::SGAlignSingle, 
+                       value)
    assign_path!( graphq, path.fwd, value )
 end
 
@@ -326,7 +333,9 @@ end
    sgquant = graphq.quant[ init_gene ]
 
    if length(path) == 1
-      push!( sgquant.node[ path[1].node ], value )
+      if !isaberrant(path[1].node)
+         push!( sgquant.node[ path[1].node ], value )
+      end
    else
       for i in 1:length(path)-1
          countedge!( sgquant, path[i], path[i+1], value )
@@ -338,7 +347,7 @@ end
 @inbounds function assign_path!( graphq::GraphLibQuant{SGAlignPaired}, 
                                  path::SGAlignPaired, 
                                  value, 
-                                 temp_iset::BitSet=BitSet() )
+                                 temp_iset::S=SortedSet{NodeFloat}() ) where S <: MonotonicSet
    if path.fwd == path.rev
       assign_path!( graphq, path.fwd, value )
       return
@@ -348,8 +357,10 @@ end
    sgquant = graphq.quant[ init_gene ]
 
    if length(path.fwd) == 1
-      push!( sgquant.node[ path.fwd[1].node ], value )
-      push!( temp_iset, path.fwd[1].node )
+      if !isaberrant(path.fwd[1].node)
+         push!( sgquant.node[ path.fwd[1].node ], value )
+         push!( temp_iset, path.fwd[1].node )
+      end
    else
       for i in 1:length(path.fwd)-1
          lnode = path.fwd[i].node
@@ -362,7 +373,7 @@ end
    end
 
    if length(path.rev) == 1
-      if !(path.rev[1].node in temp_iset)
+      if !(path.rev[1].node in temp_iset) && !isaberrant(path.rev[1].node)
          push!( sgquant.node[ path.rev[1].node ], value )
       end
    else
@@ -380,6 +391,7 @@ end
 # build compatibility classes from SpliceGraphQuant node and edge "counts"
 @inbounds function build_equivalence_classes!( graphq::GraphLibQuant, lib::GraphLib; assign_long=true )
    # initialize re-used data structures
+   sset = SortedSet{NodeFloat}()
    iset = BitSet()
    # resize!(iset.bits, 64)
    temp = Dict{Vector{Int},Float64}()
@@ -428,8 +440,9 @@ end
          end
          handle_iset_value!( graphq.geneidx[i], get(graphq.quant[i].long[align]) )
          empty!(iset)
+         empty!(sset)
          if assign_long
-            assign_path!( graphq, align, get(graphq.quant[i].long[align]), iset )
+            assign_path!( graphq, align, get(graphq.quant[i].long[align]), sset )
          end
       end
       # create compatibility classes for isoforms

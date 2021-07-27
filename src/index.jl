@@ -155,18 +155,36 @@ function add_nodes_to_collection!( ic::IntervalCollection{SGNodeIsExon},
       push!( ic, exon )
 
       i < length(sg.nodecoord) || break
-      nextleft = sg.nodecoord[i+1]
 
-      if sg.edgetype[i+1] == EDGETYPE_LR &&
-         right + min_intron_size < nextleft
- 
-         intron = GenomicFeatures.Interval(info.name, 
-                                           right+1, 
-                                           nextleft-1, 
-                                           info.strand ? '+' : '-', 
-                                           SGNodeIsExon(gene, NodeFloat(i+0.5) :: NodeNum, false))
-         push!( ic, intron )
+      if info.strand
+         nextleft = sg.nodecoord[i+1]
+
+         if sg.edgetype[i+1] == EDGETYPE_LR &&
+            right + min_intron_size < nextleft
+
+            intron = GenomicFeatures.Interval(info.name, 
+                                             right+1, 
+                                             nextleft-1, 
+                                             '+', 
+                                             SGNodeIsExon(gene, NodeFloat(i+0.5) :: NodeNum, false))
+            push!( ic, intron )
+         end
+      else
+         left  = sg.nodecoord[i+1]+sg.nodelen[i+1]
+         right = sg.nodecoord[i]-1
+
+         if sg.edgetype[i+1] == EDGETYPE_LR &&
+            left + min_intron_size < right
+
+            intron = GenomicFeatures.Interval(info.name, 
+                                             left, 
+                                             right, 
+                                             '-', 
+                                             SGNodeIsExon(gene, NodeFloat(i+0.5) :: NodeNum, false))
+            push!( ic, intron )
+         end
       end
+
    end
    ic
 end

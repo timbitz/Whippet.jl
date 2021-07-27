@@ -3,6 +3,7 @@ const AlignBlocks = Vector{Tuple{CoordInt,CoordInt}}
 const AlignNodes  = Vector{GenomicFeatures.Interval{SGNodeIsExon}}
 
 const EMPTY_PATH   = Vector{SGNodeIsExon}()
+const SPLICE_BONUS = 10
 
 # reuse temporary data
 struct AlignData
@@ -102,7 +103,8 @@ end
 function flipaberrant!( v::Vector{SGNodeIsExon} )
    for i in 1:length(v)
       n = v[i]
-      if isaberrant(n.node)
+      root,node,pos = decode_aberrant( n.node )
+      if isaberrant(n.node) && pos >= 1
          v[i] = SGNodeIsExon(n.gene, n.node, !n.meta)
       end
    end
@@ -184,18 +186,20 @@ function overlapping_nodes!( ic::IntervalCollection{SGNodeIsExon},
                              data::AlignData,
                              overlaps::Dict{NodeInt, Int},
                              rec::R;
-                             stranded=false,
-                             flipstrand=false, ) where R <: Union{SAM.Record, BAM.Record}
+                             flipstrand=false ) where R <: Union{SAM.Record, BAM.Record}
    
    refn   = refname(rec)
+   stranded = length(data.blocks) > 1 ? true : false
 
    for i in 1:length(data.blocks)
       l,r = data.blocks[i]
       
       for n in eachoverlap( ic, GenomicFeatures.Interval(refn, l, r))
-         strand = flipstrand ? revstrandchar(rec) : strandchar(rec)
-         if !stranded || strand == convert(Char, n.strand)
+         if !stranded || rec["XS"] == convert(Char, n.strand)
             over = unstranded_overlap( n.first, n.last, l, r)
+            over = n.metadata.meta ? over : Int(floor(over/2))
+            over += (i > 1 && n.last == r) ? SPLICE_BONUS : 0
+            over += (i <= length(data.blocks) && n.first == l) ? SPLICE_BONUS : 0
             increment!( overlaps, n.metadata.gene, over)
             push!( data.nodes, n)
          end
@@ -297,7 +301,7 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=false )
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, true)
                push!( path, span )
                break
-            elseif first(data.nodes[k]) >= data.blocks[i][1] &&
+            elseif data.blocks[i][1] <= first(data.nodes[k]) &&
                    last(data.nodes[k])  <  data.blocks[i][2]
                push!( path, data.nodes[k].metadata )
             end
@@ -353,7 +357,7 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    if length(overlaps) > 0 
       gene      = max_value_key(overlaps)
       leftpath, laber  = choose_path( leftdata, gene, allow_aberrant )
-      rightpath, raber = choose_path( rightdata, gene, allow_aberrant )
+      rightpath,raber  = choose_path( rightdata, gene, allow_aberrant )
       #println(stderr, "left strand: $(isstrandfwd(leftmate))")
       #println(stderr, leftpath)
       #println(stderr, all_introns_valid( leftdata, gene ))

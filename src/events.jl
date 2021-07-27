@@ -124,6 +124,13 @@ end
 SubNode( i::I ) where I <: Integer = SubNode( NodeInt(i), false )
 
 Base.isless( a::SubNode, b::SubNode ) = a.node < b.node
+#=function Base.islessminus( a::SubNode, b::SubNode ) 
+   if isaberrant(a) && isaberrant(b)
+      return a.node > b.node
+   else
+      return a.node < b.node
+   end
+end=#
 
 sub_nodes( v::Vector{I} ) where I <: Integer = map(x->SubNode(x), v)
 sub_nodes( v::Vector{NodeFloat}, donor::Bool ) = map(x->SubNode(x, donor), v)
@@ -132,7 +139,7 @@ isexonic( n::SubNode ) = isexonic( n.node )
 isaberrant( n::SubNode ) = isaberrant( n.node )
 decode_aberrant( n::SubNode ) = decode_aberrant( n.node )
 
-function aberrant_motif( a::SubNode, b::SubNode )
+function aberrant_motif( a::SubNode, b::SubNode, strand::Bool )
    aroot, anode, apos = decode_aberrant(a)
    broot, bnode, bpos = decode_aberrant(b)
    amotif = aberrant_motif(a)
@@ -140,10 +147,12 @@ function aberrant_motif( a::SubNode, b::SubNode )
       return amotif 
    elseif isaberrant(a) && isaberrant(b)
       if     aroot == anode - 0.5 && broot == bnode - 0.5 &&
-             !a.donor && b.donor
+             ((strand && !a.donor && b.donor) ||
+              (!strand && a.donor && !b.donor))
          return "XCE"
       elseif aroot == anode && broot == bnode &&
-             a.donor && !b.donor
+             ((strand && a.donor && !b.donor) ||
+              (!strand && !a.donor && b.donor))
          return "XEI"
       end
    else
@@ -184,8 +193,8 @@ mutable struct PsiGraph{S <: MonotonicSet}
    max::NodeFloat
 end
 
-Base.sum( pgraph::PsiGraph ) = sum( pgraph.count )
-Base.sum( ngraph::Nullable{PsiGraph} ) = isnull( ngraph ) ?
+Base.sum( pgraph::PsiGraph{S} ) where {S <: MonotonicSet} = sum( pgraph.count )
+Base.sum( ngraph::Nullable{PsiGraph{S}} ) where {S <: MonotonicSet} = isnull( ngraph ) ?
                                          0.0 : convert(Float64, sum( ngraph.value ))
 
 function hasintersect( a::S, b::S ) where {S <: MonotonicSet}
@@ -456,6 +465,51 @@ function extend_edges!( edges::IntervalMap{K,V},
 
    ambig_edge
 end
+
+# add_node_counts! for single pgraph (used in tandem_utrs)
+function add_node_counts!( ambig::Vector{AmbigCounts}, 
+                           pgraph::PsiGraph,
+                           sgquant::SpliceGraphQuant, 
+                           bias::Float64 )
+
+   iset = BitSet()
+   for nf in pgraph.min:pgraph.max # lets go through all possible nodes
+      n = Int(nf)
+      for i in 1:length(pgraph.nodes)
+         if n in pgraph.nodes[i]
+            push!( iset, i )
+            pgraph.length[i] += sgquant.leng[n]
+         end
+      end
+
+      #=                                            =#
+      length( iset ) == 0 && continue # unspliced node
+      if length( iset ) == 1 # non-ambiguous node
+         if first( iset ) <= length(pgraph.nodes) # belongs to inclusion
+            idx = first( iset )
+            @fastmath pgraph.count[idx] += get(sgquant.node[n]) #* bias / sgquant.leng[n]
+         end
+      else
+         #check if there is already an entry for this set of paths
+         # if so, just increment multiplier, if not, make new one
+         exists = false
+         for am in ambig
+            if iset == am
+               @fastmath am.multiplier += get(sgquant.node[n]) #* bias / sgquant.leng[n]
+               exists = true
+               break
+            end
+         end
+         if !exists && get(sgquant.node[n]) > 0
+            push!( ambig, AmbigCounts( collect(iset),
+                                       ones( length(iset) ) / length(iset),
+                                       1.0, get(sgquant.node[n]) ) ) #* bias / sgquant.leng[n] ) )
+         end
+      end
+      empty!( iset ) # clean up
+   end
+end
+
 
 # add_edge_counts! for one psigraph, (used in tandem utr)
 function add_edge_counts!( ambig::Vector{AmbigCounts}, 
@@ -823,7 +877,7 @@ function _process_events( io::BufOut,
             psi,utr,ambig,len = process_tandem_utr( sg, sgquant, convert(NodeInt, i), motif, readlen )
             if !isnull( psi ) && !any( map( isnan, psi.value ) )
                total_cnt = sum(utr) + sum(ambig)
-               end_i = output_utr( io, round(get(psi), digits=4), utr, total_cnt, motifstr, sg, i , info )
+               end_i = output_utr( io, map(x->round(x, digits=4), get(psi)), utr, total_cnt, motifstr, sg, i , info )
             else
                # psi/utr/total_cnt ignored here.
                end_i = output_utr( io, zeros(len), utr, 0.0, motifstr, sg, i, info, empty=true )
@@ -841,36 +895,45 @@ function _process_events( io::BufOut,
          end
       
       else # both this and the next are aberrant, check if exitron or cryptic exon
-         if isaberrant(snodes[j+1]) && 
-            aberrant_motif(snodes[j], snodes[j+1]) == "XCE" ||
-            (aberrant_motif(snodes[j], snodes[j+1]) == "XEI" &&
-             get(edges, (snodes[j].node, snodes[j+1].node), nothing) != nothing)
+         strand = info[3] == '+' ? true : false
+         if j < length(snodes) && 
+            (isaberrant(snodes[j+1]) && 
+            aberrant_motif(snodes[j], snodes[j+1], strand) == "XCE" ||
+            (aberrant_motif(snodes[j], snodes[j+1], strand) == "XEI" &&
+             get(edges, (snodes[j].node, snodes[j+1].node), nothing) != nothing))
 
             #is exitron or cryptic exon
             motif = ABER_MOTIF
-            motifstr = aberrant_motif(snodes[j], snodes[j+1])
+            motifstr = aberrant_motif(snodes[j], snodes[j+1], strand)
             lfull = n.node
             rfull = snodes[j+1].node
             lroot,lnode,lpos = decode_aberrant(lfull)
             rroot,rnode,rpos = decode_aberrant(rfull)
 
-            left  = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot]) + lpos - 1 #(n.donor ? 0 : 1)
-            right = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot]) + rpos - 1 #(snodes[j+1].donor ? 0 : 1)
+            li,ri = (strand || (lroot == lnode && rroot == rnode)) ? (lroot, rroot) : (lroot+1, rroot+1)
+            left  = sg.nodecoord[li] + (lroot == lnode ? 0 : sg.nodelen[li]) + lpos - 1 #(n.donor ? 0 : 1)
+            right = sg.nodecoord[ri] + (rroot == rnode ? 0 : sg.nodelen[ri]) + rpos - 1 #(snodes[j+1].donor ? 0 : 1)
+            #left, right = strand ? (left, right) : (right, left)
             cstring = coord_string( info[2], left, right )
 
             psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
             
             push!(used, rfull)
-         else
+         else  ##### NOTE All the positions for 0.5 nodes in - strand are wrong. Maybe 0 nodes as well.
             motif = ABER_MOTIF
             motifstr = aberrant_motif(n)
             root,node,pos = decode_aberrant(n)
             if motifstr == "XRI"
-               left  = sg.nodecoord[root]+sg.nodelen[root]
-               right = sg.nodecoord[root+1] - 1
+               # require exon-intron junction reads on both sides to report XRI
+               get(edges, (root, n), nothing) != nothing   || continue
+               get(edges, (n, root+1), nothing) != nothing || continue
+               li,ri = strand ? (root, root+1) : (root+1, root)
+               left  = sg.nodecoord[li]+sg.nodelen[li] 
+               right = sg.nodecoord[ri] - 1
                cstring = coord_string( info[2], left, right )
             else
-               offset = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root]) + pos - 1  # (n.donor ? 0 : 1)
+               ri = (strand || root == node) ? root : root+1
+               offset = sg.nodecoord[ri] + (root == node ? 0 : sg.nodelen[ri]) + pos - 1  # (n.donor ? 0 : 1)
                cstring = info[2] * ":" * string(offset)
             end
 
@@ -880,8 +943,6 @@ function _process_events( io::BufOut,
          if !isnull( psi ) && 0 <= psi.value <= 1 && total_cnt > 0
             conf_int  = beta_posterior_ci( psi.value, total_cnt, sig=3 )
             output_psi( io, round(psi.value, sigdigits=3), inc, exc, total_cnt, conf_int, motifstr, cstring, edges, n.node, info, bias  ) # TODO bias
-         else #### CLEAN UP PRINTING ###
-            output_empty( io, motifstr, sg, i, info )
          end
       end
 

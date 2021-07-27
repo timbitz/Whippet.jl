@@ -164,7 +164,7 @@ function cigar_string( align::SGAlignment, sg::SpliceGraph, strand::Bool, readle
          curi = align.path[idx].node
          nexti = align.path[idx+1].node
          intron = strand ? Int(sg.nodecoord[nexti]) - Int(sg.nodecoord[curi] +  sg.nodelen[curi] - 1) - 1 :
-                                 Int(sg.nodecoord[curi])  - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
+                           Int(sg.nodecoord[curi])  - Int(sg.nodecoord[nexti] + sg.nodelen[nexti] - 1) - 1
          if intron >= 1
             push!( cigar, string(running + matches) * "M" )
             push!( cigar, string( intron ) * "N" )
@@ -227,6 +227,7 @@ function write_sam( io::BufOut,
       tab_write( io, '*' )
       write( io, '*' )
    end
+   tagstr = "XS:A:" * (lib.info[geneind].strand ? '+' : '-')
    if tagstr != ""
       write( io, '\t' )
       write( io, tagstr )
@@ -346,9 +347,9 @@ function output_utr( io::BufOut,
                      sg::SpliceGraph, 
                      node::Int,
                      info::GeneMeta; 
-                        empty=false ) where {S <: MonotonicSet}
+                     empty=false ) where {S <: MonotonicSet}
 
-   st = motif == TXST_MOTIF ? node : node - 1
+   st = motif == TXST_MOTIF ? node : max(1, node - 1)
    en = st + length(psi) - 1
    if en < st
       error("$psi, $total_reads, $motif, $node, $info, $empty")
