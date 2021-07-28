@@ -139,7 +139,7 @@ isexonic( n::SubNode ) = isexonic( n.node )
 isaberrant( n::SubNode ) = isaberrant( n.node )
 decode_aberrant( n::SubNode ) = decode_aberrant( n.node )
 
-function aberrant_motif( a::SubNode, b::SubNode, strand::Bool )
+function aberrant_motif( a::SubNode, b::SubNode )
    aroot, anode, apos = decode_aberrant(a)
    broot, bnode, bpos = decode_aberrant(b)
    amotif = aberrant_motif(a)
@@ -147,12 +147,10 @@ function aberrant_motif( a::SubNode, b::SubNode, strand::Bool )
       return amotif 
    elseif isaberrant(a) && isaberrant(b)
       if     aroot == anode - 0.5 && broot == bnode - 0.5 &&
-             ((strand && !a.donor && b.donor) ||
-              (!strand && a.donor && !b.donor))
+             !a.donor && b.donor
          return "XCE"
       elseif aroot == anode && broot == bnode &&
-             ((strand && a.donor && !b.donor) ||
-              (!strand && !a.donor && b.donor))
+             a.donor && !b.donor
          return "XEI"
       end
    else
@@ -896,27 +894,36 @@ function _process_events( io::BufOut,
       
       else # both this and the next are aberrant, check if exitron or cryptic exon
          strand = info[3] == '+' ? true : false
-         if j < length(snodes) && 
-            (isaberrant(snodes[j+1]) && 
-            aberrant_motif(snodes[j], snodes[j+1], strand) == "XCE" ||
-            (aberrant_motif(snodes[j], snodes[j+1], strand) == "XEI" &&
+         if j < length(snodes) && (isaberrant(snodes[j+1]) && 
+             aberrant_motif(snodes[j], snodes[j+1]) == "XCE" ||
+            (aberrant_motif(snodes[j], snodes[j+1]) == "XEI" &&
              get(edges, (snodes[j].node, snodes[j+1].node), nothing) != nothing))
 
             #is exitron or cryptic exon
             motif = ABER_MOTIF
-            motifstr = aberrant_motif(snodes[j], snodes[j+1], strand)
+            motifstr = aberrant_motif(snodes[j], snodes[j+1])
             lfull = n.node
             rfull = snodes[j+1].node
             lroot,lnode,lpos = decode_aberrant(lfull)
             rroot,rnode,rpos = decode_aberrant(rfull)
 
-            li,ri = (strand || (lroot == lnode && rroot == rnode)) ? (lroot, rroot) : (lroot+1, rroot+1)
-            left  = sg.nodecoord[li] + (lroot == lnode ? 0 : sg.nodelen[li]) + lpos - 1 #(n.donor ? 0 : 1)
-            right = sg.nodecoord[ri] + (rroot == rnode ? 0 : sg.nodelen[ri]) + rpos - 1 #(snodes[j+1].donor ? 0 : 1)
-            #left, right = strand ? (left, right) : (right, left)
+            if strand
+               lanchor = sg.nodecoord[lroot] + (lroot == lnode ? 0 : sg.nodelen[lroot])
+               ranchor = sg.nodecoord[rroot] + (rroot == rnode ? 0 : sg.nodelen[rroot])
+               left  = lanchor + lpos - 1 
+               right = ranchor + rpos - 1
+            else
+               lanchor = sg.nodecoord[lroot] + (lroot != lnode ? 0 : sg.nodelen[lroot])
+               ranchor = sg.nodecoord[rroot] + (rroot != rnode ? 0 : sg.nodelen[rroot])
+               left  = ranchor - rpos
+               right = lanchor - lpos
+            end
             cstring = coord_string( info[2], left, right )
 
-            psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, convert(CurInt, lfull), convert(CurInt, rfull), motif, bias )
+            psi,inc,exc,ambig,total_cnt = process_spliced( sg, edges, 
+                                                           convert(CurInt, lfull), 
+                                                           convert(CurInt, rfull), 
+                                                           motif, bias )
             
             push!(used, rfull)
          else  ##### NOTE All the positions for 0.5 nodes in - strand are wrong. Maybe 0 nodes as well.
@@ -925,15 +932,20 @@ function _process_events( io::BufOut,
             root,node,pos = decode_aberrant(n)
             if motifstr == "XRI"
                # require exon-intron junction reads on both sides to report XRI
-               get(edges, (root, n), nothing) != nothing   || continue
-               get(edges, (n, root+1), nothing) != nothing || continue
+               get(edges, (root, node), nothing) != nothing   || continue
+               get(edges, (node, root+1), nothing) != nothing || continue
                li,ri = strand ? (root, root+1) : (root+1, root)
                left  = sg.nodecoord[li]+sg.nodelen[li] 
                right = sg.nodecoord[ri] - 1
                cstring = coord_string( info[2], left, right )
             else
-               ri = (strand || root == node) ? root : root+1
-               offset = sg.nodecoord[ri] + (root == node ? 0 : sg.nodelen[ri]) + pos - 1  # (n.donor ? 0 : 1)
+               if strand
+                  anchor = sg.nodecoord[root] + (root == node ? 0 : sg.nodelen[root])
+                  offset = anchor + pos - 1
+               else
+                  anchor = sg.nodecoord[root] + (root != node ? 0 : sg.nodelen[root])
+                  offset = anchor - pos
+               end
                cstring = info[2] * ":" * string(offset)
             end
 

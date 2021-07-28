@@ -253,7 +253,10 @@ function all_introns_valid( data::AlignData, gene::GeneInt )
    true
 end
 
-function aberrant_path( data::AlignData, gene::GeneInt, verbose=false )
+function aberrant_path( data::AlignData, 
+                        gene::GeneInt, 
+                        strand::Bool=true, 
+                        verbose=false )
 
    path     = Vector{SGNodeIsExon}()
    sizehint!(path, length(data.nodes))
@@ -277,7 +280,8 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=false )
                push!( path, data.nodes[k].metadata )
                break
             elseif first(data.nodes[k]) < data.blocks[i][1] <= last(data.nodes[k])
-               aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][1] - first(data.nodes[k]) + 1)
+               pos  = strand ? data.blocks[i][1] - first(data.nodes[k]) : last(data.nodes[k]) - data.blocks[i][1]
+               aber = encode_aberrant( data.nodes[k].metadata.node, pos + 1)
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, false)
                push!( path, span )
                break
@@ -297,7 +301,8 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=false )
                j += 1
                break
             elseif first(data.nodes[k]) <= data.blocks[i][2] < last(data.nodes[k])
-               aber = encode_aberrant( data.nodes[k].metadata.node, data.blocks[i][2] - first(data.nodes[k]) + 1)
+               pos  = strand ? data.blocks[i][2] - first(data.nodes[k]) : last(data.nodes[k]) - data.blocks[i][2]
+               aber = encode_aberrant( data.nodes[k].metadata.node, pos + 1)
                span = SGNodeIsExon( data.nodes[k].metadata.gene, aber :: NodeNum, true)
                push!( path, span )
                break
@@ -312,15 +317,20 @@ function aberrant_path( data::AlignData, gene::GeneInt, verbose=false )
    path
 end
 
-function choose_path( data::AlignData, gene::GeneInt, allow_aberrant::Bool=true )
+function choose_path( data::AlignData, 
+                      gene::GeneInt, 
+                      strand::Bool=true, 
+                      allow_aberrant::Bool=true )
+
    if allow_aberrant && !all_introns_valid( data, gene )
-      return aberrant_path( data, gene ), false
+      return aberrant_path( data, gene, strand ), false
    else
       return best_path( data, gene ), true
    end
 end
 
-function align_bam( ic::IntervalCollection{SGNodeIsExon}, 
+function align_bam( ic::IntervalCollection{SGNodeIsExon},
+                    info::Vector{GeneInfo},
                     data::AlignData,
                     overlaps::Dict{NodeInt, Int},
                     rec::R,
@@ -331,7 +341,7 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    overlapping_nodes!(ic, data, overlaps, rec)
    if length(overlaps) > 0 
       gene = max_value_key(overlaps)
-      path, aber = choose_path( data, gene, allow_aberrant )
+      path, aber = choose_path( data, gene, info[gene].strand, allow_aberrant )
 
       if length(path) > 0
          return path, aber
@@ -340,7 +350,8 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    EMPTY_PATH, false
 end
 
-function align_bam( ic::IntervalCollection{SGNodeIsExon}, 
+function align_bam( ic::IntervalCollection{SGNodeIsExon},
+                    info::Vector{GeneInfo},
                     leftdata::AlignData,
                     rightdata::AlignData,
                     overlaps::Dict{NodeInt, Int},
@@ -356,8 +367,8 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    overlapping_nodes!(ic, rightdata, overlaps, rightmate, flipstrand=true)
    if length(overlaps) > 0 
       gene      = max_value_key(overlaps)
-      leftpath, laber  = choose_path( leftdata, gene, allow_aberrant )
-      rightpath,raber  = choose_path( rightdata, gene, allow_aberrant )
+      leftpath, laber  = choose_path( leftdata, gene, info[gene].strand, allow_aberrant )
+      rightpath,raber  = choose_path( rightdata, gene, info[gene].strand, allow_aberrant )
       #println(stderr, "left strand: $(isstrandfwd(leftmate))")
       #println(stderr, leftpath)
       #println(stderr, all_introns_valid( leftdata, gene ))
@@ -490,7 +501,12 @@ function read_collated_bam( parser,
          #align and count
 
          if hasalignment(leftmate)
-            leftpath, leftvalid = align_bam( lib.coords, leftdata, overlaps, leftmate, allow_aberrant )
+            leftpath, leftvalid = align_bam( lib.coords, 
+                                             lib.info, 
+                                             leftdata, 
+                                             overlaps, 
+                                             leftmate, 
+                                             allow_aberrant )
             if length(leftpath) > 0 
 
                leftseq = sequence(leftmate) 
@@ -539,7 +555,8 @@ function read_collated_bam( parser,
 
          #println(stderr, "dist is: $dist > 0? && left: $(strandchar(leftmate))")
          # Process left/right first_mates
-         leftpath, leftvalid, rightpath, rightvalid  = align_bam( lib.coords, 
+         leftpath, leftvalid, rightpath, rightvalid  = align_bam( lib.coords,
+                                                                  lib.info, 
                                                                   leftdata, 
                                                                   rightdata,
                                                                   overlaps,
