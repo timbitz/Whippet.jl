@@ -419,7 +419,7 @@ IIIIIIIIIIII
          overlaps  = Dict{NodeInt, Int}()
          mod = DefaultBiasMod()
          for r in parser
-            path, valid = align_bam( lib.coords, lib.info, data, overlaps, r )
+            path, valid = align_bam( lib.coords, lib.info, data, overlaps, r, true, 1 )
             println(stderr, path)
             cur_sam = popfirst!( aligns )
             @test valid

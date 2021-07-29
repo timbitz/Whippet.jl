@@ -355,12 +355,13 @@ end
 function choose_path( data::AlignData, 
                       gene::GeneInt, 
                       strand::Bool=true, 
-                      allow_aberrant::Bool=true )
+                      allow_aberrant::Bool=true,
+                      min_over::Int=MIN_OVERLAP )
 
    if allow_aberrant && !all_introns_valid( data, gene )
       return aberrant_path( data, gene, strand ), false
    else
-      return best_path( data, gene ), true
+      return best_path( data, gene, min_over ), true
    end
 end
 
@@ -369,14 +370,15 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
                     data::AlignData,
                     overlaps::Dict{NodeInt, Int},
                     rec::R,
-                    allow_aberrant::Bool=true ) where R <: Union{SAM.Record, BAM.Record}
+                    allow_aberrant::Bool=true,
+                    min_over::Int=MIN_OVERLAP ) where R <: Union{SAM.Record, BAM.Record}
    empty!(data) 
    empty!(overlaps)
    fill_alignment_blocks!( data.blocks, rec )
    overlapping_nodes!(ic, data, overlaps, rec)
    if length(overlaps) > 0 
       gene = max_value_key(overlaps)
-      path, aber = choose_path( data, gene, info[gene].strand, allow_aberrant )
+      path, aber = choose_path( data, gene, info[gene].strand, allow_aberrant, min_over )
 
       if length(path) > 0
          return path, aber
@@ -392,7 +394,8 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
                     overlaps::Dict{NodeInt, Int},
                     leftmate::R,
                     rightmate::R,
-                    allow_aberrant::Bool=true ) where R <: Union{SAM.Record, BAM.Record}
+                    allow_aberrant::Bool=true,
+                    min_over::Int=MIN_OVERLAP ) where R <: Union{SAM.Record, BAM.Record}
    empty!(leftdata) 
    empty!(rightdata)
    empty!(overlaps)
@@ -402,8 +405,8 @@ function align_bam( ic::IntervalCollection{SGNodeIsExon},
    overlapping_nodes!(ic, rightdata, overlaps, rightmate, flipstrand=true)
    if length(overlaps) > 0 
       gene      = max_value_key(overlaps)
-      leftpath, laber  = choose_path( leftdata, gene, info[gene].strand, allow_aberrant )
-      rightpath,raber  = choose_path( rightdata, gene, info[gene].strand, allow_aberrant )
+      leftpath, laber  = choose_path( leftdata, gene, info[gene].strand, allow_aberrant, min_over )
+      rightpath,raber  = choose_path( rightdata, gene, info[gene].strand, allow_aberrant, min_over )
       #println(stderr, "left strand: $(isstrandfwd(leftmate))")
       #println(stderr, leftpath)
       #println(stderr, all_introns_valid( leftdata, gene ))
