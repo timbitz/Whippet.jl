@@ -286,7 +286,7 @@ end
 
 function reduce_graph( edges::PsiGraph{S}, 
                        graph::PsiGraph{S}=deepcopy(edges), 
-                       maxit::Int=100, 
+                       maxit::Int=64, 
                        maxiso::Int=1024 ) where S <: MonotonicSet
 
    newgraph = PsiGraph{S}( Vector{Float64}(), Vector{Float64}(), 
