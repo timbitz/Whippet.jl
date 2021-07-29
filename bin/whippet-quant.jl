@@ -19,7 +19,7 @@ using ArgParse
 
 function parse_cmd()
    s = ArgParseSettings()
-   # TODO finish options...
+
    @add_arg_table s begin
       "filename.fastq[.gz]--OR--pre-aligned.bam"
          arg_type = String
@@ -35,62 +35,84 @@ function parse_cmd()
          help     = "Where should the gzipped output go 'dir/prefix'?"
          arg_type = String
          default  = fixpath( "./output" )
-      "--seed-len", "-L"
-         help     = "Seed length"
-         arg_type = Int
-         default  = 18
-      "--seed-try", "-M"
-         help     = "Number of failed seeds to try before giving up"
-         arg_type = Int
-         default  = 3
-      "--seed-tol", "-T"
-         help     = "Number of seed hits to tolerate"
-         arg_type = Int
-         default  = 4
-      "--seed-buf", "-B"
-         help     = "Ignore this many bases from beginning and end of read for seed"
-         arg_type = Int
-         default  = 5
-      "--seed-inc", "-I"
-         help     = "Number of bases to increment seed each iteration"
-         arg_type = Int
-         default  = 18
-      "--pair-range", "-P"
-         help     = "Seeds for paired end reads must match within _ bases of one another"
-         arg_type = Int
-         default  = 5000
-      "--mismatches", "-X"
-         help     = "Allowable number of mismatches in alignment (counted as 1-10^(-phred/10))"
-         arg_type = Int
-         default  = 3
-      "--score-min", "-S"
-         help     = "Minimum percent matching (matches - mismatches) / read_length"
-         arg_type = Float64
-         default  = 0.7
-      "--sam"
-         help     = "Should SAM format be sent to stdout?"
-         action   = :store_true
       "--biascorrect"
          help     = "Apply fragment GC-content and 5' Sequence bias correction methods for more stable PSI values"
          action   = :store_true
+
+      "--aberrant-min-overlap"
+         help     = "Minimum number of overlap in the first or last node of a path (.bam input only)"
+         arg_type = Int
+         default  = 6
+      "--aberrant-min-reads"
+         help     = "Minimum number of reads supporting an aberrant splicing event (.bam input only)"
+         arg_type = Int
+         default  = 1
+      "--aberrant-max-xce"
+         help     = "Maximum length of a cryptic exon to include XCE entry (.bam input only)"
+         arg_type = Int
+         default  = 1000
+      "--aberrant-xri-one-side"
+         help     = "Allow XRI calls where only one exon-intron spanning junction has support (.bam input only)"
+         action   = :store_true
+      "--no-aberrant"
+         help     = "Don't allow aberrant splicing calls (.bam input only)"
+         action   = :store_false
+
+      "--sam"
+         help     = "Should SAM format be sent to stdout? (.fastq input only)"
+         action   = :store_true
       "--stranded"
-         help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag"
+         help     = "Is the data strand specific in fwd orientation? If so, increase speed with this flag (.fastq input only)"
          action   = :store_true
       "--pair-same-strand"
-         help     = "Whippet by default tries to align fwd/rev pairs, if your data is fwd/fwd or rev/rev set this flag"
+         help     = "Whippet by default tries to align fwd/rev pairs, if your data is fwd/fwd or rev/rev set this flag (.fastq input only)"
          action   = :store_true
       "--phred-33"
-         help     = "Qual string is encoded in Phred+33 integers (default)"
+         help     = "Qual string is encoded in Phred+33 integers [default] (.fastq input only)"
          action   = :store_true
       "--phred-64"
          help     = "Qual string is encoded in Phred+64 integers"
          action   = :store_true
       "--circ"
-         help     = "Allow back/circular splicing, this will allow output of `BS`-type lines"
+         help     = "Allow back/circular splicing, this will allow output of `BS`-type lines (.fastq input only)"
          action   = :store_true
       "--force-gz"
-         help     = "Regardless of suffix, consider read input as gzipped"
+         help     = "Regardless of suffix, consider read input as gzipped (.fastq input only)"
          action   = :store_true
+
+      "--seed-len", "-L"
+         help     = "Seed length (.fastq input only)"
+         arg_type = Int
+         default  = 18
+      "--seed-try", "-M"
+         help     = "Number of failed seeds to try before giving up (.fastq input only)"
+         arg_type = Int
+         default  = 3
+      "--seed-tol", "-T"
+         help     = "Number of seed hits to tolerate (.fastq input only)"
+         arg_type = Int
+         default  = 4
+      "--seed-buf", "-B"
+         help     = "Ignore this many bases from beginning and end of read for seed (.fastq input only)"
+         arg_type = Int
+         default  = 5
+      "--seed-inc", "-I"
+         help     = "Number of bases to increment seed each iteration (.fastq input only)"
+         arg_type = Int
+         default  = 18
+      "--pair-range", "-P"
+         help     = "Seeds for paired end reads must match within _ bases of one another (.fastq input only)"
+         arg_type = Int
+         default  = 5000
+      "--mismatches", "-X"
+         help     = "Allowable number of mismatches in alignment [counted as 1-10^(-phred/10)] (.fastq input only)"
+         arg_type = Int
+         default  = 3
+      "--score-min", "-S"
+         help     = "Minimum percent matching (matches - mismatches) / read_length (.fastq input only)"
+         arg_type = Float64
+         default  = 0.7
+
    end
    return parse_args(s)
 end

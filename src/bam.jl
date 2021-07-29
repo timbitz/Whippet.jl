@@ -4,6 +4,7 @@ const AlignNodes  = Vector{GenomicFeatures.Interval{SGNodeIsExon}}
 
 const EMPTY_PATH   = Vector{SGNodeIsExon}()
 const SPLICE_BONUS = 10
+const MIN_OVERLAP  = 6
 
 # reuse temporary data
 struct AlignData
@@ -166,7 +167,7 @@ end=#
 
 function unstranded_overlap( i_a::I, i_b::I,
                              j_a::J, j_b::J ) where {I <: Integer, J <: Integer}
-   max(0, min(i_b, j_b) - max(i_a, j_a))
+   max(0, min(i_b, j_b) - max(i_a, j_a) + 1)
 end
 
 # return key that has the first max value
@@ -207,14 +208,40 @@ function overlapping_nodes!( ic::IntervalCollection{SGNodeIsExon},
    end
 end
 
-function best_path( data::AlignData, bestgene::GeneInt )
+function best_path( data::AlignData, bestgene::GeneInt, min_over::Int=MIN_OVERLAP )
 
    path     = Vector{SGNodeIsExon}()
+   inde     = Vector{Int}()
    sizehint!(path, length(data.nodes))
 
-   for n in data.nodes
-      if n.metadata.gene == bestgene
-         push!( path, n.metadata )
+   # pull all the overlapping nodes
+   for i in 1:length(data.nodes)
+      if data.nodes[i].metadata.gene == bestgene
+         push!( path, data.nodes[i].metadata )
+         push!( inde, i )
+      end
+   end
+
+   # check tails to ensure minimum nucleotide overlap
+   if length(path) > 1
+      # check overlap of first node
+      leng = data.nodes[inde[1]].last - data.nodes[inde[1]].first + 1
+      over = unstranded_overlap( data.nodes[inde[1]].first, 
+                                 data.nodes[inde[1]].last, 
+                                 data.blocks[1][1], 
+                                 data.blocks[1][2] )
+      if over < leng && over < min_over
+         popfirst!(path)
+      end
+
+      # check last node
+      leng = data.nodes[inde[length(inde)]].last - data.nodes[inde[length(inde)]].first + 1
+      over = unstranded_overlap( data.nodes[inde[length(inde)]].first, 
+                                 data.nodes[inde[length(inde)]].last, 
+                                 data.blocks[length(data.blocks)][1], 
+                                 data.blocks[length(data.blocks)][2] )
+      if over < leng && over < min_over
+         pop!(path)
       end
    end
 
@@ -263,19 +290,12 @@ function aberrant_path( data::AlignData,
 
    j = 1
    for i in 1:length(data.blocks)
-      verbose && println(Int(data.blocks[i][1]))
-      verbose && println(Int(data.blocks[i][2]))
-      verbose && println("^blocks 1,2, and i=$i, path and nodes>\n")
-      verbose && println(path)
-      verbose && println(data.nodes)
 
       if i > 1
-         verbose && println("i > 1")
          for k in j:length(data.nodes)
             j = k
             data.nodes[k].metadata.gene == gene || continue
-            verbose && println(first(data.nodes[k]))
-            verbose && println(Int(data.blocks[i][1]))
+
             if first(data.nodes[k]) == data.blocks[i][1]
                push!( path, data.nodes[k].metadata )
                break
@@ -290,12 +310,10 @@ function aberrant_path( data::AlignData,
       end
 
       if i < length(data.blocks)
-         verbose && println("i <= 1")
          for k in j:length(data.nodes)
             j = k
             data.nodes[k].metadata.gene == gene || continue
-            verbose && println(first(data.nodes[k]))
-            verbose && println(Int(data.blocks[i][2]))
+
             if last(data.nodes[k]) == data.blocks[i][2]
                data.nodes[k].metadata in path || push!( path, data.nodes[k].metadata )
                j += 1
@@ -314,6 +332,23 @@ function aberrant_path( data::AlignData,
       end
    end
    verbose && println(stderr, path)
+   # add canonical node to remove dangling aberrant edges
+   if length(path) > 1 && isaberrant(path[1].node)
+      root,node,pos = decode_aberrant(path[1].node)
+      if root == node
+         pushfirst!(path, SGNodeIsExon(path[1].gene, root, true))
+      else
+         pushfirst!(path, SGNodeIsExon(path[1].gene, node, false))
+      end
+   end
+   if length(path) > 1 && isaberrant(path[length(path)].node)
+     root,node,pos = decode_aberrant(path[length(path)].node)
+      if root == node
+         push!(path, SGNodeIsExon(path[length(path)].gene, root, true))
+      else
+         push!(path, SGNodeIsExon(path[length(path)].gene, node, false))
+      end
+   end
    path
 end
 
