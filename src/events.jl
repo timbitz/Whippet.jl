@@ -1026,13 +1026,13 @@ end
 function spliced_em!( igraph::PsiGraph, 
                       egraph::PsiGraph, 
                       ambig::Vector{AmbigCounts};
-                      it=1, maxit=500, sig=0 )
+                      it=1, maxit=750, sig=0 )
 
    inc_temp   = zeros(length(igraph.count))
    exc_temp   = zeros(length(egraph.count))
    count_temp = ones(length(igraph.count)+length(egraph.count))
 
-   while (sum(inc_temp) != sum(igraph.psi) || sum(egraph.psi) != sum(exc_temp)) && it < maxit
+   while (inc_temp != igraph.psi || egraph.psi != exc_temp) && it < maxit
 
       unsafe_copy!( count_temp, igraph.count, indx_shift=0 )
       unsafe_copy!( count_temp, egraph.count, indx_shift=length(igraph.count) )
