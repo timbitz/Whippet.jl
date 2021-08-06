@@ -34,6 +34,10 @@ function parse_cmd()
     "--gene-centric"
     	help		= "Pivot sample_centric .psi[.gz] files into gene_centric .gpsi.gz files"
     	action   = :store_true
+    "--output-extension"
+      help     = "Default output extension"
+      arg_type = String
+      default  = ".gpsi.gz"
     "--matrix"
       help     = "Make a matrix of nodes vs. samples for a particular value type (psi, entropy)"
       arg_type = String
@@ -64,12 +68,12 @@ readlinesplit( stream ) = readline(stream) |> x->split( x, '\t' )
 
 function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
                        names::Vector{String};
-                       var_column::Int64=0 )
+                       var_column::Int64=0,
+                       output_ext::String )
    
    curline  = Vector{Vector{SubString{String}}}(undef, length(streams))
    metadata = Vector{String}()
    header   = ""
-   outmat   = DataFrame()
 
    # initialize header lines
    for (i,s) in enumerate(streams)
@@ -77,9 +81,9 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    	curline[i] = readlinesplit(s) # first psi line
    end
    curgene = curline[1][1]
-   ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi.gz", "w"))
+   ostream = ZlibDeflateOutputStream(open(curgene * output_ext, "w"))
    write(ostream, "Sample\t" * header * "\n")
-   println(stderr, "Pivoting into " * curgene * ".gpsi.gz")
+   println(stderr, "Pivoting into " * curgene * output_ext)
 
    while !eof(streams[1])
    	for (i,s) in enumerate(streams)
@@ -92,9 +96,9 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
       end
       close(ostream)
       curgene = curline[1][1]
-   	ostream = ZlibDeflateOutputStream(open(curgene * ".gpsi.gz", "w"))
+   	  ostream = ZlibDeflateOutputStream(open(curgene * output_ext, "w"))
       write(ostream, "Sample\t" * header * "\n")
-      println(stderr, "Pivoting into " * curgene * ".gpsi.gz")
+      println(stderr, "Pivoting into " * curgene * output_ext)
    end
 end
 
@@ -105,7 +109,7 @@ function main()
    dir   = fixpath( args["directory"] )
    files = retrievefilelist( args["files"], dir )
 	fnames = map(x->last(splitdir(x)), files) |>
-	      x->map(y->String(first(split(y, ".psi"))), x)
+	      x->map(y->String(first(split(y, r".(psi|isoform.tpm|gene.tpm)"))), x)
 
    println(stderr, "Loading files to pivot: $(join(map(basename, files), '\n'))")
 
