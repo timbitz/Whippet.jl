@@ -129,10 +129,12 @@ export SpliceGraph,
        open_streams,
        process_psi_files,
        tab_write,
+       RNABindNSeq,
        load_rbns,
        load_matrix5,
        load_matrix3,
        score_cis,
        score_five,
-       score_three
+       score_three,
+       normalize_score
 end

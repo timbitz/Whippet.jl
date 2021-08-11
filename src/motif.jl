@@ -59,7 +59,7 @@ function score_cis( seq::B, rbp::RNABindNSeq ) where B <: BioSequence
       ind  = encode_kmer( seq[i:i+rbp.kmer-1] )
       best = rbp.data[ind] > best ? rbp.data[ind] : best
    end
-   best
+   round(best, digits=3)
 end
 
 function score_cis( seq::B, rbps::Vector{RNABindNSeq} ) where B <: BioSequence
@@ -92,21 +92,34 @@ tr( seq ) = map(s -> get(hashd,s,s), seq)
 
 function hashseq( seq )
 	seq = tr(seq)
-	hval = 0
+	hval = 1
 	for (i,j) in enumerate(seq)
 		hval += parse(Int, j) * 4 ^ (length(seq) - i)
 	end
 	return hval
 end
 
-load_matrix5() = CSV.read("../motif/maxent/score5_matrix.txt", DataFrame, delim='\t', header=false)[:,2]
-function load_matrix3()
-	csv = CSV.read("../motif/maxent/score3_matrix.txt", DataFrame, delim='\t', header=false)
+load_matrix5( filename::String="../motif/maxent/score5_matrix.txt" ) = CSV.read(filename, DataFrame, delim='\t', header=false)[:,2]
+function load_matrix3( filename::String="../motif/maxent/score3_matrix.txt" )
+	csv = CSV.read(filename, DataFrame, delim='\t', header=false)
 	mat = unstack(csv, :Column2, :Column3, allowduplicates=true)
    return mat[:,2:ncol(mat)]
 end
 
-function score_five( seq, matrix=load_matrix5() )
+#normalize_five( score::Float64, max_score=11.8 ) = normalize_score( score, max_score )
+#normalize_three( score::Float64, max_score=15.52 ) = normalize_score( score, max_score )
+
+function normalize_score( score, max_score=10.0, min_score=-3.0 )
+   score = min( score, max_score )
+   score = max( score, min_score )
+   score += min_score * -1
+   score /= max_score + min_score * -1
+   round(score, digits=3)
+end
+
+score_five( seq::B, matrix=load_matrix5() ) where B <: BioSequence = score_five( string(seq), matrix )
+
+function score_five( seq::String, matrix=load_matrix5() )
 	#=
     Calculate 5' splice site strength
     (exon)XXX|XXXXXX(intron)
@@ -135,6 +148,8 @@ function score_five( seq, matrix=load_matrix5() )
 	# final score
 	return log2(score * rest_score)
 end
+
+score_three( seq::B, matrix=load_matrix3() ) where B <: BioSequence = score_three( string(seq), matrix )
 
 function score_three( seq, matrix=load_matrix3() )
 	#=
