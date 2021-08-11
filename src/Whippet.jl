@@ -136,5 +136,6 @@ export SpliceGraph,
        score_cis,
        score_five,
        score_three,
-       normalize_score
+       normalize_score,
+       bufferedinput
 end

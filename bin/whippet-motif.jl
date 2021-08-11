@@ -52,15 +52,7 @@ end
 
 function read_fasta( filename::String )
    genome = Dict{String,ReferenceSequence}()
-
-   if isgzipped( filename )
-      println(stderr, "Decompressing and Indexing $filename...")
-      to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
-   else
-      println(stderr, "Indexing $filename...")
-      to_open = open( filename ) |> BufferedInputStream
-   end
-   reader = FASTA.Reader( to_open )
+   reader = FASTA.Reader( bufferedinput(to_open) )
 
    for entry in reader
       println(stderr, "Processing $(identifier(entry))")
@@ -109,7 +101,7 @@ function score_motifs( ifile::String,
 
    bufout = open(ofile, "w") |> ZlibDeflateOutputStream
 
-   for l in eachline( ZlibInflateInputStream(open(ifile, "r")) )
+   for l in eachline( bufferedinput(ifile) )
 
       if header
          header = false

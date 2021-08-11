@@ -32,7 +32,7 @@ function gini_coefficient( arr::Vector{F} ) where F <: Number
 end
 
 function load_rbns( tsv_file::String )
-   rbp  = CSV.read(tsv_file, DataFrame, delim='\t')
+   rbp  = CSV.read(bufferedinput(tsv_file), DataFrame, delim='\t')
    gini = map(i->gini_coefficient(rbp[:,i]), 2:ncol(rbp))
    ind  = argmax(gini)
    name = replace(names(rbp)[1], r"\[|\]|_0nM" => "")
@@ -99,9 +99,9 @@ function hashseq( seq )
 	return hval
 end
 
-load_matrix5( filename::String="../motif/maxent/score5_matrix.txt" ) = CSV.read(filename, DataFrame, delim='\t', header=false)[:,2]
+load_matrix5( filename::String="../motif/maxent/score5_matrix.txt" ) = CSV.read(bufferedinput(filename), DataFrame, delim='\t', header=false)[:,2]
 function load_matrix3( filename::String="../motif/maxent/score3_matrix.txt" )
-	csv = CSV.read(filename, DataFrame, delim='\t', header=false)
+	csv = CSV.read(bufferedinput(filename), DataFrame, delim='\t', header=false)
 	mat = unstack(csv, :Column2, :Column3, allowduplicates=true)
    return mat[:,2:ncol(mat)]
 end
