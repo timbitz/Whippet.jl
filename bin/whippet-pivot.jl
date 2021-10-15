@@ -69,7 +69,7 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    curline  = Vector{Vector{SubString{String}}}(undef, length(streams))
    metadata = Vector{String}()
    header   = ""
-   outmat   = DataFrame()
+#   outmat   = DataFrame()
 
    # initialize header lines
    for (i,s) in enumerate(streams)
