@@ -90,8 +90,7 @@ function score_motifs( ifile::String,
                        rbps::Vector{RNABindNSeq},
                        genome::Dict{String,ReferenceSequence},
                        rbpspan::Int,
-                       gpsi::Bool=false,
-                       overwrite::Bool=false )
+                       gpsi::Bool=false )
 
    header    = true
    skipfive  = false
@@ -99,9 +98,6 @@ function score_motifs( ifile::String,
 
    used = Dict{String,Bool}()
 
-   if isfile(ofile) && !overwrite
-      return
-   end
    bufout = open(ofile, "w") |> ZlibDeflateOutputStream
 
    for l in eachline( bufferedinput(ifile) )
@@ -250,6 +246,9 @@ function main()
    fexten = map(x->(split(x, '.')[end] == "gz" ? split(x, '.')[end-1] : split(x, '.')[end]), sfiles)
 
    Threads.@threads for i in 1:length(ifiles)
+      if isfile(ofiles[i])
+         continue
+      end
       println(stderr, "Fetching motifs for $(ifiles[i])")
       score_motifs( ifiles[i], ofiles[i], five_mat, three_mat, rbps, genome, rbpspan, fexten[i] == "gpsi" )
    end
