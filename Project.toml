@@ -10,10 +10,7 @@ BioSequences = "7e6ae17a-c86d-528c-b3b9-7f778a29fe59"
 BioSymbols = "3c28c6f8-a34d-59c4-9654-267d177fcfa9"
 BufferedStreams = "e1450e63-4bb3-523b-b2a4-4ffa8c0fd77d"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-<<<<<<< HEAD
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
-=======
->>>>>>> 9b137ec563ff283869dbb52971377a0b52ffb9f9
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
