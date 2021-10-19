@@ -243,7 +243,7 @@ function main()
    ifiles = glob(name, replace(args["files"], "$name" => "")) 
    sfiles = map(x->(isgzipped(x) ? splitext(x)[1] : x), ifiles)
    ofiles = map(x->splitext(basename(x))[1] * ".motif.gz", sfiles)
-   fexten = map(x->splitext(x)[2], sfiles)
+   fexten = map(x->splitext(x)[end], sfiles)
 
    for i in 1:length(ifiles)
       println(stderr, "Fetching motifs for $(ifiles[i])")
