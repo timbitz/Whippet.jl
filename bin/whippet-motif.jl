@@ -50,7 +50,7 @@ end
 
 function read_fasta( filename::String )
    genome = Dict{String,ReferenceSequence}()
-   reader = FASTA.Reader( bufferedinput(to_open) )
+   reader = FASTA.Reader( bufferedinput( filename ) )
 
    for entry in reader
       println(stderr, "Processing $(identifier(entry))")
@@ -97,6 +97,8 @@ function score_motifs( ifile::String,
    skipfive  = false
    skipthree = false
 
+   used = Dict{String,Bool}()
+
    bufout = open(ofile, "w") |> ZlibDeflateOutputStream
 
    for l in eachline( bufferedinput(ifile) )
@@ -107,8 +109,15 @@ function score_motifs( ifile::String,
       end
 
       spl  = split(l, '\t')
-      fval = gpsi ? 4 : 3
+      pre,fval = gpsi ? (2,4) : (1,3)
       pre, ci, si, ti = 1,fval,fval+1,fval+2 #prefix, coord, strand, type
+
+      key = join(spl[pre:ti], ':')
+      if haskey(used, key)
+         continue
+      else
+         used[key] = true
+      end
 
       for i in pre:ti
          tab_write(bufout, spl[i])

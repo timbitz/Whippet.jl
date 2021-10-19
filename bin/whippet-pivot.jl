@@ -17,6 +17,8 @@ using ArgParse
 using Glob
 using BufferedStreams
 using Libz
+using CSV
+using DataFrames
 
 
 function parse_cmd()
@@ -55,7 +57,7 @@ function retrievefilelist( pattern::String, dir::String )
       tmp = split( pattern, ',', keepempty=false )
    else
       pat = length(pattern) > 0 ? "*" * pattern : pattern
-      tmp = glob( pat * "*.psi*", dir )
+      tmp = glob( pat * "*psi*", dir )
    end
    # now clean the return
    for file in tmp
@@ -74,10 +76,6 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    curline  = Vector{Vector{SubString{String}}}(undef, length(streams))
    metadata = Vector{String}()
    header   = ""
-<<<<<<< HEAD
-#   outmat   = DataFrame()
-=======
->>>>>>> 9b137ec563ff283869dbb52971377a0b52ffb9f9
 
    # initialize header lines
    for (i,s) in enumerate(streams)
@@ -106,20 +104,56 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
    end
 end
 
-function psi_to_dataframe( streams::Vector{BufferedStreams.BufferedInputStream},
-                           files::Vector{String} )
 
-   df = DataFrame(map(x->Pair(x,Float64[]), names))
+function psi_to_dataframe( files::Vector{String}, summarize_type=true )
+   vdf = Vector{DataFrame}()
 
-   for (i,s) in enumerate(streams)
-      vals = Vector{Float64}()
-      name = Vector{Float64}()
-      
-      while !eof(s)
-         l = readlinesplit(s)
-         
+   for i in 1:length(files)
+      if summarize_type
+         full = CSV.read(bufferedinput(files[i]), DataFrame, delim='\t', types=Dict(:Sample=>CategoricalArray, :Gene=>CategoricalArray)) |>
+                             x->select(x, [:Sample, :Gene, :Node, :Type, :Psi, :Entropy]) |>
+                             x->filter(row -> row.Psi != "NA", x) |>
+                             x->filter(row -> row.Entropy != "NA", x)
+         full[!,:Psi ]     = tryparse.(Float64,full[:,:Psi ])
+         full[!,:Entropy ] = tryparse.(Float64,full[:,:Entropy ])
+         full[!,:Sample ] = CategoricalArray(full[!,:Sample ])
+         full[!,:Gene ]   = CategoricalArray(full[!,:Gene ])
+         full[!,:Type ]   = CategoricalArray(full[!,:Type ])
+         reg_df = filter(row -> row.Type in ["CE", "AA", "AD", "RI"], full)
+         #reg_df[!,:Node ]  = parse.(Int64,reg_df[:,:Node])
+         #sum_df = filter(row -> row.Type in ["XRI", "XDI", "XAI", "XDE", "XAE", "XEI", "XCE"], full) |>
+         #                    x->groupby(x, [:Sample, :Gene, :Type]) |>
+         #                    x->combine(x, [:Psi, :Entropy] .=> mean)
+         push!(vdf, reg_df)
+         #push!(vdf, sum_df)
+      else
+         temp = CSV.read(bufferedinput(files[i]), DataFrame, delim='\t', types=Dict(:Psi => Float64, :Entropy => Float64)) |>
+                    x->select(x, [:Sample, :Gene, :Node, :Type, :Psi, :Entropy]) |>
+                    x->filter(row -> row.Psi != "NA", x) |>
+                    x->filter(row -> row.Entropy != "NA", x)
+         temp[!,:Psi ] = tryparse.(Float64,temp[:,:Psi ])
+         temp[!,:Entropy ] = tryparse.(Float64,temp[:,:Entropy ])
+         push!(vdf, temp)
       end
-   end   
+   end
+   vcat( vdf... )
+end
+
+unstack_psi( df::DataFrame )     = unstack_col( df, :Psi )
+unstack_entropy( df::DataFrame ) = unstack_col( df, :Entropy )
+
+function unstack_col( df::DataFrame, feature::Symbol=:Psi )
+   df  = transform(df, [:Gene, :Node] => ByRow((Gene, Node) -> string(Gene, "_", Node)) => :GeneNode) |>
+         x->select(x, [:Sample, :GeneNode, feature])
+
+   udf = unstack(df, :Sample, :GeneNode, feature, allowduplicates=true)
+   udf
+end
+
+function summarize_type( df::DataFrame )
+   gdf = groupby(df, [:Sample, :Gene, :Node, :Type]) |>
+      x->combine(gdf, :Psi => mean)
+
 end
 
 function main()
