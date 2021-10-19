@@ -109,7 +109,7 @@ function score_motifs( ifile::String,
 
       spl  = split(l, '\t')
       pre,fval = gpsi ? (2,4) : (1,3)
-      pre, ci, si, ti = 1,fval,fval+1,fval+2 #prefix, coord, strand, type
+      ci, si, ti = fval,fval+1,fval+2 #prefix, coord, strand, type
 
       key = join(spl[pre:ti], ':')
       if haskey(used, key)
