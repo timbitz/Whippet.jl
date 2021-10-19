@@ -27,6 +27,8 @@ using LinearAlgebra
 using Nullables
 using Printf
 using Random
+using CSV
+using DataFrames
 
 include("types.jl")
 include("timer.jl")
@@ -46,6 +48,7 @@ include("paired.jl")
 include("events.jl")
 include("io.jl")
 include("diff.jl")
+include("motif.jl")
 
 export SpliceGraph,
        SpliceGraphQuant,
@@ -125,5 +128,14 @@ export SpliceGraph,
        timer_print,
        open_streams,
        process_psi_files,
-       tab_write
+       tab_write,
+       RNABindNSeq,
+       load_rbns,
+       load_matrix5,
+       load_matrix3,
+       score_cis,
+       score_five,
+       score_three,
+       normalize_score,
+       bufferedinput
 end

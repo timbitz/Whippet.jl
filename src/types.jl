@@ -93,3 +93,13 @@ function increment!( dict::Dict{K,V}, key::K, val::V=one(V) ) where {K,V}
    end
    dict
 end
+
+function bufferedinput( filename::String )
+   if isgzipped( filename )
+      to_open = open( filename ) |> x->ZlibInflateInputStream(x, reset_on_end=true)
+   else
+      to_open = open( filename ) |> BufferedInputStream
+   end
+   to_open
+end
+
