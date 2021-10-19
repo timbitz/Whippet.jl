@@ -27,7 +27,6 @@ function parse_cmd()
     "--files"
       help     = "Pattern to glob.psi[.gz] (common-filename-segment [*.psi*]), or comma delimited list of filenames. ie. (-a sample_a) would work for sample_a-rep1.psi.gz,sample_a-rep2.psi.gz,..."
       arg_type = String
-      required = true
       default  = "*psi.gz"
     "--fasta"
       help     = "Genome sequence fasta file used with `--fasta` parameter when building the whippet index"
