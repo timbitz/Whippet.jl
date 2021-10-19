@@ -2,6 +2,7 @@
 #using CSV
 #using Glob
 #using BioSequences
+#using Statistics
 #rbns = map(load_rbns, glob("*.tsv"))
 
 encode_kmer( kmer::B ) where B <: BioSequence = Int(reinterpret(UInt64, DNAMer(kmer)))+1
@@ -37,7 +38,7 @@ function load_rbns( tsv_file::String )
    ind  = argmax(gini)
    name = replace(names(rbp)[1], r"\[|\]|_0nM" => "")
    leng = length(rbp[:,ind+1])
-   klen = length(rbp[1,1])
+   klen = Int(floor(mean(map(x->length(x), rbp[:,1]))))
    data = zeros(4^klen)
 
    rbp[:,ind+1] = rbp[:,ind+1] .* (sortperm(rbp[:,ind+1]) / nrow(rbp))

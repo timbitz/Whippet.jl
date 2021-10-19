@@ -64,7 +64,7 @@ function retrievefilelist( pattern::String, dir::String )
    list
 end
 
-readlinesplit( stream ) = readline(stream) |> x->split( x, '\t' )
+readlinesplit( stream ) =  split( readline(stream), '\t' )
 
 function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
                        names::Vector{String};
@@ -100,6 +100,22 @@ function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
       write(ostream, "Sample\t" * header * "\n")
       println(stderr, "Pivoting into " * curgene * output_ext)
    end
+end
+
+function psi_to_dataframe( streams::Vector{BufferedStreams.BufferedInputStream},
+                           files::Vector{String} )
+
+   df = DataFrame(map(x->Pair(x,Float64[]), names))
+
+   for (i,s) in enumerate(streams)
+      vals = Vector{Float64}()
+      name = Vector{Float64}()
+      
+      while !eof(s)
+         l = readlinesplit(s)
+         
+      end
+   end   
 end
 
 function main()

@@ -24,13 +24,11 @@ using DataFrames
 function parse_cmd()
   s = ArgParseSettings()
   @add_arg_table s begin
-    "filename.psi.gz"
+    "--files"
+      help     = "Pattern to glob.psi[.gz] (common-filename-segment [*.psi*]), or comma delimited list of filenames. ie. (-a sample_a) would work for sample_a-rep1.psi.gz,sample_a-rep2.psi.gz,..."
       arg_type = String
       required = true
-    "--output", "-o"
-      help     = "Filename prefix to write motif output.motif.gz (default: 'output')"
-      arg_type = String
-      default  = "output"
+      default  = "*psi.gz"
     "--fasta"
       help     = "Genome sequence fasta file used with `--fasta` parameter when building the whippet index"
       arg_type = String
@@ -225,16 +223,16 @@ function main()
    args  = parse_cmd()
    println(stderr, " $( round( (time_ns()-start)/1e9, digits=6 ) ) seconds" )
 
-   five_mat  = load_matrix5( dir * "/../motif/maxent/score5_matrix.txt" )
-   three_mat = load_matrix3( dir * "/../motif/maxent/score3_matrix.txt" )
-   rbps = map(load_rbns, glob("*.tsv", fixpath(dir * "/../motif/5mers/")))
+   five_mat  = load_matrix5( dir * "/../motif/maxent/score5_matrix.txt.gz" )
+   three_mat = load_matrix3( dir * "/../motif/maxent/score3_matrix.txt.gz" )
+   rbps = map(load_rbns, glob("*.tsv.gz", fixpath(dir * "/../motif/5mers/")))
 
    genome   = read_fasta( args["fasta"] )
    rbpspan  = args["rbp-span"]
 
-   name = basename(args["filename.psi.gz"])
+   name = basename(args["files"])
 
-   ifiles = glob(name, replace(args["filename.psi.gz"], "$name" => "")) 
+   ifiles = glob(name, replace(args["files"], "$name" => "")) 
    sfiles = map(x->(isgzipped(x) ? splitext(x)[1] : x), ifiles)
    ofiles = map(x->splitext(basename(x))[1] * ".motif.gz", sfiles)
    fexten = map(x->splitext(x)[2], sfiles)

@@ -46,7 +46,7 @@ function parse_cmd()
       "--aberrant-min-reads"
          help     = "Minimum number of reads supporting an aberrant splicing event (.bam input only)"
          arg_type = Int
-         default  = 1
+         default  = 2
       "--aberrant-max-xce"
          help     = "Maximum length of a cryptic exon to include XCE entry (.bam input only)"
          arg_type = Int
