@@ -103,6 +103,16 @@ function score_motifs( ifile::String,
    for l in eachline( bufferedinput(ifile) )
 
       if header
+         rbpstr = join(map(x->x.name * "_" * x.conc, rbps), ',')
+         tab_write(bufout, "Gene\tNode\tCoord\tStrand\tType")
+         tab_write(bufout, "SpliceSite3p_UpstreamRBP:[$rbpstr]")
+         tab_write(bufout, "SpliceSite3p_Seq")
+         tab_write(bufout, "SpliceSite3p_MaxEnt")
+         tab_write(bufout, "SpliceSite3p_Downstream:[$rbpstr]")
+         tab_write(bufout, "SpliceSite5p_UpstreamRBP:[$rbpstr]")
+         tab_write(bufout, "SpliceSite5p_Seq")
+         tab_write(bufout, "SpliceSite5p_MaxEnt")
+         end_write(bufout, "SpliceSite5p_Downstream:[$rbpstr]")
          header = false
          continue
       end
