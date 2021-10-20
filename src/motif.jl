@@ -48,7 +48,7 @@ function load_rbns( tsv_file::String )
    end
    data = data / maximum(data)
    RNABindNSeq(name, 
-   				names(rbp)[ind+1], 
+   				replace(names(rbp)[ind+1], " " => ""), 
    				klen, 
    				gini_coefficient(data), 
    				map(x->round(x, digits=3), data))
