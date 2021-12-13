@@ -42,7 +42,7 @@ function parse_cmd()
       "--aberrant-min-overlap"
          help     = "Minimum number of overlap in the first or last node of a path (.bam input only)"
          arg_type = Int
-         default  = 6
+         default  = 9
       "--aberrant-min-reads"
          help     = "Minimum number of reads supporting an aberrant splicing event (.bam input only)"
          arg_type = Int

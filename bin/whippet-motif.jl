@@ -108,11 +108,11 @@ function score_motifs( ifile::String,
          tab_write(bufout, "SpliceSite3p_UpstreamRBP:[$rbpstr]")
          tab_write(bufout, "SpliceSite3p_Seq")
          tab_write(bufout, "SpliceSite3p_MaxEnt")
-         tab_write(bufout, "SpliceSite3p_Downstream:[$rbpstr]")
+         tab_write(bufout, "SpliceSite3p_DownstreamRBP:[$rbpstr]")
          tab_write(bufout, "SpliceSite5p_UpstreamRBP:[$rbpstr]")
          tab_write(bufout, "SpliceSite5p_Seq")
          tab_write(bufout, "SpliceSite5p_MaxEnt")
-         end_write(bufout, "SpliceSite5p_Downstream:[$rbpstr]")
+         end_write(bufout, "SpliceSite5p_DownstreamRBP:[$rbpstr]")
          header = false
          continue
       end

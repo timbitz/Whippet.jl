@@ -54,6 +54,52 @@ function load_rbns( tsv_file::String )
    				map(x->round(x, digits=3), data))
 end
 
+function ranked_dist( a::Vector{F}, b::Vector{F}, top_n=50 ) where F <: Number
+   ord_a = sortperm(a, rev=true)
+   ord_b = sortperm(b, rev=true)
+   mean_dist = 0.0
+   for i in 1:length(a)
+      pos_ai = findfirst(isequal(i), ord_a)
+      pos_bi = findfirst(isequal(i), ord_b)
+      mean_dist += abs(pos_ai - pos_bi)
+   end
+   mean_dist / length(a)
+end
+
+# As described in:
+# William Webber, Alistair Moffat, and Justin Zobel. 2010. “A similarity measure for indefinite rankings”. 
+# ACM Trans. Inf. Syst. 28, 4, Article 20 (November 2010), 38 pages. 
+# DOI:https://doi.org/10.1145/1852102.1852106
+function rank_based_overlap(a::Vector{N}, b::Vector{N}, p=0.9) where N <: Number
+
+   function helper(ret, i, d)
+      a_d = length(intersect(a[1:i], b[1:i])) / i
+      term = (p^i) * a_d
+      if d == i
+         return ret + term
+      else
+         return helper(ret + term, i + 1, d)
+      end
+   end
+
+   k = max(length(a), length(b))
+   x_k = length(intersect(a, b))
+   summ = helper(0, 1, k)
+   return ((x_k/k) * (p^k)) + ((1-p)/p * summ)
+end
+
+function dist_matrix( rbps::Vector{RNABindNSeq} )
+   dist_mat = zeros( length(rbps), length(rbps) )
+   ord_vec  = map(x->sortperm(x.data, rev=true), rbps )
+   for i in 1:length(rbps)
+      for j in i:length(rbps)
+         dist_mat[i,j] = rank_based_overlap( ord_vec[i], ord_vec[j] )
+         dist_mat[j,i] = dist_mat[i,j]
+      end
+   end
+   return dist_mat
+end
+
 function score_cis( seq::B, rbp::RNABindNSeq ) where B <: BioSequence
 	best = 0.0
    for i in 1:length(seq)-(rbp.kmer-1)
