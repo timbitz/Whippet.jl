@@ -71,7 +71,7 @@ readlinesplit( stream ) =  split( readline(stream), '\t' )
 function gene_centric( streams::Vector{BufferedStreams.BufferedInputStream},
                        names::Vector{String};
                        var_column::Int64=0,
-                       output_ext::String )
+                       output_ext::String=".gpsi.gz" )
    
    curline  = Vector{Vector{SubString{String}}}(undef, length(streams))
    metadata = Vector{String}()

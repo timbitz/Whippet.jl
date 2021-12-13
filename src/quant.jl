@@ -872,7 +872,7 @@ function output_tpm( file, lib::GraphLib, gquant::GraphLibQuant )
       end
       tab_write( genestream, lib.names[i] )
       tab_write( genestream, string(genetpm) )
-      tab_write( genestream, string(genecnt) )
+      write( genestream, string(genecnt) )
       write( genestream, '\n' )
    end
    close( isostream )
