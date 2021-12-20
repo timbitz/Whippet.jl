@@ -127,21 +127,29 @@ end
 parse_complexity( c::S ) where {S <: AbstractString} = split( c, COMPLEX_CHAR, keepempty=false )[1] |> x->parse(Int,x)
 
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; 
-                           min_reads=5, size=1000 )
+                           min_reads=5,
+			   size=1000,
+			   whitelist_events = String["TS", "TE", "RI", "CE", "AA", "AD"])
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
    entropy = 0.0
    i = 1
    mean_num = 0.0
+   curnode = ""
    while i <= length(streams)
       line = readline( streams[i] )
       i += 1
       if line != ""
          par,post,isok,num = parse_psi_line( line, min_num=min_reads, size=size )
          event = par[1:5]
-         event[5] == "BS" && (i -= 1; continue)
+         event[5] in whitelist_events || (i -= 1; continue)
          !isok && continue
+	 if curnode == ""
+	    curnode = event[2]
+	 else
+	    @assert event[2] == curnode
+	 end
 	 mean_num += num
          push!( postvec, post )
          parcomplex = parse_complexity( par[10] )
