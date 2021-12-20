@@ -51,7 +51,11 @@ function parse_cmd()
     "--pseudo-adjust"
       help     = "When a single replicate is given, pseudo-adjust a \"second\" for mle fitting by this value."
       arg_type = Float64
-      default  = 0.001
+      default  = 0.01
+    "--max-variance"
+      help     = "Maximum allowed variance across psi values to fit a Beta -- if greater, use null Beta(0.1,0.1)"
+      arg_type = Float64
+      default  = 0.15
     "--use-depth"
       help     = "Sample each replicate's PSI according to read-depth of the event. (default off)"
       action   = :store_true
@@ -104,8 +108,9 @@ function main()
                              amt=0.0,
                              size=args["emperical-size"],
                              point_est=!args["use-depth"], 
-                             pseudo_adj=args["pseudo-adjust"]) 
-   println(STDERR, "Whippet $ver done." )
+                             pseudo_adj=args["pseudo-adjust"],
+			     max_variance=args["max-variance"]) 
+   println(stderr, "Whippet $ver done." )
 end
 
 @timer main()

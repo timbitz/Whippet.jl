@@ -370,7 +370,7 @@ function output_utr( io::BufOut,
       if !isnull( pgraph )
          conf_int  = beta_posterior_ci( psi[i], total_reads, sig=3 )
          conf_int_write( io, conf_int, tab=true, width=true)
-         tab_write( io, string( round(total_reads, sigdigits=3) ) )
+         tab_write( io, string( round(total_reads, digits=3) ) )
          complex_write( io, complexity( pgraph.value ), tab=true )
          tab_write( io, string( round( shannon_index( pgraph.value ), digits=4 ) ) )
          count_write( io, get(pgraph).nodes[i], get(pgraph).psi[i], tab=true )
@@ -425,7 +425,7 @@ function output_psi( io::BufOut,
    tab_write( io, string(psi) )
 
    conf_int_write( io, conf_int, tab=true, width=true )
-   tab_write( io, string( round(total_reads, sigdigits=3) ) )
+   tab_write( io, string( round(total_reads, digits=3) ) )
 
    if !isnull( inc ) && !isnull( exc )
       complex_write( io, complexity( inc.value, exc.value ), tab=true )
@@ -476,7 +476,7 @@ function output_circular( io::BufOut, sg::SpliceGraph, sgquant::SpliceGraphQuant
          tab_write( io, string(psi) )
          conf_int  = beta_posterior_ci( psi, total_reads, sig=3 )
          conf_int_write( io, conf_int, tab=true, width=true)
-         tab_write( io, string( round(total_reads, sigdigits=3) ) )
+         tab_write( io, string( round(total_reads, digits=3) ) )
          write( io, "NA\tNA\tNA\tNA\tNA\n" )
       end
    end
@@ -546,13 +546,17 @@ end
 
 function output_diff_header( io::BufOut )
    tab_write( io, "Gene\tNode\tCoord\tStrand" )
-   write( io, "Type\tPsi_A\tPsi_B\tDeltaPsi\tProbability\tComplexity\tEntropy\n" )
+   write( io, "Type\tSampleCnt_A\tSampleCnt_B\tMeanReads_A\tMeanReads_B\tPsi_A\tPsi_B\tDeltaPsi\tProbability\tComplexity\tEntropy\n" )
 end
 
 function output_diff( io::BufOut, 
                      event, 
                      complex::Int, 
                      entropy::Float64,
+		     samp_a::Int,
+		     samp_b::Int,
+		     mean_a::Float64,
+		     mean_b::Float64,
                      psi_a::Float64, 
                      psi_b::Float64, 
                      deltapsi::Float64, 
@@ -562,13 +566,17 @@ function output_diff( io::BufOut,
    for i in 1:length(event)
       tab_write( io, event[i] )
    end
-   tab_write( io, string(round(psi_a, sigdigits=sig)) )
-   tab_write( io, string(round(psi_b, sigdigits=sig)) )
-   tab_write( io, string(round(deltapsi, sigdigits=sig)) )
-   tab_write( io, string(round(prob, sigdigits=sig)) )
+   tab_write( io, string(samp_a))
+   tab_write( io, string(samp_b))
+   tab_write( io, string(round(mean_a, digits=1)) )
+   tab_write( io, string(round(mean_b, digits=1)) )
+   tab_write( io, string(round(psi_a, digits=sig)) )
+   tab_write( io, string(round(psi_b, digits=sig)) )
+   tab_write( io, string(round(deltapsi, digits=sig)) )
+   tab_write( io, string(round(prob, digits=10)) )
    write( io, COMPLEX_CHAR )
    tab_write( io, string(complex) )
-   tab_write( io, string(entropy) )
+   write( io, string(entropy) )
    write( io, '\n' )
 end
 
@@ -648,23 +656,23 @@ function output_stats( io::BufOut,
    write( io, "Total_Reads\t$total\n" )
    write( io, "# -------- Mapping Stats ---------\n" )
    write( io, "Mapped_Reads\t$mapped\n" )
-   write( io, "Mapped_Percent\t$(round((mapped/total)*100,sigdigits=2))%\n" )
+   write( io, "Mapped_Percent\t$(round((mapped/total)*100,digits=2))%\n" )
    write( io, "# -------- Multi-loci Mapping ---------\n" )
    write( io, "Multimap_Reads\t$multi\n" )
-   write( io, "Multimap_Percent\t$(round((multi/mapped)*100,sigdigits=2))%\n" )
+   write( io, "Multimap_Percent\t$(round((multi/mapped)*100,digits=2))%\n" )
    write( io, "# -------- Unspliced Reads ---------\n" )
    body,junc,anno,jcnt,acnt = count_read_types( lib, graphq )
    write( io, "Exon_Body_Reads\t$body\n" )
-   write( io, "Exon_Body_Percent\t$(round((body/(body+junc))*100,sigdigits=2))%\n" )
+   write( io, "Exon_Body_Percent\t$(round((body/(body+junc))*100,digits=2))%\n" )
    write( io, "# -------- Spliced Reads ---------\n" )
    write( io, "Junction_Reads\t$junc\n" )
-   write( io, "Junction_Percent\t$(round((junc/(body+junc))*100,sigdigits=2))%\n" )
+   write( io, "Junction_Percent\t$(round((junc/(body+junc))*100,digits=2))%\n" )
    write( io, "Junction_Number\t$jcnt\n" )
    write( io, "Annotated_Junc_Reads\t$anno\n" )
-   write( io, "Annotated_Junc_Percent\t$(round((anno/junc)*100,sigdigits=2))%\n" )
+   write( io, "Annotated_Junc_Percent\t$(round((anno/junc)*100,digits=2))%\n" )
    write( io, "Annotated_Junc_Number\t$acnt\n" )
    write( io, "Novel_Junc_Number\t$(jcnt-acnt)\n" )
-   write( io, "Novel_Junc_Percent\t$(round(((jcnt-acnt)/jcnt)*100,sigdigits=2))%\n" )
+   write( io, "Novel_Junc_Percent\t$(round(((jcnt-acnt)/jcnt)*100,digits=2))%\n" )
 end
 
 
