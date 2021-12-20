@@ -129,7 +129,7 @@ parse_complexity( c::S ) where {S <: AbstractString} = split( c, COMPLEX_CHAR, k
 function process_psi_line( streams::Vector{BufferedStreams.BufferedInputStream}; 
                            min_reads=5,
 			   size=1000,
-			   whitelist_events = String["TS", "TE", "RI", "CE", "AA", "AD"])
+			   whitelist_events = String["TS", "TE", "AF", "AL", "RI", "CE", "AA", "AD"])
    postvec = Vector{PosteriorPsi}()
    event   = split( "", "" )
    complex = 0
