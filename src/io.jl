@@ -546,7 +546,7 @@ end
 
 function output_diff_header( io::BufOut )
    tab_write( io, "Gene\tNode\tCoord\tStrand" )
-   write( io, "Type\tSampleCnt_A\tSampleCnt_B\tMeanReads_A\tMeanReads_B\tPsi_A\tPsi_B\tDeltaPsi\tProbability\tComplexity\tEntropy\n" )
+   write( io, "Type\tComplexity\tEntropy\tSampleCnt_A\tSampleCnt_B\tMeanReads_A\tMeanReads_B\tPsi_A\tPsi_B\tDeltaPsi\tProbability\n" )
 end
 
 function output_diff( io::BufOut, 
@@ -566,6 +566,9 @@ function output_diff( io::BufOut,
    for i in 1:length(event)
       tab_write( io, event[i] )
    end
+   write( io, COMPLEX_CHAR )
+   tab_write( io, string(complex))
+   tab_write( io, string(entropy) )
    tab_write( io, string(samp_a))
    tab_write( io, string(samp_b))
    tab_write( io, string(round(mean_a, digits=1)) )
@@ -573,11 +576,7 @@ function output_diff( io::BufOut,
    tab_write( io, string(round(psi_a, digits=sig)) )
    tab_write( io, string(round(psi_b, digits=sig)) )
    tab_write( io, string(round(deltapsi, digits=sig)) )
-   tab_write( io, string(round(prob, digits=10)) )
-   write( io, COMPLEX_CHAR )
-   tab_write( io, string(complex) )
-   write( io, string(entropy) )
-   write( io, '\n' )
+   end_write( io, string(round(prob, digits=10)) )
 end
 
 #=
