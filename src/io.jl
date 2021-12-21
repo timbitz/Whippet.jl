@@ -816,15 +816,15 @@ function output_paths( io::BufOut, sg::SpliceGraph, info::GeneInfo )
       next = iterate(sg.annopath[i])
       prev = 0
       while next !== nothing
-         (i, state) = next
+         (val, state) = next
          next = iterate(sg.annopath[i], state)
          if prev != 0
             write( io, string(prev) )
             write( io, '-' )
-            write( io, string(i) )
+            write( io, string(val) )
             next !== nothing && write(io, ',')
          end
-         prev = i
+         prev = val
       end
    end
    write( io, '\n' )
