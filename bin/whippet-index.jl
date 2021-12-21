@@ -109,7 +109,7 @@ function main()
    output_exons( args["index"] * ".exons.tsv.gz", graphome )
 
    println(stderr, "Printing annotated paths through Whippet nodes ... $(args["index"] * ".paths.tsv.gz")")
-   output_paths( args["index"] * ".exons.tsv.gz", graphome )
+   output_paths( args["index"] * ".paths.tsv.gz", graphome )
 end
 
 @timer main()
