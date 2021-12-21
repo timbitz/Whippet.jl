@@ -23,10 +23,10 @@ end
 # so we can re-sample from the new joint beta
 function PosteriorPsi( set::Vector{PosteriorPsi}; 
                        paired::Bool=false, 
-		       size::Int=1000,
+            		     size::Int=1000,
                        point_est::Bool=true, 
-		       pseudo_adj::Float64=0.025,
-		       max_variance::Float64=0.15)
+            		     pseudo_adj::Float64=0.025,
+         		        max_variance::Float64=0.15)
    if point_est
       psiarr = [x.psi for x in set]
       if length(set) > 1 && var(psiarr) > 0.0
@@ -37,14 +37,14 @@ function PosteriorPsi( set::Vector{PosteriorPsi};
          emperical = vcat(psiarr, two)
       else
          for i in 2:length(psiarr)
-	    rand_adj = (rand() * 2pseudo_adj - pseudo_adj)
+      	   rand_adj = (rand() * 2pseudo_adj - pseudo_adj)
             if 0.0 > rand_adj + psiarr[i] ||
-	       1.0 < rand_adj + psiarr[i]
-	       rand_adj = rand_adj * -1.0
-	    end
-	    psiarr[i] += rand_adj
-	 end
-	 emperical = psiarr
+         	   1.0 < rand_adj + psiarr[i]
+         	   rand_adj = rand_adj * -1.0
+      	   end
+   	      psiarr[i] += rand_adj
+   	   end
+   	   emperical = psiarr
       end
    else
       emperical = vcat( map( x->x.emperical, set )... )
@@ -58,7 +58,7 @@ function PosteriorPsi( set::Vector{PosteriorPsi};
       catch e
          println(stderr, "Error: Couldn't fit beta pdf to discordant psi values:")
          println(stderr, emperical)
-	 println(stderr, "Decrease `--max-variance`.")
+      	println(stderr, "Decrease `--max-variance`.")
          error(e)
       end
    end

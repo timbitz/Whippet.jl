@@ -553,10 +553,10 @@ function output_diff( io::BufOut,
                      event, 
                      complex::Int, 
                      entropy::Float64,
-		     samp_a::Int,
-		     samp_b::Int,
-		     mean_a::Float64,
-		     mean_b::Float64,
+		               samp_a::Int,
+                     samp_b::Int,
+                     mean_a::Float64,
+                     mean_b::Float64,
                      psi_a::Float64, 
                      psi_b::Float64, 
                      deltapsi::Float64, 
@@ -802,6 +802,46 @@ function output_exons( filename::String, lib::GraphLib )
 
    write( stream, "Gene\tPotential_Exon\tWhippet_Nodes\tIs_Annotated\n" )
    output_exons( stream, lib )
+
+   close(stream)
+   close(io)
+end
+
+function output_paths( io::BufOut, sg::SpliceGraph, info::GeneInfo )
+   for i in 1:length(sg.annopath)
+      tab_write( io, info.gene )
+      tab_write( io, sg.annoname[i] )
+      tab_write( io, join(sg.annopath[i], '-') )
+
+      next = iterate(sg.annopath[i])
+      prev = 0
+      while next !== nothing
+         (i, state) = next
+         next = iterate(sg.annopath[i], state)
+         if prev != 0
+            write( io, string(prev) )
+            write( io, '-' )
+            write( io, string(i) )
+            next !== nothing && write(io, ',')
+         end
+         prev = i
+      end
+   end
+   write( io, '\n' )
+end
+
+function output_paths( io::BufOut, lib::GraphLib )
+   for i in 1:length(lib.graphs)
+      output_paths( io, lib.graphs[i], lib.info[i] )
+   end
+end
+
+function output_paths( filename::String, lib::GraphLib )
+   io = open( filename, "w" )
+   stream = ZlibDeflateOutputStream( io )
+
+   write( stream, "Gene\tIsoform\tPath\tEdges\n" )
+   output_paths( stream, lib )
 
    close(stream)
    close(io)

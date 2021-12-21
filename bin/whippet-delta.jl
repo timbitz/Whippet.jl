@@ -17,9 +17,9 @@ using ArgParse
 using Glob
 
 function parse_cmd()
-  s = ArgParseSettings()
-  # TODO finish options...
-  @add_arg_table s begin
+   s = ArgParseSettings()
+   # TODO finish options...
+   @add_arg_table s begin
     "--a", "-a"
       help     = "Replicates for Set A -- Could be: pattern to glob.psi (common-filename-segment [*.psi*]), or comma delimited list of filenames. ie. (-a sample_a) would work for sample_a-rep1.psi.gz,sample_a-rep2.psi.gz,..."
       arg_type = String
@@ -67,8 +67,8 @@ function parse_cmd()
       help     = "Seed the RNG (Int) for reproducible results on successive runs"
       arg_type = Int64
       default  = 123456
-  end
-  return parse_args(s)
+   end
+   return parse_args(s)
 end
 
 function retrievefilelist( pattern::String, dir::String )
@@ -109,7 +109,7 @@ function main()
                              size=args["emperical-size"],
                              point_est=!args["use-depth"], 
                              pseudo_adj=args["pseudo-adjust"],
-			     max_variance=args["max-variance"]) 
+                  		     max_variance=args["max-variance"]) 
    println(stderr, "Whippet $ver done." )
 end
 

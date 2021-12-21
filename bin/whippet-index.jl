@@ -105,9 +105,11 @@ function main()
       @timer serialize( io, graphome )
    end
 
-   println(stderr, "Printing a map of Whippet nodes to putative full exons... $(args["index"] * ".exons.tab.gz")")
-   output_exons( args["index"] * ".exons.tab.gz", graphome )
+   println(stderr, "Printing a map of Whippet nodes to putative full exons... $(args["index"] * ".exons.tsv.gz")")
+   output_exons( args["index"] * ".exons.tsv.gz", graphome )
 
+   println(stderr, "Printing annotated paths through Whippet nodes ... $(args["index"] * ".paths.tsv.gz")")
+   output_paths( args["index"] * ".exons.tsv.gz", graphome )
 end
 
 @timer main()
