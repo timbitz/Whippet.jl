@@ -826,8 +826,8 @@ function output_paths( io::BufOut, sg::SpliceGraph, info::GeneInfo )
          end
          prev = val
       end
+      write( io, '\n' )
    end
-   write( io, '\n' )
 end
 
 function output_paths( io::BufOut, lib::GraphLib )
