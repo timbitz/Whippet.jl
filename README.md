@@ -37,9 +37,9 @@ Whippet v1.6 works on the current version of Julia (**v1.6**) which is available
 
 Download and install dependencies
 ```bash
-$ git clone https://github.com/timbitz/Whippet.jl.git
-$ cd Whippet.jl
-$ julia --project -e 'using Pkg; Pkg.instantiate()'
+git clone https://github.com/timbitz/Whippet.jl.git
+cd Whippet.jl
+julia --project -e 'using Pkg; Pkg.instantiate()'
 ```
 
 
@@ -48,7 +48,7 @@ $ julia --project -e 'using Pkg; Pkg.instantiate()'
 * Update to the most recent version of Whippet by pulling the master branch `git pull`
 * For all executables in `Whippet.jl/bin`, you can use the `-h` flag to get a list of the available command line options, their usage and defaults.
 * You should install Julia locally, if you have to install system-wide, there is some help [here](https://groups.google.com/forum/#!topic/julia-users/9lQZJlLs99M)
-* For instructions on using Whippet with **Julia v0.6.4**, look at the README.md within the Whippet v0.11.1 tag
+* For instructions on using Whippet with **Julia v0.6.4**, look at the README.md within the Whippet v0.11.1 tag (but please note this verison is no longer supported)
 
 
 ### 2) Build an index.
@@ -58,7 +58,7 @@ $ julia --project -e 'using Pkg; Pkg.instantiate()'
 You need your genome sequence in fasta, and a gene annotation file in Ensembl-style GTF format. Default GENCODE annotation supplied for hg19 and mm10 in `Whippet/anno`. You can also obtain Ensembl GTF files from these direct links for Human: [Ensembl_hg38_release_92](http://ftp.ensembl.org/pub/release-92/gtf/homo_sapiens/Homo_sapiens.GRCh38.92.gtf.gz) and Mouse: [Ensembl_mm10_release_92](http://ftp.ensembl.org/pub/release-92/gtf/mus_musculus/Mus_musculus.GRCm38.92.gtf.gz). Other Ensembl GTF files can be downloaded [here](https://uswest.ensembl.org/info/data/ftp/index.html),
 
 ```bash
-$ julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
+julia bin/whippet-index.jl --fasta hg19.fa.gz --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
 _Notes_:
@@ -70,18 +70,18 @@ _Notes_:
 Whippet v0.11+ allows you to build an index that includes unannotated splice-sites and exons found in a spliced RNA-seq alignment file.  In order to build a BAM supplemented index, you need your BAM file sorted and indexed (using samtools):
 ```bash
 # If using multiple BAM files (tissue1, ..., tissue3 etc), merge them first:
-$ samtools merge filename.bam tissue1.bam tissue2.bam tissue3.bam
+samtools merge filename.bam tissue1.bam tissue2.bam tissue3.bam
 # If using a single BAM file start here:
-$ samtools sort -o filename.sort filename.bam
-$ samtools rmdup -S filename.sort.bam filename.sort.rmdup.bam
-$ samtools index filename.sort.rmdup.bam
-$ ls filename.sort.rmdup.bam*
+samtools sort -o filename.sort filename.bam
+samtools rmdup -S filename.sort.bam filename.sort.rmdup.bam
+samtools index filename.sort.rmdup.bam
+ls filename.sort.rmdup.bam*
 filename.sort.rmdup.bam        filename.sort.rmdup.bam.bai
 ```
 
 Then build an index but with the additional `--bam` parameter:
 ```bash
-$ julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
+julia bin/whippet-index.jl --fasta hg19.fa.gz --bam filename.sort.rmdup.bam --gtf anno/gencode_hg19.v25.tsl1.gtf.gz
 ```
 
 _Notes_:
@@ -93,26 +93,26 @@ _Notes_:
 
 #### a) Single-end reads
 ```bash
-$ julia bin/whippet-quant.jl file.fastq.gz
+julia bin/whippet-quant.jl file.fastq.gz
 ```
 
 As of version 1.0.0, `--ebi` and `--url` flags have been deprecated to ease maintenance. EBI file paths can be found at the URL http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt. Use your own accession id (SRR id) in place of $ebi_id.
 
 For example:
 ```bash
-$ curl "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=SRR1199010&result=read_run&fields=fastq_ftp&display=txt"
+curl "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=SRR1199010&result=read_run&fields=fastq_ftp&display=txt"
 fastq_ftp
 ftp.sra.ebi.ac.uk/vol1/fastq/SRR119/000/SRR1199010/SRR1199010.fastq.gz
 ```
 
 #### b) Paired-end reads
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
+julia bin/whippet-quant.jl fwd_file.fastq.gz rev_file.fastq.gz
 ```
 
 To locate paired-end SRR id files, use the same ebi.ac.uk URL:
 ```bash
-$ curl "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=ERR1994736&result=read_run&fields=fastq_ftp&display=txt"
+curl "https://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=ERR1994736&result=read_run&fields=fastq_ftp&display=txt"
 fastq_ftp
 ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_1.fastq.gz;ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_2.fastq.gz
 ```
@@ -120,33 +120,33 @@ ftp.sra.ebi.ac.uk/vol1/fastq/ERR199/006/ERR1994736/ERR1994736_1.fastq.gz;ftp.sra
 #### c) Non-default input/output
 To specify output location or a specific index:
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz -o outputname -x customindex.jls
+julia bin/whippet-quant.jl fwd_file.fastq.gz -o outputname -x customindex.jls
 ```
 
 You can also output the alignments in SAM format with the `--sam` flag and convert to bam with samtools:
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz --sam > fwd_file.sam
-$ samtools view -bS fwd_file.sam > fwd_file.bam
+julia bin/whippet-quant.jl fwd_file.fastq.gz --sam > fwd_file.sam
+samtools view -bS fwd_file.sam > fwd_file.bam
 ```
 
 For greater stability of quantifications across multiple RNA-seq protocols, try the `--biascorrect` flag, which will apply GC-content and 5' sequence bias correction methods:
 ```bash
-$ julia bin/whippet-quant.jl fwd_file.fastq.gz --biascorrect
+julia bin/whippet-quant.jl fwd_file.fastq.gz --biascorrect
 ```
 
 It is also possible to pool fastq files at runtime using shell commands, and the optional (`--force-gz`) for pooled gz files (files without .gz suffix)
 ```bash
-$ julia bin/whippet-quant.jl <( cat time-series_{1,2,3,4,5}.fastq.gz ) --force-gz -o interval_1-5
+julia bin/whippet-quant.jl <( cat time-series_{1,2,3,4,5}.fastq.gz ) --force-gz -o interval_1-5
 ```
 
 ### 4) Compare multiple psi files
 Compare `.psi.gz` files from from two samples `-a` and `-b` with any number of replicates (comma delimited list of files or common pattern matching) per sample.
 ```bash
-$ ls *.psi.gz
-sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
-$ julia bin/whippet-delta.jl -a sample1 -b sample2
-OR
-$ julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
+ls *.psi.gz
+#sample1-r1.psi.gz sample1-r2.psi.gz sample2-r1.psi.gz sample2-r2.psi.gz
+julia bin/whippet-delta.jl -a sample1 -b sample2
+#OR
+julia bin/whippet-delta.jl -a sample1-r1.psi.gz,sample1-r2.psi.gz -b sample2-r1.psi.gz,sample2-r2.psi.gz
 ```
 Note: comparisons of single files still need a comma: `-a singlefile_a.psi.gz, -b singlefile_b.psi.gz,`
 
