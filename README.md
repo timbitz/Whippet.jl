@@ -96,7 +96,9 @@ _Notes_:
 julia bin/whippet-quant.jl file.fastq.gz
 ```
 
-As of version 1.0.0, `--ebi` and `--url` flags have been deprecated to ease maintenance. EBI file paths can be found at the URL http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt. Use your own accession id (SRR id) in place of $ebi_id.
+Note: Whippet only accepts standard four-line FASTQ file (described here: https://support.illumina.com/bulletins/2016/04/fastq-files-explained.html)
+
+Also, as of version 1.0.0, `--ebi` and `--url` flags have been deprecated to ease maintenance. EBI file paths can be found at the URL http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt. Use your own accession id (SRR id) in place of $ebi_id.
 
 For example:
 ```bash
