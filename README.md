@@ -1,7 +1,7 @@
 # Whippet
 
 [![Latest Release](https://img.shields.io/github/release/timbitz/Whippet.jl.svg)](https://github.com/timbitz/Whippet.jl/releases/latest)
-[![Build Status](https://img.shields.io/travis/timbitz/Whippet.jl/master.svg?label=Linux+/+macOS)](https://travis-ci.com/timbitz/Whippet.jl)
+[![Build Status](https://img.shields.io/travis/com/timbitz/Whippet.jl)](https://app.travis-ci.com/github/timbitz/Whippet.jl)
 [![codecov](https://codecov.io/gh/timbitz/Whippet.jl/branch/master/graph/badge.svg?token=RKE7BSr47v)](https://codecov.io/gh/timbitz/Whippet.jl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Gitter Chat](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/Whippet-jl/Lobby)
@@ -32,16 +32,17 @@ Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 ### 1) Install
 
 
-Whippet v1.6 works on the current version of Julia (**v1.6**) which is available here (https://julialang.org).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Whippet v1.6 works on the current stable release of Julia (**v1.8.X**) and long-term support release (**v1.6.7**) which are available here (https://julialang.org).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 
 Download and install dependencies
 ```bash
 git clone https://github.com/timbitz/Whippet.jl.git
 cd Whippet.jl
-julia --project -e 'using Pkg; Pkg.instantiate()'
+julia --project -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 ```
 
+This should tell you `Testing Whippet tests passed` 
 
 *Notes*:
 * Everything in Whippet.jl/bin should work out-of-the-box, however the first time running will be slow as julia will be precompiling code
@@ -96,7 +97,9 @@ _Notes_:
 julia bin/whippet-quant.jl file.fastq.gz
 ```
 
-As of version 1.0.0, `--ebi` and `--url` flags have been deprecated to ease maintenance. EBI file paths can be found at the URL http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt. Use your own accession id (SRR id) in place of $ebi_id.
+Note: Whippet only accepts standard four-line FASTQ file (described here: https://support.illumina.com/bulletins/2016/04/fastq-files-explained.html)
+
+Also, as of version 1.0.0, `--ebi` and `--url` flags have been deprecated to ease maintenance. EBI file paths can be found at the URL http://www.ebi.ac.uk/ena/data/warehouse/filereport?accession=$ebi_id&result=read_run&fields=fastq_ftp&display=txt. Use your own accession id (SRR id) in place of $ebi_id.
 
 For example:
 ```bash
