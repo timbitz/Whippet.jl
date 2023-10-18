@@ -32,7 +32,7 @@ Paper: https://doi.org/10.1016/j.molcel.2018.08.018
 ### 1) Install
 
 
-Whippet v1.6 works on the current stable release of Julia (**v1.8.X**) and long-term support release (**v1.6.7**) which are available here (https://julialang.org).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
+Whippet v1.6 works on the long-term support release of Julia (**v1.6.7**) which are available here (https://julialang.org).  If you are new to julia, there is a [helpful guide on how to get it up and running here](https://en.wikibooks.org/wiki/Introducing_Julia/Getting_started)
 
 
 Download and install dependencies
