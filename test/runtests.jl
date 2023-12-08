@@ -745,9 +745,18 @@ IIIIIIIIIIII
    end
 
    @testset "Executable testing" begin
-
-      run(`julia ../bin/whippet-quant.jl test_out.bam -x test_index.jls`)
-      run(`julia ../bin/whippet-quant.jl aber_inp.bam -x test_index.jls`)
+      check_samtools() || error("Samtools is not properly installed, but is a dependency of BAM input!")
+      run(`pwd`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-index.jl -h`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl -h`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-pivot.jl -h`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-motif.jl -h`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-delta.jl -h`)
+      run(`samtools view -b test_out.sam -o test_out.bam`)
+      run(`samtools sort test_out.bam -o test_out.sort.bam`)
+      run(`samtools index test_out.sort.bam`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl test_out.sort.bam -x test_index.jls`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl aber_inp.bam -x test_index.jls`)
        ## CHECK test.sort.bam, make 
    end
 end

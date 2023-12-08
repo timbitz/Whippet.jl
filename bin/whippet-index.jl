@@ -22,7 +22,7 @@ using ArgParse
 function parse_cmd()
   s = ArgParseSettings()
 
-  @add_arg_table s begin
+  @add_arg_table! s begin
     "--kmer", "-k"
       help = "Kmer size to use for exon-exon junctions (default 9)"
       arg_type = Int64

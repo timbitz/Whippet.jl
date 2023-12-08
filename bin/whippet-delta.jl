@@ -19,7 +19,7 @@ using Glob
 function parse_cmd()
    s = ArgParseSettings()
    # TODO finish options...
-   @add_arg_table s begin
+   @add_arg_table! s begin
     "--a", "-a"
       help     = "Replicates for Set A -- Could be: pattern to glob.psi (common-filename-segment [*.psi*]), or comma delimited list of filenames. ie. (-a sample_a) would work for sample_a-rep1.psi.gz,sample_a-rep2.psi.gz,..."
       arg_type = String

@@ -20,7 +20,7 @@ using ArgParse
 function parse_cmd()
    s = ArgParseSettings()
 
-   @add_arg_table s begin
+   @add_arg_table! s begin
       "filename.fastq[.gz]--OR--pre-aligned.bam"
          arg_type = String
          required = true
