@@ -757,6 +757,8 @@ IIIIIIIIIIII
       run(`samtools index test_out.sort.bam`)
       run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl test_out.sort.bam -x test_index.jls`)
       run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl aber_inp.bam -x test_index.jls`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl test.fq.gz -x test_index.jls`)
+      run(`$(Base.julia_cmd()) ../bin/whippet-quant.jl test_real.fq.gz -x test_index.jls`)
        ## CHECK test.sort.bam, make 
    end
 end
