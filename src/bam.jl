@@ -685,8 +685,8 @@ function process_records!( reader::BAM.Reader,
    try
       for rec in GenomicFeatures.eachoverlap( reader, seqname, range )
          # add to exon count if overlaps exon
-         if hasintersection( exons, leftposition(rec) ) ||
-            hasintersection( exons, rightposition(rec) )
+         if IntervalTrees.hasintersection( exons, leftposition(rec) ) ||
+            IntervalTrees.hasintersection( exons, rightposition(rec) )
             exoncount += 1
          end
          # if is spliced process splice sites
